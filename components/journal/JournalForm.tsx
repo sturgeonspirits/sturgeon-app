@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Spirit } from '@/lib/supabase/types'
 
 interface Props {
-  spirits: Pick<Spirit, 'id' | 'name' | 'category' | 'is_house'>[]
+  spirits: Pick<Spirit, 'id' | 'name' | 'category' | 'subcategory' | 'is_house'>[]
   userId:  string
 }
 
@@ -66,25 +66,38 @@ export default function JournalForm({ spirits, userId }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-10">
-      {/* Spirit selection */}
+      {/* Spirit selection — grouped from menu */}
       <div>
-        <label className={labelClass}>Spirit</label>
+        <label className={labelClass}>What are you tasting?</label>
         <select
           value={spiritId}
           onChange={e => setSpiritId(e.target.value)}
           className={inputClass}
         >
-          <option value="">— Something not on the list —</option>
-          <optgroup label="House Spirits">
-            {spirits.filter(s => s.is_house).map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Other">
-            {spirits.filter(s => !s.is_house).map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </optgroup>
+          <option value="">— Not on the menu —</option>
+          {/* House spirits first */}
+          {spirits.filter(s => s.is_house).length > 0 && (
+            <optgroup label="🏠 Sturgeon Spirits">
+              {spirits.filter(s => s.is_house).map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.subcategory ? ` · ${s.subcategory}` : ''}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {/* Other menu items grouped by category */}
+          {Array.from(new Set(spirits.filter(s => !s.is_house).map(s => s.category)))
+            .sort()
+            .map(cat => (
+              <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
+                {spirits.filter(s => !s.is_house && s.category === cat).map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.subcategory ? ` · ${s.subcategory}` : ''}
+                  </option>
+                ))}
+              </optgroup>
+            ))
+          }
         </select>
       </div>
 

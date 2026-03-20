@@ -8,6 +8,11 @@ export default async function ClubPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  // Redirect to onboarding if profile hasn't been completed yet
+  const { data: profileCheck } = await supabase
+    .from('profiles').select('full_name').eq('id', user.id).single()
+  if (!profileCheck?.full_name) redirect('/onboarding')
+
   const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('points_ledger').select('*').eq('user_id', user.id).single(),
