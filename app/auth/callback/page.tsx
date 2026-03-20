@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AuthCallbackPage() {
+function AuthCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -23,11 +23,9 @@ export default function AuthCallbackPage() {
       }
 
       // ── Implicit flow: #access_token= hash fragment ────────────────────
-      // @supabase/ssr's createBrowserClient doesn't auto-parse the hash,
-      // so we do it manually and call setSession() directly.
       const hash = window.location.hash
       if (hash && hash.includes('access_token=')) {
-        const params = new URLSearchParams(hash.substring(1)) // strip leading '#'
+        const params = new URLSearchParams(hash.substring(1))
         const accessToken = params.get('access_token')
         const refreshToken = params.get('refresh_token')
 
@@ -37,7 +35,6 @@ export default function AuthCallbackPage() {
             refresh_token: refreshToken,
           })
           if (!error) {
-            // Clear the hash so it isn't reprocessed on back-navigation
             window.history.replaceState(null, '', window.location.pathname)
             router.replace('/club')
             return
@@ -58,8 +55,20 @@ export default function AuthCallbackPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
-      <p className="text-gray-400 text-sm">Signing in…</p>
+    <div className="min-h-screen bg-[#0e0d0b] flex items-center justify-center">
+      <p className="text-[#C8BCA4] text-sm">Signing in…</p>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0e0d0b] flex items-center justify-center">
+        <p className="text-[#C8BCA4] text-sm">Signing in…</p>
+      </div>
+    }>
+      <AuthCallbackInner />
+    </Suspense>
   )
 }
