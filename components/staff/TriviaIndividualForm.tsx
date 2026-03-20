@@ -9,21 +9,21 @@ interface Props {
   staffId: string
 }
 
-interface ScoreRow { userId: string; score: number }
+interface ScoreRow { userId: string; score: string }
 
 export default function TriviaIndividualForm({ period, members, staffId }: Props) {
-  const [rows, setRows]       = useState<ScoreRow[]>([{ userId: '', score: 0 }])
-  const [saving, setSaving]   = useState(false)
+  const [rows,    setRows]    = useState<ScoreRow[]>([{ userId: '', score: '' }])
+  const [saving,  setSaving]  = useState(false)
   const [message, setMessage] = useState('')
 
-  function addRow()  { setRows(r => [...r, { userId: '', score: 0 }]) }
+  function addRow()    { setRows(r => [...r, { userId: '', score: '' }]) }
   function removeRow(i: number) { setRows(r => r.filter((_, j) => j !== i)) }
-  function updateRow(i: number, field: keyof ScoreRow, value: string | number) {
+  function updateRow(i: number, field: keyof ScoreRow, value: string) {
     setRows(r => r.map((row, j) => j === i ? { ...row, [field]: value } : row))
   }
 
   async function submitScores() {
-    const valid = rows.filter(r => r.userId && r.score > 0)
+    const valid = rows.filter(r => r.userId && r.score !== '')
     if (valid.length === 0) return
     setSaving(true)
     setMessage('')
@@ -32,17 +32,18 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        periodId: period.id,
+        periodId:      period.id,
         scoringMethod: 'points',
         staffId,
-        entries: valid.map(r => ({ userId: r.userId, score: r.score })),
+        entries: valid.map(r => ({ userId: r.userId, score: parseInt(r.score) || 0 })),
       }),
     })
 
     const json = await res.json()
     if (res.ok) {
-      setMessage(`Saved ${valid.length} scores ✓`)
-      setRows([{ userId: '', score: 0 }])
+      setMessage(`${valid.length} score${valid.length > 1 ? 's' : ''} saved!`)
+      setRows([{ userId: '', score: '' }])
+      setTimeout(() => setMessage(''), 3000)
     } else {
       setMessage(json.error ?? 'Error saving scores')
     }
@@ -53,18 +54,19 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-500">Enter each participant's final score</p>
+      <p className="text-xs text-[#7a6e5f]">Enter each player's total score for the night</p>
 
       {rows.map((row, i) => (
         <div key={i} className="flex gap-2 items-center">
           <select
             value={row.userId}
             onChange={e => updateRow(i, 'userId', e.target.value)}
-            className="flex-1 bg-[#0f0f0f] border border-[#2e2e2e] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#5aadff]"
+            className="flex-1 bg-[#161410] border border-[#2c2820] rounded-lg px-3 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F]/60"
           >
             <option value="">Select player</option>
             {members.map(m => (
-              <option key={m.id} value={m.id} disabled={usedIds.includes(m.id) && m.id !== row.userId}>
+              <option key={m.id} value={m.id}
+                disabled={usedIds.includes(m.id) && m.id !== row.userId}>
                 {m.display_name}
               </option>
             ))}
@@ -73,29 +75,33 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
             type="number"
             min={0}
             value={row.score}
-            onChange={e => updateRow(i, 'score', parseInt(e.target.value) || 0)}
-            className="w-20 bg-[#0f0f0f] border border-[#2e2e2e] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#5aadff] text-center"
-            placeholder="pts"
+            onChange={e => updateRow(i, 'score', e.target.value)}
+            className="w-24 bg-[#161410] border border-[#2c2820] rounded-lg px-3 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F]/60 text-center"
+            placeholder="score"
           />
           {rows.length > 1 && (
-            <button onClick={() => removeRow(i)} className="text-gray-600 hover:text-red-400 text-lg px-1">×</button>
+            <button onClick={() => removeRow(i)} className="text-[#3a3228] hover:text-red-400 text-xl px-1 leading-none">×</button>
           )}
         </div>
       ))}
 
-      <button onClick={addRow} className="text-xs text-[#5aadff] hover:text-[#7abdff] transition-colors">
+      <button onClick={addRow} className="text-xs text-[#96321F]/70 hover:text-[#96321F] transition-colors">
         + Add player
       </button>
 
       <button
         onClick={submitScores}
         disabled={saving || rows.every(r => !r.userId)}
-        className="w-full bg-[#5aadff] text-black font-semibold py-2.5 rounded-xl disabled:opacity-40 text-sm"
+        className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base"
       >
         {saving ? 'Saving…' : 'Submit Scores'}
       </button>
 
-      {message && <p className="text-sm text-[#5dbb5d]">{message}</p>}
+      {message && (
+        <p className={`text-sm ${message.includes('!') ? 'text-[#87A67F]' : 'text-red-400'}`}>
+          {message}
+        </p>
+      )}
     </div>
   )
 }

@@ -17,7 +17,7 @@ interface Props {
 export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staffId }: Props) {
   const [selectedEventTypeId, setSelectedEventTypeId] = useState<string | null>(null)
 
-  const selectedET = eventTypes.find(et => et.id === selectedEventTypeId)
+  const selectedET   = eventTypes.find(et => et.id === selectedEventTypeId)
   const activePeriod = openPeriods.find(p => p.event_type_id === selectedEventTypeId)
 
   async function createPeriod(eventTypeId: string) {
@@ -36,26 +36,26 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
       {/* Event type picker */}
       <div className="grid gap-3">
         {eventTypes.map(et => {
-          const hasPeriod = openPeriods.some(p => p.event_type_id === et.id)
+          const hasPeriod  = openPeriods.some(p => p.event_type_id === et.id)
           const isSelected = selectedEventTypeId === et.id
           return (
             <button
               key={et.id}
               onClick={() => setSelectedEventTypeId(isSelected ? null : et.id)}
-              className={`w-full text-left bg-[#1a1a1a] border rounded-xl p-4 transition-all ${
-                isSelected ? 'border-[#f5c842]' : 'border-[#2e2e2e] hover:border-[#3e3e3e]'
+              className={`w-full text-left bg-[#161410] border rounded-xl p-4 transition-all ${
+                isSelected ? 'border-[#96321F]' : 'border-[#2c2820] hover:border-[#3a3228]'
               }`}
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{et.icon}</span>
                 <div className="flex-1">
-                  <p className="font-semibold text-white">{et.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-semibold text-[#F1F1E7]">{et.name}</p>
+                  <p className="text-xs text-[#7a6e5f]">
                     {et.day_of_week != null ? dayOfWeekLabel(et.day_of_week) : ''} · {et.participant_type} · {et.scoring_method.replace('_', '/')}
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  hasPeriod ? 'bg-green-900/40 text-green-400' : 'bg-[#2e2e2e] text-gray-500'
+                  hasPeriod ? 'bg-[#87A67F]/15 text-[#87A67F]' : 'bg-[#2c2820] text-[#7a6e5f]'
                 }`}>
                   {hasPeriod ? 'Active' : 'No period'}
                 </span>
@@ -67,13 +67,13 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
 
       {/* Score entry for selected event */}
       {selectedET && (
-        <div className="bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl p-4 space-y-4">
+        <div className="bg-[#161410] border border-[#2c2820] rounded-xl p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-white">{selectedET.name}</h3>
+            <h3 className="font-semibold text-[#F1F1E7]">{selectedET.name}</h3>
             {!activePeriod && (
               <button
                 onClick={() => createPeriod(selectedET.id)}
-                className="text-xs bg-[#f5c842] text-black font-bold px-3 py-1.5 rounded-lg"
+                className="text-xs bg-[#96321F] text-[#F1F1E7] font-bold px-3 py-1.5 rounded-lg hover:bg-[#ae3a24] transition-colors"
               >
                 Start Period
               </button>
@@ -81,12 +81,12 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
           </div>
 
           {!activePeriod ? (
-            <p className="text-sm text-gray-500">No active period. Start one to enter scores.</p>
+            <p className="text-sm text-[#7a6e5f]">No active period. Start one to enter scores.</p>
           ) : (
             <>
-              <p className="text-xs text-gray-500">Period: {activePeriod.label}</p>
+              <p className="text-xs text-[#7a6e5f]">Period: {activePeriod.label}</p>
 
-              {/* Branch on scoring method — driven by DB config, no hardcoding */}
+              {/* Branch on scoring method — driven by DB config */}
               {selectedET.scoring_method === 'wins_losses' && (
                 <CribbageScoreForm period={activePeriod} members={members} staffId={staffId} />
               )}

@@ -60,9 +60,9 @@ export default function JournalForm({ spirits, userId }: Props) {
     }
   }
 
-  const inputClass = "w-full bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f5c842] transition-colors text-sm"
+  const inputClass = "w-full bg-[#161410] border border-[#2c2820] rounded-xl px-4 py-3 text-[#F1F1E7] placeholder-[#3a3228] focus:outline-none focus:border-[#96321F]/60 transition-colors text-sm"
   const textareaClass = `${inputClass} resize-none`
-  const labelClass = "block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide"
+  const labelClass = "block text-xs font-medium text-[#7a6e5f] mb-1.5 uppercase tracking-widest"
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-10">
@@ -122,7 +122,7 @@ export default function JournalForm({ spirits, userId }: Props) {
               onClick={() => setRating(rating === n ? 0 : n)}
               className="text-2xl transition-all hover:scale-110"
             >
-              <span className={n <= rating ? 'text-[#f5c842]' : 'text-[#2e2e2e]'}>★</span>
+              <span className={n <= rating ? 'text-[#96321F]' : 'text-[#2c2820]'}>★</span>
             </button>
           ))}
         </div>
@@ -155,7 +155,7 @@ export default function JournalForm({ spirits, userId }: Props) {
       <button
         type="submit"
         disabled={loading || (!spiritId && !customName)}
-        className="w-full bg-[#f5c842] text-black font-bold py-4 rounded-xl disabled:opacity-40 hover:bg-[#f5d060] transition-colors"
+        className="w-full bg-[#96321F] text-[#F1F1E7] font-bold py-4 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
       >
         {loading ? 'Saving…' : 'Save Entry'}
       </button>

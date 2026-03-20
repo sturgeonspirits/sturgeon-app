@@ -30,17 +30,34 @@ export async function POST(req: NextRequest) {
     // ── Individual scoring (wins_losses or points) ────────
     if (scoringMethod !== 'placement' || teams.length === 0) {
       for (const entry of entries) {
-        const { userId, score = 0, wins = 0, losses = 0 } = entry
+        const { userId, score = 0, wins = 0, losses = 0, spread = 0 } = entry
+
+        // For wins_losses, we ACCUMULATE across matches in a period.
+        // Fetch the existing row first, then add to it.
+        const { data: existing } = await supabase
+          .from('leaderboard_events')
+          .select('wins, losses, score')
+          .eq('period_id', periodId)
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        const newWins   = (existing?.wins   ?? 0) + wins
+        const newLosses = (existing?.losses ?? 0) + losses
+        // For wins_losses: score field stores cumulative point spread
+        // For points: score field stores the raw score (replace, not add)
+        const newScore  = scoringMethod === 'wins_losses'
+          ? (existing?.score ?? 0) + spread
+          : score
 
         // Upsert leaderboard_events row
-        const { data: le } = await supabase
+        await supabase
           .from('leaderboard_events')
           .upsert({
             period_id:  periodId,
             user_id:    userId,
-            score:      score,
-            wins:       wins,
-            losses:     losses,
+            score:      newScore,
+            wins:       newWins,
+            losses:     newLosses,
             entered_by: staffId,
             entered_at: new Date().toISOString(),
           }, { onConflict: 'period_id,user_id' })
@@ -96,6 +113,19 @@ export async function POST(req: NextRequest) {
         await supabase.from('leaderboard_team_members').insert(
           memberIds.map((uid: string) => ({ team_id: teamRow.id, user_id: uid }))
         )
+
+        // Also write individual leaderboard_events rows for each member so the
+        // individual standings page auto-populates — no separate data entry needed.
+        for (const userId of memberIds) {
+          await supabase.from('leaderboard_events').upsert({
+            period_id:  periodId,
+            user_id:    userId,
+            score:      score,
+            placement:  placement,
+            entered_by: staffId,
+            entered_at: new Date().toISOString(),
+          }, { onConflict: 'period_id,user_id' })
+        }
 
         // Award points to each team member
         const pts = placementPoints[String(placement)] ?? placementPoints['participant'] ?? 25

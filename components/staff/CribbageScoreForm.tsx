@@ -9,107 +9,141 @@ interface Props {
   staffId: string
 }
 
-interface MatchResult {
-  winnerId: string
-  loserId:  string
+interface PlayerRow {
+  userId: string
+  wins:   string   // '0'|'1'|'2'|'3'
+  spread: string   // total point spread, can be negative
 }
 
 export default function CribbageScoreForm({ period, members, staffId }: Props) {
-  const [winner, setWinner]   = useState('')
-  const [loser, setLoser]     = useState('')
-  const [saving, setSaving]   = useState(false)
+  const [rows,    setRows]    = useState<PlayerRow[]>([{ userId: '', wins: '', spread: '' }])
+  const [saving,  setSaving]  = useState(false)
   const [message, setMessage] = useState('')
-  const [results, setResults] = useState<MatchResult[]>([])
 
-  async function submitMatch() {
-    if (!winner || !loser || winner === loser) return
+  function addRow() { setRows(r => [...r, { userId: '', wins: '', spread: '' }]) }
+  function removeRow(i: number) { setRows(r => r.filter((_, j) => j !== i)) }
+  function updateRow(i: number, field: keyof PlayerRow, value: string) {
+    setRows(r => r.map((row, j) => j === i ? { ...row, [field]: value } : row))
+  }
+
+  async function submitScores() {
+    const valid = rows.filter(r => r.userId && r.wins !== '')
+    if (valid.length === 0) return
     setSaving(true)
     setMessage('')
+
+    const entries = valid.map(r => {
+      const wins   = parseInt(r.wins)   || 0
+      const spread = parseInt(r.spread) || 0
+      return { userId: r.userId, wins, losses: 3 - wins, spread }
+    })
 
     const res = await fetch('/api/staff/leaderboard-score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        periodId:    period.id,
+        periodId:      period.id,
         scoringMethod: 'wins_losses',
         staffId,
-        entries: [
-          { userId: winner, wins: 1, losses: 0 },
-          { userId: loser,  wins: 0, losses: 1 },
-        ],
+        entries,
       }),
     })
 
     const json = await res.json()
     if (res.ok) {
-      setResults(prev => [...prev, { winnerId: winner, loserId: loser }])
-      setWinner('')
-      setLoser('')
-      setMessage('Match recorded ✓')
+      setMessage(`${valid.length} player${valid.length > 1 ? 's' : ''} saved!`)
+      setRows([{ userId: '', wins: '', spread: '' }])
+      setTimeout(() => setMessage(''), 3000)
     } else {
-      setMessage(json.error ?? 'Error saving match')
+      setMessage(json.error ?? 'Error saving scores')
     }
     setSaving(false)
   }
 
-  const memberName = (id: string) => members.find(m => m.id === id)?.display_name ?? id
+  const usedIds = rows.map(r => r.userId).filter(Boolean)
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-gray-500">Record each cribbage match individually</p>
+    <div className="space-y-3">
+      <p className="text-xs text-[#7a6e5f]">
+        Each player plays 3 matches — enter their wins and total point spread for the night
+      </p>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Winner 🏆</label>
-          <select
-            value={winner}
-            onChange={e => setWinner(e.target.value)}
-            className="w-full bg-[#0f0f0f] border border-[#2e2e2e] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#f5c842]"
-          >
-            <option value="">Select player</option>
-            {members.map(m => (
-              <option key={m.id} value={m.id} disabled={m.id === loser}>
-                {m.display_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Loser</label>
-          <select
-            value={loser}
-            onChange={e => setLoser(e.target.value)}
-            className="w-full bg-[#0f0f0f] border border-[#2e2e2e] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#f5c842]"
-          >
-            <option value="">Select player</option>
-            {members.map(m => (
-              <option key={m.id} value={m.id} disabled={m.id === winner}>
-                {m.display_name}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Column headers */}
+      <div className="grid grid-cols-[1fr_80px_96px_24px] gap-2 px-1">
+        <span className="text-xs text-[#3a3228] uppercase tracking-wide">Player</span>
+        <span className="text-xs text-[#3a3228] uppercase tracking-wide text-center">Wins</span>
+        <span className="text-xs text-[#3a3228] uppercase tracking-wide text-center">Spread</span>
+        <span />
       </div>
 
-      <button
-        onClick={submitMatch}
-        disabled={!winner || !loser || winner === loser || saving}
-        className="w-full bg-[#e87c3e] text-white font-semibold py-2.5 rounded-xl disabled:opacity-40 hover:bg-[#e88c4e] transition-colors text-sm"
-      >
-        {saving ? 'Saving…' : 'Record Match'}
+      {rows.map((row, i) => {
+        const winsNum = parseInt(row.wins)
+        return (
+          <div key={i} className="grid grid-cols-[1fr_80px_96px_24px] gap-2 items-center">
+            {/* Player */}
+            <select
+              value={row.userId}
+              onChange={e => updateRow(i, 'userId', e.target.value)}
+              className="bg-[#161410] border border-[#2c2820] rounded-lg px-3 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F]"
+            >
+              <option value="">Player</option>
+              {members.map(m => (
+                <option key={m.id} value={m.id}
+                  disabled={usedIds.includes(m.id) && m.id !== row.userId}>
+                  {m.display_name}
+                </option>
+              ))}
+            </select>
+
+            {/* Wins: tap 0–3 — min 44px tall for thumb taps */}
+            <div className="flex gap-1">
+              {[0, 1, 2, 3].map(n => (
+                <button
+                  key={n}
+                  onClick={() => updateRow(i, 'wins', String(n))}
+                  className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold border transition-all active:scale-95 ${
+                    row.wins === String(n)
+                      ? 'bg-[#96321F] text-[#F1F1E7] border-[#96321F]'
+                      : 'bg-[#161410] text-[#7a6e5f] border-[#2c2820] hover:border-[#96321F]/50'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            {/* Point spread (+ or –) */}
+            <input
+              type="number"
+              value={row.spread}
+              onChange={e => updateRow(i, 'spread', e.target.value)}
+              placeholder="±0"
+              className="bg-[#161410] border border-[#2c2820] rounded-lg px-2 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F] text-center"
+            />
+
+            {rows.length > 1 && (
+              <button onClick={() => removeRow(i)} className="text-[#3a3228] hover:text-red-400 text-xl leading-none">×</button>
+            )}
+          </div>
+        )
+      })}
+
+      <button onClick={addRow} className="text-xs text-[#96321F]/70 hover:text-[#96321F] transition-colors">
+        + Add player
       </button>
 
-      {message && <p className="text-sm text-[#5dbb5d]">{message}</p>}
+      <button
+        onClick={submitScores}
+        disabled={saving || rows.every(r => !r.userId || r.wins === '')}
+        className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base"
+      >
+        {saving ? 'Saving…' : 'Submit Scores'}
+      </button>
 
-      {results.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">This session:</p>
-          {results.map((r, i) => (
-            <p key={i} className="text-xs text-gray-400">
-              🏆 {memberName(r.winnerId)} def. {memberName(r.loserId)}
-            </p>
-          ))}
-        </div>
+      {message && (
+        <p className={`text-sm ${message.includes('!') ? 'text-[#5dbb5d]' : 'text-red-400'}`}>
+          {message}
+        </p>
       )}
     </div>
   )

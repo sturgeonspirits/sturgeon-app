@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -27,18 +28,31 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // ── Unauthenticated: redirect to login ──────────────────
-  if (!user && pathname !== '/auth/login' && pathname !== '/auth/verify' && !pathname.startsWith('/staff/login')) {
+  const publicPaths = [
+    '/auth/login',
+    '/auth/verify',
+    '/auth/callback',
+    '/dev-login',
+    '/api/dev-auth',
+    '/staff/login',
+  ]
+  if (!user && !publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
   // ── Staff routes: require staff or admin role ───────────
-  if (pathname.startsWith('/staff') && pathname !== '/staff/login') {
+  if (pathname.startsWith('/staff') && !pathname.startsWith('/staff/login')) {
     if (!user) {
       return NextResponse.redirect(new URL('/staff/login', request.url))
     }
 
-    // Check role via DB (keep this fast — profiles table is tiny)
-    const { data: profile } = await supabase
+    // Use service role to bypass RLS — middleware is server-only, never exposed to browser
+    const serviceClient = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data: profile } = await serviceClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)

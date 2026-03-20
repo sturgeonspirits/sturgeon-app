@@ -9,9 +9,9 @@ interface Props {
   eventType:     EventType
   currentPeriod: LeaderboardPeriod | null
   periods:       LeaderboardPeriod[]
-  entries:       any[]   // individual scores with profiles joined
-  teams:         any[]   // team scores with members joined
-  allTime:       any[]   // leaderboard_cache rows with profiles joined
+  entries:       any[]
+  teams:         any[]
+  allTime:       any[]
   currentUserId?: string
 }
 
@@ -25,7 +25,7 @@ export default function LeaderboardBoard({
   return (
     <div className="space-y-4">
       {/* Tab switcher */}
-      <div className="flex bg-[#1a1a1a] rounded-xl p-1 gap-1">
+      <div className="flex bg-[#161410] rounded-xl p-1 gap-1">
         {(['current', 'alltime'] as View[]).map(v => (
           <button
             key={v}
@@ -33,8 +33,8 @@ export default function LeaderboardBoard({
             className={cn(
               'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
               view === v
-                ? 'bg-[#2e2e2e] text-white'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'bg-[#2c2820] text-[#F1F1E7]'
+                : 'text-[#7a6e5f] hover:text-[#C8BCA4]'
             )}
           >
             {v === 'current' ? (currentPeriod?.label ?? 'This Week') : 'All Time'}
@@ -44,7 +44,7 @@ export default function LeaderboardBoard({
 
       {/* No data state */}
       {view === 'current' && !currentPeriod && (
-        <div className="text-center py-12 text-gray-600">
+        <div className="text-center py-12 text-[#7a6e5f]">
           <p className="text-4xl mb-3">{eventType.icon}</p>
           <p className="font-medium">No active leaderboard yet</p>
           <p className="text-sm mt-1">Check back after the next event night</p>
@@ -75,30 +75,37 @@ export default function LeaderboardBoard({
 // ── Cribbage: wins / losses ──────────────────────────────────
 
 function WinsLossesBoard({ entries, currentUserId }: { entries: any[]; currentUserId?: string }) {
-  const sorted = [...entries].sort((a, b) => b.wins - a.wins || a.losses - b.losses)
+  const sorted = [...entries].sort((a, b) =>
+    b.wins - a.wins || b.score - a.score || a.losses - b.losses
+  )
   return (
     <div className="space-y-2">
       {sorted.map((e, i) => {
-        const isMe = e.user_id === currentUserId
+        const isMe   = e.user_id === currentUserId
+        const spread = e.score ?? 0
+        const total  = e.wins + e.losses
         return (
           <div key={e.id} className={cn(
-            'bg-[#1a1a1a] border rounded-xl px-4 py-3 flex items-center gap-3',
-            isMe ? 'border-[#f5c842]/40' : 'border-[#2e2e2e]'
+            'bg-[#161410] border rounded-xl px-4 py-3 flex items-center gap-3',
+            isMe ? 'border-[#96321F]/40' : 'border-[#2c2820]'
           )}>
-            <span className="text-gray-500 text-sm w-6 text-center font-mono">{ordinal(i + 1)}</span>
+            <span className="text-[#7a6e5f] text-sm w-6 text-center font-mono">{ordinal(i + 1)}</span>
             <div className="flex-1">
-              <p className={cn('font-semibold text-sm', isMe ? 'text-[#f5c842]' : 'text-white')}>
+              <p className={cn('font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#F1F1E7]')}>
                 {e.profiles?.display_name ?? 'Unknown'}
-                {isMe && <span className="ml-2 text-xs text-[#f5c842]/60">you</span>}
+                {isMe && <span className="ml-2 text-xs text-[#96321F]/60">you</span>}
               </p>
-            </div>
-            <div className="text-right">
-              <p className="text-white font-bold text-sm">{e.wins}W – {e.losses}L</p>
-              {e.wins + e.losses > 0 && (
-                <p className="text-xs text-gray-500">
-                  {Math.round((e.wins / (e.wins + e.losses)) * 100)}% win
+              {total > 0 && (
+                <p className="text-xs text-[#7a6e5f] mt-0.5">
+                  {Math.round((e.wins / total) * 100)}% win rate
                 </p>
               )}
+            </div>
+            <div className="text-right">
+              <p className="text-[#F1F1E7] font-bold text-sm">{e.wins}W – {e.losses}L</p>
+              <p className={cn('text-xs font-mono mt-0.5', spread >= 0 ? 'text-[#87A67F]' : 'text-red-400')}>
+                {spread >= 0 ? '+' : ''}{spread} spread
+              </p>
             </div>
           </div>
         )
@@ -114,19 +121,19 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
   return (
     <div className="space-y-2">
       {sorted.map((e, i) => {
-        const isMe = e.user_id === currentUserId
+        const isMe  = e.user_id === currentUserId
         const medal = ['🥇', '🥈', '🥉'][i]
         return (
           <div key={e.id} className={cn(
-            'bg-[#1a1a1a] border rounded-xl px-4 py-3 flex items-center gap-3',
-            isMe ? 'border-[#5aadff]/40' : 'border-[#2e2e2e]'
+            'bg-[#161410] border rounded-xl px-4 py-3 flex items-center gap-3',
+            isMe ? 'border-[#7E613F]/40' : 'border-[#2c2820]'
           )}>
-            <span className="w-7 text-center">{medal ?? <span className="text-gray-500 text-sm">{i + 1}</span>}</span>
-            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#5aadff]' : 'text-white')}>
+            <span className="w-7 text-center">{medal ?? <span className="text-[#7a6e5f] text-sm">{i + 1}</span>}</span>
+            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#C8BCA4]' : 'text-[#F1F1E7]')}>
               {e.profiles?.display_name ?? 'Unknown'}
-              {isMe && <span className="ml-2 text-xs text-[#5aadff]/60">you</span>}
+              {isMe && <span className="ml-2 text-xs text-[#C8BCA4]/60">you</span>}
             </p>
-            <p className="text-white font-bold">{e.score.toLocaleString()} pts</p>
+            <p className="text-[#F1F1E7] font-bold">{e.score.toLocaleString()} pts</p>
           </div>
         )
       })}
@@ -146,21 +153,21 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
         const medal = ['🥇', '🥈', '🥉'][i]
         return (
           <div key={team.id} className={cn(
-            'bg-[#1a1a1a] border rounded-xl p-4',
-            isMyTeam ? 'border-[#b06aff]/40' : 'border-[#2e2e2e]'
+            'bg-[#161410] border rounded-xl p-4',
+            isMyTeam ? 'border-[#87A67F]/40' : 'border-[#2c2820]'
           )}>
             <div className="flex items-center gap-3 mb-2">
-              <span className="w-7 text-center">{medal ?? <span className="text-gray-500 text-sm">{i + 1}</span>}</span>
-              <p className={cn('flex-1 font-semibold', isMyTeam ? 'text-[#b06aff]' : 'text-white')}>
+              <span className="w-7 text-center">{medal ?? <span className="text-[#7a6e5f] text-sm">{i + 1}</span>}</span>
+              <p className={cn('flex-1 font-semibold', isMyTeam ? 'text-[#87A67F]' : 'text-[#F1F1E7]')}>
                 {team.name}
-                {isMyTeam && <span className="ml-2 text-xs text-[#b06aff]/60">your team</span>}
+                {isMyTeam && <span className="ml-2 text-xs text-[#87A67F]/60">your team</span>}
               </p>
-              <p className="text-white font-bold text-sm">{team.score.toLocaleString()} pts</p>
+              <p className="text-[#F1F1E7] font-bold text-sm">{team.score.toLocaleString()} pts</p>
             </div>
             {/* Team members */}
             <div className="flex flex-wrap gap-1 ml-10">
               {(team.leaderboard_team_members ?? []).map((m: any) => (
-                <span key={m.user_id} className="text-xs bg-[#2e2e2e] text-gray-400 px-2 py-0.5 rounded-full">
+                <span key={m.user_id} className="text-xs bg-[#2c2820] text-[#7a6e5f] px-2 py-0.5 rounded-full">
                   {m.profiles?.display_name ?? 'Member'}
                 </span>
               ))}
@@ -176,7 +183,7 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
 
 function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventType: EventType; currentUserId?: string }) {
   if (rows.length === 0) {
-    return <p className="text-center text-gray-600 py-8">No all-time records yet</p>
+    return <p className="text-center text-[#7a6e5f] py-8">No all-time records yet</p>
   }
 
   const isWinsLosses = eventType.scoring_method === 'wins_losses'
@@ -187,21 +194,21 @@ function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventTy
         const isMe = row.user_id === currentUserId
         return (
           <div key={`${row.event_type_id}-${row.user_id}`} className={cn(
-            'bg-[#1a1a1a] border rounded-xl px-4 py-3 flex items-center gap-3',
-            isMe ? 'border-[#f5c842]/40' : 'border-[#2e2e2e]'
+            'bg-[#161410] border rounded-xl px-4 py-3 flex items-center gap-3',
+            isMe ? 'border-[#96321F]/40' : 'border-[#2c2820]'
           )}>
-            <span className="text-gray-500 text-sm w-6 text-center font-mono">{i + 1}</span>
-            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#f5c842]' : 'text-white')}>
+            <span className="text-[#7a6e5f] text-sm w-6 text-center font-mono">{i + 1}</span>
+            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#F1F1E7]')}>
               {row.profiles?.display_name ?? 'Unknown'}
               {isMe && <span className="ml-2 text-xs opacity-60">you</span>}
             </p>
             <div className="text-right">
               {isWinsLosses ? (
-                <p className="text-white font-bold text-sm">{row.total_wins}W</p>
+                <p className="text-[#F1F1E7] font-bold text-sm">{row.total_wins}W</p>
               ) : (
-                <p className="text-white font-bold text-sm">{(row.total_score ?? 0).toLocaleString()} pts</p>
+                <p className="text-[#F1F1E7] font-bold text-sm">{(row.total_score ?? 0).toLocaleString()} pts</p>
               )}
-              <p className="text-xs text-gray-600">{row.events_attended} events</p>
+              <p className="text-xs text-[#7a6e5f]">{row.events_attended} events</p>
             </div>
           </div>
         )

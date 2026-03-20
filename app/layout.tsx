@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from 'next'
+import { Vollkorn, Inter } from 'next/font/google'
 import './globals.css'
+
+// Vollkorn: brand body/display font (closest Google Fonts match to brand's Vollkorn spec)
+const vollkorn = Vollkorn({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Sturgeon Spirits',
@@ -10,7 +25,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f0f0f',
+  themeColor: '#0e0d0b',   // brand warm black
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -19,11 +34,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${vollkorn.variable} ${inter.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body className="bg-[#0f0f0f] text-white antialiased overscroll-none">
+      <body className={`${vollkorn.variable} ${inter.variable} font-sans bg-[#0e0d0b] text-[#F1F1E7] antialiased overscroll-none`}>
         {children}
       </body>
     </html>

@@ -29,8 +29,8 @@ export default async function StaffScoresPage() {
   return (
     <div className="space-y-6 py-4">
       <div>
-        <h1 className="text-xl font-bold text-white">Enter Scores</h1>
-        <p className="text-sm text-gray-500">Select an event to record results</p>
+        <h1 className="text-xl font-bold text-[#F1F1E7]">Enter Scores</h1>
+        <p className="text-sm text-[#7a6e5f]">Select an event to record results</p>
       </div>
       <ScoreEntryPanel
         eventTypes={eventTypes ?? []}

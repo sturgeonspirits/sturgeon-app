@@ -4,28 +4,78 @@
 
 @layer base {
   :root {
-    --brand-gold:   #f5c842;
-    --brand-orange: #e87c3e;
-    --brand-blue:   #5aadff;
-    --brand-purple: #b06aff;
-    --brand-green:  #5dbb5d;
-    --bg:           #0f0f0f;
-    --surface:      #1a1a1a;
-    --border:       #2e2e2e;
-    --text-muted:   #888;
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    /* ── Sturgeon Spirits Official Brand Colors ── */
+    --brand-rust:   #96321F;   /* Primary accent — Rust Red */
+    --brand-brown:  #7E613F;   /* Secondary — Brown */
+    --brand-cream:  #F1F1E7;   /* Light text / light backgrounds */
+    --brand-tan:    #C8BCA4;   /* Muted text, borders */
+    --brand-olive:  #87A67F;   /* Accent green */
+    --brand-black:  #242622;   /* Brand black */
+
+    /* ── Legacy aliases (keep for backward compat) ── */
+    --brand-gold:   #96321F;   /* remapped → rust */
+    --brand-orange: #96321F;   /* remapped → rust */
+    --brand-green:  #87A67F;   /* remapped → olive */
+
+    /* ── Dark theme surfaces ── */
+    --bg:           #0e0d0b;   /* Near-black with warm tint */
+    --surface:      #161410;   /* Warm dark surface */
+    --surface-2:    #1e1b16;   /* Slightly lighter */
+    --border:       #2c2820;   /* Warm dark border */
+    --border-2:     #3a3228;   /* Lighter border */
+    --text-primary: #F1F1E7;   /* Cream — primary text */
+    --text-muted:   #7a6e5f;   /* Warm muted text */
+    --safe-bottom:  env(safe-area-inset-bottom, 0px);
+    --font-display: 'Vollkorn', Georgia, serif;
+    --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
-  * { -webkit-tap-highlight-color: transparent; }
+  * {
+    -webkit-tap-highlight-color: transparent;   /* no blue flash on tap */
+    box-sizing: border-box;
+  }
+
+  /* Prevent bounce scroll on iOS at the document level */
+  html, body { height: 100%; overscroll-behavior: none; }
 
   body {
     background: var(--bg);
-    color: #e8e8e8;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    /* Improve text rendering on mobile */
+    -webkit-font-smoothing: antialiased;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
   }
 
+  /* Remove default input styling on iOS */
+  input, select, textarea, button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  select { background-image: none; }
+
+  /* Grain overlay on auth pages — cracked ice / paper texture feel */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 128px;
+    z-index: 9999;
+  }
+
+  .font-display { font-family: var(--font-display); }
+
+  /* Rust red accent utilities */
+  .text-brand    { color: var(--brand-rust); }
+  .bg-brand      { background-color: var(--brand-rust); }
+  .border-brand  { border-color: var(--brand-rust); }
+
   /* Safe area for tab bar on iOS */
-  .pb-safe { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .pb-safe { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }
 
 @layer utilities {
