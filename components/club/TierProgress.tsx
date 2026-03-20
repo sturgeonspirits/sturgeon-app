@@ -24,12 +24,12 @@ export default function TierProgress({ currentTier, lifetimeEarned, tiers }: Pro
   if (!nextTier) {
     // Captain — max tier
     return (
-      <div className="bg-[#161410] border border-[#96321F]/35 rounded-2xl p-4">
+      <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xl">⚓</span>
           <p className="font-bold text-[#96321F]">Captain</p>
         </div>
-        <p className="text-xs text-[#7a6e5f]">You've reached the highest tier. Legendary.</p>
+        <p className="text-xs text-[#7E613F]">You've reached the highest tier. Legendary.</p>
       </div>
     )
   }
@@ -44,31 +44,31 @@ export default function TierProgress({ currentTier, lifetimeEarned, tiers }: Pro
   const nextColor  = TIER_COLORS[nextTier.tier] ?? nextTier.color
 
   return (
-    <div className="bg-[#161410] border border-[#2c2820] rounded-2xl p-4">
+    <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs text-[#7a6e5f] mb-0.5">Current tier</p>
+          <p className="text-xs text-[#7E613F] mb-0.5">Current tier</p>
           <p className="font-semibold text-sm" style={{ color: tierColor }}>
             {tierLabel(currentTier)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-[#7a6e5f] mb-0.5">Next tier</p>
+          <p className="text-xs text-[#7E613F] mb-0.5">Next tier</p>
           <p className="font-semibold text-sm" style={{ color: nextColor }}>
             {nextTier.label}
           </p>
         </div>
       </div>
 
-      <div className="h-1.5 bg-[#2c2820] rounded-full overflow-hidden mb-2">
+      <div className="h-1.5 bg-[#E8E4D6] rounded-full overflow-hidden mb-2">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${progress}%`, backgroundColor: nextColor }}
         />
       </div>
 
-      <p className="text-xs text-[#7a6e5f]">
-        <span className="text-[#F1F1E7] font-medium">{remaining.toLocaleString()} pts</span> to {nextTier.label}
+      <p className="text-xs text-[#7E613F]">
+        <span className="text-[#242622] font-medium">{remaining.toLocaleString()} pts</span> to {nextTier.label}
       </p>
     </div>
   )

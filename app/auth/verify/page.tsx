@@ -76,7 +76,7 @@ export default function VerifyPage() {
   }
 
   return (
-    <div className="grain min-h-screen bg-[#0e0d0b] flex flex-col items-center justify-center p-6">
+    <div className="grain min-h-screen bg-[#F1F1E7] flex flex-col items-center justify-center p-6">
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[400px] h-[300px] rounded-full bg-[#96321F]/8 blur-[120px]" />
@@ -87,10 +87,10 @@ export default function VerifyPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#96321F]/10 border border-[#96321F]/20 mb-4">
             <span className="text-3xl">📬</span>
           </div>
-          <h1 className="text-xl font-bold text-[#F1F1E7]">Check your email</h1>
-          <p className="text-sm text-[#7a6e5f] mt-2">
+          <h1 className="text-xl font-bold text-[#242622]">Check your email</h1>
+          <p className="text-sm text-[#7E613F] mt-2">
             We sent an 8-digit code to<br />
-            <span className="text-[#F1F1E7] font-medium">{email}</span>
+            <span className="text-[#242622] font-medium">{email}</span>
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export default function VerifyPage() {
               disabled={loading}
               onChange={e => handleDigitChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)}
-              className="w-10 h-14 text-center text-xl font-bold bg-[#161410] border border-[#2c2820] rounded-xl text-[#F1F1E7] focus:outline-none focus:border-[#96321F]/60 disabled:opacity-40 transition-colors"
+              className="w-10 h-14 text-center text-xl font-bold bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl text-[#242622] focus:outline-none focus:border-[#96321F] disabled:opacity-40 transition-colors"
             />
           ))}
         </div>
@@ -118,17 +118,17 @@ export default function VerifyPage() {
         )}
 
         {error && (
-          <p className="text-red-400 text-sm text-center bg-red-900/20 border border-red-900/40 rounded-lg px-3 py-2 mb-4">
+          <p className="text-red-600 text-sm text-center bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
             {error}
           </p>
         )}
 
         <div className="text-center space-y-3 mt-4">
-          <button onClick={resendCode} className="text-sm text-[#7a6e5f] hover:text-[#F1F1E7] transition-colors">
+          <button onClick={resendCode} className="text-sm text-[#7E613F] hover:text-[#242622] transition-colors">
             Resend code
           </button>
           <br />
-          <a href="/auth/login" className="text-xs text-[#2c2820] hover:text-[#7a6e5f] transition-colors">
+          <a href="/auth/login" className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors">
             ← Use a different email
           </a>
         </div>

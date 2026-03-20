@@ -70,9 +70,9 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
 
       {/* Column headers */}
       <div className="grid grid-cols-[1fr_80px_96px_24px] gap-2 px-1">
-        <span className="text-xs text-[#3a3228] uppercase tracking-wide">Player</span>
-        <span className="text-xs text-[#3a3228] uppercase tracking-wide text-center">Wins</span>
-        <span className="text-xs text-[#3a3228] uppercase tracking-wide text-center">Spread</span>
+        <span className="text-xs text-[#7E613F] uppercase tracking-wide">Player</span>
+        <span className="text-xs text-[#7E613F] uppercase tracking-wide text-center">Wins</span>
+        <span className="text-xs text-[#7E613F] uppercase tracking-wide text-center">Spread</span>
         <span />
       </div>
 
@@ -84,7 +84,7 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
             <select
               value={row.userId}
               onChange={e => updateRow(i, 'userId', e.target.value)}
-              className="bg-[#161410] border border-[#2c2820] rounded-lg px-3 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F]"
+              className="bg-[#FFFFFF] border border-[#C8BCA4] rounded-lg px-3 min-h-[44px] text-[#242622] text-base focus:outline-none focus:border-[#96321F]"
             >
               <option value="">Player</option>
               {members.map(m => (
@@ -103,8 +103,8 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
                   onClick={() => updateRow(i, 'wins', String(n))}
                   className={`flex-1 min-h-[44px] rounded-lg text-sm font-bold border transition-all active:scale-95 ${
                     row.wins === String(n)
-                      ? 'bg-[#96321F] text-[#F1F1E7] border-[#96321F]'
-                      : 'bg-[#161410] text-[#7a6e5f] border-[#2c2820] hover:border-[#96321F]/50'
+                      ? 'bg-[#96321F] text-[#FFFFFF] border-[#96321F]'
+                      : 'bg-[#FFFFFF] text-[#7E613F] border-[#D4CFC3] hover:border-[#96321F]/50'
                   }`}
                 >
                   {n}
@@ -118,11 +118,11 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
               value={row.spread}
               onChange={e => updateRow(i, 'spread', e.target.value)}
               placeholder="±0"
-              className="bg-[#161410] border border-[#2c2820] rounded-lg px-2 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F] text-center"
+              className="bg-[#FFFFFF] border border-[#C8BCA4] rounded-lg px-2 min-h-[44px] text-[#242622] text-base focus:outline-none focus:border-[#96321F] text-center"
             />
 
             {rows.length > 1 && (
-              <button onClick={() => removeRow(i)} className="text-[#3a3228] hover:text-red-400 text-xl leading-none">×</button>
+              <button onClick={() => removeRow(i)} className="text-[#9E8F7E] hover:text-red-500 text-xl leading-none">×</button>
             )}
           </div>
         )
@@ -135,13 +135,13 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
       <button
         onClick={submitScores}
         disabled={saving || rows.every(r => !r.userId || r.wins === '')}
-        className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base"
+        className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base"
       >
         {saving ? 'Saving…' : 'Submit Scores'}
       </button>
 
       {message && (
-        <p className={`text-sm ${message.includes('!') ? 'text-[#5dbb5d]' : 'text-red-400'}`}>
+        <p className={`text-sm ${message.includes('!') ? 'text-[#5dbb5d]' : 'text-red-500'}`}>
           {message}
         </p>
       )}

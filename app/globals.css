@@ -5,71 +5,64 @@
 @layer base {
   :root {
     /* ── Sturgeon Spirits Official Brand Colors ── */
-    --brand-rust:   #96321F;   /* Primary accent — Rust Red */
-    --brand-brown:  #7E613F;   /* Secondary — Brown */
-    --brand-cream:  #F1F1E7;   /* Light text / light backgrounds */
-    --brand-tan:    #C8BCA4;   /* Muted text, borders */
-    --brand-olive:  #87A67F;   /* Accent green */
-    --brand-black:  #242622;   /* Brand black */
+    --brand-rust:   #96321F;   /* Accent — Rust Red (use sparingly) */
+    --brand-brown:  #7E613F;   /* Secondary text / Brown */
+    --brand-cream:  #F1F1E7;   /* Primary background */
+    --brand-tan:    #C8BCA4;   /* Borders, alt surfaces */
+    --brand-olive:  #87A67F;   /* Accent green (use sparingly) */
+    --brand-black:  #242622;   /* Primary text / Brand black */
 
-    /* ── Legacy aliases (keep for backward compat) ── */
-    --brand-gold:   #96321F;   /* remapped → rust */
-    --brand-orange: #96321F;   /* remapped → rust */
-    --brand-green:  #87A67F;   /* remapped → olive */
+    /* ── Light theme surfaces ── */
+    --bg:           #F1F1E7;   /* Cream — primary background */
+    --bg-alt:       #E8E4D6;   /* Slightly darker cream for sections */
+    --surface:      #FFFFFF;   /* White cards */
+    --surface-tan:  #EDE9DC;   /* Warm off-cream surface */
+    --border:       #D4CFC3;   /* Light warm border */
+    --border-dark:  #C8BCA4;   /* Tan border */
 
-    /* ── Dark theme surfaces ── */
-    --bg:           #0e0d0b;   /* Near-black with warm tint */
-    --surface:      #161410;   /* Warm dark surface */
-    --surface-2:    #1e1b16;   /* Slightly lighter */
-    --border:       #2c2820;   /* Warm dark border */
-    --border-2:     #3a3228;   /* Lighter border */
-    --text-primary: #F1F1E7;   /* Cream — primary text */
-    --text-muted:   #7a6e5f;   /* Warm muted text */
-    --safe-bottom:  env(safe-area-inset-bottom, 0px);
-    --font-display: 'Vollkorn', Georgia, serif;
+    /* ── Typography ── */
+    --text-primary:   #242622;  /* Brand black */
+    --text-secondary: #7E613F;  /* Brown */
+    --text-muted:     #9E8F7E;  /* Warm muted */
+
+    /* ── Navigation ── */
+    --tab-bg:       #242622;   /* Brand black tab bar */
+
+    /* ── Fonts ── */
+    --font-display: 'Barlow Condensed', 'Trade Gothic', 'Franklin Gothic Medium', sans-serif;
+    --font-body:    'Vollkorn', Georgia, serif;
     --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --safe-bottom:  env(safe-area-inset-bottom, 0px);
   }
 
   * {
-    -webkit-tap-highlight-color: transparent;   /* no blue flash on tap */
+    -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
   }
 
-  /* Prevent bounce scroll on iOS at the document level */
   html, body { height: 100%; overscroll-behavior: none; }
 
   body {
     background: var(--bg);
     color: var(--text-primary);
     font-family: var(--font-sans);
-    /* Improve text rendering on mobile */
     -webkit-font-smoothing: antialiased;
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
   }
 
-  /* Remove default input styling on iOS */
   input, select, textarea, button {
     -webkit-appearance: none;
     appearance: none;
   }
   select { background-image: none; }
 
-  /* Grain overlay on auth pages — cracked ice / paper texture feel */
-  .grain::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.045;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    background-size: 128px;
-    z-index: 9999;
-  }
+  /* Utility classes */
+  .font-display  { font-family: var(--font-display); }
+  .font-body     { font-family: var(--font-body); }
 
-  .font-display { font-family: var(--font-display); }
-
-  /* Rust red accent utilities */
+  /* Brand color utilities */
   .text-brand    { color: var(--brand-rust); }
   .bg-brand      { background-color: var(--brand-rust); }
   .border-brand  { border-color: var(--brand-rust); }

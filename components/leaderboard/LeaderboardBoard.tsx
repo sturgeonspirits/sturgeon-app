@@ -25,7 +25,7 @@ export default function LeaderboardBoard({
   return (
     <div className="space-y-4">
       {/* Tab switcher */}
-      <div className="flex bg-[#161410] rounded-xl p-1 gap-1">
+      <div className="flex bg-[#EDE9DC] rounded-xl p-1 gap-1">
         {(['current', 'alltime'] as View[]).map(v => (
           <button
             key={v}
@@ -33,8 +33,8 @@ export default function LeaderboardBoard({
             className={cn(
               'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
               view === v
-                ? 'bg-[#2c2820] text-[#F1F1E7]'
-                : 'text-[#7a6e5f] hover:text-[#C8BCA4]'
+                ? 'bg-[#FFFFFF] text-[#242622]'
+                : 'text-[#7E613F] hover:text-[#242622]'
             )}
           >
             {v === 'current' ? (currentPeriod?.label ?? 'This Week') : 'All Time'}
@@ -44,7 +44,7 @@ export default function LeaderboardBoard({
 
       {/* No data state */}
       {view === 'current' && !currentPeriod && (
-        <div className="text-center py-12 text-[#7a6e5f]">
+        <div className="text-center py-12 text-[#7E613F]">
           <p className="text-4xl mb-3">{eventType.icon}</p>
           <p className="font-medium">No active leaderboard yet</p>
           <p className="text-sm mt-1">Check back after the next event night</p>
@@ -86,24 +86,24 @@ function WinsLossesBoard({ entries, currentUserId }: { entries: any[]; currentUs
         const total  = e.wins + e.losses
         return (
           <div key={e.id} className={cn(
-            'bg-[#161410] border rounded-xl px-4 py-3 flex items-center gap-3',
-            isMe ? 'border-[#96321F]/40' : 'border-[#2c2820]'
+            'bg-[#FFFFFF] border rounded-xl px-4 py-3 flex items-center gap-3',
+            isMe ? 'border-[#96321F]/40' : 'border-[#D4CFC3]'
           )}>
-            <span className="text-[#7a6e5f] text-sm w-6 text-center font-mono">{ordinal(i + 1)}</span>
+            <span className="text-[#7E613F] text-sm w-6 text-center font-mono">{ordinal(i + 1)}</span>
             <div className="flex-1">
-              <p className={cn('font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#F1F1E7]')}>
+              <p className={cn('font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
                 {e.profiles?.display_name ?? 'Unknown'}
                 {isMe && <span className="ml-2 text-xs text-[#96321F]/60">you</span>}
               </p>
               {total > 0 && (
-                <p className="text-xs text-[#7a6e5f] mt-0.5">
+                <p className="text-xs text-[#7E613F] mt-0.5">
                   {Math.round((e.wins / total) * 100)}% win rate
                 </p>
               )}
             </div>
             <div className="text-right">
-              <p className="text-[#F1F1E7] font-bold text-sm">{e.wins}W – {e.losses}L</p>
-              <p className={cn('text-xs font-mono mt-0.5', spread >= 0 ? 'text-[#87A67F]' : 'text-red-400')}>
+              <p className="text-[#242622] font-bold text-sm">{e.wins}W – {e.losses}L</p>
+              <p className={cn('text-xs font-mono mt-0.5', spread >= 0 ? 'text-[#87A67F]' : 'text-red-500')}>
                 {spread >= 0 ? '+' : ''}{spread} spread
               </p>
             </div>
@@ -125,15 +125,15 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
         const medal = ['🥇', '🥈', '🥉'][i]
         return (
           <div key={e.id} className={cn(
-            'bg-[#161410] border rounded-xl px-4 py-3 flex items-center gap-3',
-            isMe ? 'border-[#7E613F]/40' : 'border-[#2c2820]'
+            'bg-[#FFFFFF] border rounded-xl px-4 py-3 flex items-center gap-3',
+            isMe ? 'border-[#7E613F]/40' : 'border-[#D4CFC3]'
           )}>
-            <span className="w-7 text-center">{medal ?? <span className="text-[#7a6e5f] text-sm">{i + 1}</span>}</span>
-            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#C8BCA4]' : 'text-[#F1F1E7]')}>
+            <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm">{i + 1}</span>}</span>
+            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#7E613F]' : 'text-[#242622]')}>
               {e.profiles?.display_name ?? 'Unknown'}
-              {isMe && <span className="ml-2 text-xs text-[#C8BCA4]/60">you</span>}
+              {isMe && <span className="ml-2 text-xs text-[#7E613F]/60">you</span>}
             </p>
-            <p className="text-[#F1F1E7] font-bold">{e.score.toLocaleString()} pts</p>
+            <p className="text-[#242622] font-bold">{e.score.toLocaleString()} pts</p>
           </div>
         )
       })}
@@ -153,21 +153,21 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
         const medal = ['🥇', '🥈', '🥉'][i]
         return (
           <div key={team.id} className={cn(
-            'bg-[#161410] border rounded-xl p-4',
-            isMyTeam ? 'border-[#87A67F]/40' : 'border-[#2c2820]'
+            'bg-[#FFFFFF] border rounded-xl p-4',
+            isMyTeam ? 'border-[#87A67F]/40' : 'border-[#D4CFC3]'
           )}>
             <div className="flex items-center gap-3 mb-2">
-              <span className="w-7 text-center">{medal ?? <span className="text-[#7a6e5f] text-sm">{i + 1}</span>}</span>
-              <p className={cn('flex-1 font-semibold', isMyTeam ? 'text-[#87A67F]' : 'text-[#F1F1E7]')}>
+              <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm">{i + 1}</span>}</span>
+              <p className={cn('flex-1 font-semibold', isMyTeam ? 'text-[#87A67F]' : 'text-[#242622]')}>
                 {team.name}
                 {isMyTeam && <span className="ml-2 text-xs text-[#87A67F]/60">your team</span>}
               </p>
-              <p className="text-[#F1F1E7] font-bold text-sm">{team.score.toLocaleString()} pts</p>
+              <p className="text-[#242622] font-bold text-sm">{team.score.toLocaleString()} pts</p>
             </div>
             {/* Team members */}
             <div className="flex flex-wrap gap-1 ml-10">
               {(team.leaderboard_team_members ?? []).map((m: any) => (
-                <span key={m.user_id} className="text-xs bg-[#2c2820] text-[#7a6e5f] px-2 py-0.5 rounded-full">
+                <span key={m.user_id} className="text-xs bg-[#EDE9DC] text-[#7E613F] px-2 py-0.5 rounded-full">
                   {m.profiles?.display_name ?? 'Member'}
                 </span>
               ))}
@@ -183,7 +183,7 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
 
 function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventType: EventType; currentUserId?: string }) {
   if (rows.length === 0) {
-    return <p className="text-center text-[#7a6e5f] py-8">No all-time records yet</p>
+    return <p className="text-center text-[#7E613F] py-8">No all-time records yet</p>
   }
 
   const isWinsLosses = eventType.scoring_method === 'wins_losses'
@@ -194,21 +194,21 @@ function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventTy
         const isMe = row.user_id === currentUserId
         return (
           <div key={`${row.event_type_id}-${row.user_id}`} className={cn(
-            'bg-[#161410] border rounded-xl px-4 py-3 flex items-center gap-3',
-            isMe ? 'border-[#96321F]/40' : 'border-[#2c2820]'
+            'bg-[#FFFFFF] border rounded-xl px-4 py-3 flex items-center gap-3',
+            isMe ? 'border-[#96321F]/40' : 'border-[#D4CFC3]'
           )}>
-            <span className="text-[#7a6e5f] text-sm w-6 text-center font-mono">{i + 1}</span>
-            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#F1F1E7]')}>
+            <span className="text-[#7E613F] text-sm w-6 text-center font-mono">{i + 1}</span>
+            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
               {row.profiles?.display_name ?? 'Unknown'}
               {isMe && <span className="ml-2 text-xs opacity-60">you</span>}
             </p>
             <div className="text-right">
               {isWinsLosses ? (
-                <p className="text-[#F1F1E7] font-bold text-sm">{row.total_wins}W</p>
+                <p className="text-[#242622] font-bold text-sm">{row.total_wins}W</p>
               ) : (
-                <p className="text-[#F1F1E7] font-bold text-sm">{(row.total_score ?? 0).toLocaleString()} pts</p>
+                <p className="text-[#242622] font-bold text-sm">{(row.total_score ?? 0).toLocaleString()} pts</p>
               )}
-              <p className="text-xs text-[#7a6e5f]">{row.events_attended} events</p>
+              <p className="text-xs text-[#7E613F]">{row.events_attended} events</p>
             </div>
           </div>
         )

@@ -55,7 +55,7 @@ export default function StaffLoginPage() {
   }
 
   return (
-    <div className="grain min-h-screen bg-[#0e0d0b] flex flex-col items-center justify-center p-6">
+    <div className="grain min-h-screen bg-[#F1F1E7] flex flex-col items-center justify-center p-6">
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[400px] h-[300px] rounded-full bg-[#96321F]/8 blur-[120px]" />
@@ -66,14 +66,14 @@ export default function StaffLoginPage() {
           <div className="inline-block bg-[#96321F]/10 border border-[#96321F]/25 text-[#96321F] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4">
             Staff Console
           </div>
-          <h1 className="text-xl font-bold text-[#F1F1E7]">Sturgeon Spirits</h1>
-          <p className="text-sm text-[#7a6e5f] mt-1">Staff sign in</p>
+          <h1 className="text-xl font-bold text-[#242622]">Sturgeon Spirits</h1>
+          <p className="text-sm text-[#7E613F] mt-1">Staff sign in</p>
         </div>
 
         {!sent ? (
           <form onSubmit={requestCode} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-[#7a6e5f] mb-1.5 uppercase tracking-widest">
+              <label className="block text-xs font-medium text-[#7E613F] mb-1.5 uppercase tracking-widest">
                 Staff email
               </label>
               <input
@@ -82,22 +82,22 @@ export default function StaffLoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="staff@sturgeonspiritsdistillery.com"
-                className="w-full bg-[#161410] border border-[#2c2820] rounded-xl px-4 py-3.5 text-[#F1F1E7] placeholder-[#3a3228] focus:outline-none focus:border-[#96321F]/60 transition-colors"
+                className="w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3.5 text-[#242622] placeholder-[#9E8F7E] focus:outline-none focus:border-[#96321F] transition-colors"
               />
             </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
+              className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
             >
               {loading ? 'Sending…' : 'Send Code'}
             </button>
           </form>
         ) : (
           <form onSubmit={verifyCode} className="space-y-4">
-            <p className="text-sm text-[#7a6e5f] text-center mb-2">
-              Enter the code sent to <span className="text-[#F1F1E7]">{email}</span>
+            <p className="text-sm text-[#7E613F] text-center mb-2">
+              Enter the code sent to <span className="text-[#242622]">{email}</span>
             </p>
             <input
               type="text"
@@ -109,20 +109,20 @@ export default function StaffLoginPage() {
               value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
               placeholder="· · · · · ·"
-              className="w-full text-center text-2xl font-bold tracking-[0.4em] bg-[#161410] border border-[#2c2820] rounded-xl px-4 py-3.5 text-[#F1F1E7] focus:outline-none focus:border-[#96321F]/60 transition-colors"
+              className="w-full text-center text-2xl font-bold tracking-[0.4em] bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3.5 text-[#242622] focus:outline-none focus:border-[#96321F] transition-colors"
             />
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            {error && <p className="text-red-600 text-sm text-center">{error}</p>}
             <button
               type="submit"
               disabled={loading || code.length < 6}
-              className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
+              className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
             >
               {loading ? 'Verifying…' : 'Sign In'}
             </button>
             <button
               type="button"
               onClick={() => setSent(false)}
-              className="w-full text-[#7a6e5f] text-sm hover:text-[#F1F1E7] transition-colors"
+              className="w-full text-[#7E613F] text-sm hover:text-[#242622] transition-colors"
             >
               ← Different email
             </button>
@@ -130,7 +130,7 @@ export default function StaffLoginPage() {
         )}
 
         <div className="mt-8 text-center">
-          <a href="/auth/login" className="text-xs text-[#2c2820] hover:text-[#7a6e5f] transition-colors">
+          <a href="/auth/login" className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors">
             Member login →
           </a>
         </div>

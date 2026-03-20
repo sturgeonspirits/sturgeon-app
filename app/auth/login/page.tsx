@@ -37,7 +37,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grain min-h-screen bg-[#0e0d0b] flex flex-col">
+    <div className="grain min-h-screen bg-[#F1F1E7] flex flex-col">
       {/* Ambient glow — warm rust */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[500px] h-[360px] rounded-full bg-[#96321F]/10 blur-[140px]" />
@@ -47,13 +47,13 @@ export default function LoginPage() {
       <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Brand mark */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#161410] border border-[#96321F]/30 mb-5 shadow-xl shadow-black/50">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#FFFFFF] border border-[#D4CFC3] mb-5 shadow-lg shadow-black/10">
             <span className="text-4xl">🐟</span>
           </div>
-          <h1 className="font-display text-3xl font-bold text-[#F1F1E7] tracking-tight">
+          <h1 className="font-display text-3xl font-bold text-[#242622] tracking-tight">
             Sturgeon Spirits
           </h1>
-          <p className="text-xs text-[#7a6e5f] mt-1.5 tracking-[0.2em] uppercase">
+          <p className="text-xs text-[#7E613F] mt-1.5 tracking-[0.2em] uppercase">
             Spearers Club
           </p>
           {/* Decorative rule */}
@@ -69,15 +69,15 @@ export default function LoginPage() {
           {!sent ? (
             <>
               <div className="mb-6">
-                <h2 className="text-lg font-semibold text-[#F1F1E7]">Sign in</h2>
-                <p className="text-sm text-[#7a6e5f] mt-1">
+                <h2 className="text-lg font-semibold text-[#242622]">Sign in</h2>
+                <p className="text-sm text-[#7E613F] mt-1">
                   We'll send a code to your email — no password needed.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-xs font-medium text-[#7a6e5f] mb-2 uppercase tracking-widest">
+                  <label htmlFor="email" className="block text-xs font-medium text-[#7E613F] mb-2 uppercase tracking-widest">
                     Email address
                   </label>
                   <input
@@ -88,12 +88,12 @@ export default function LoginPage() {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full bg-[#161410] border border-[#2c2820] rounded-xl px-4 py-3.5 text-[#F1F1E7] placeholder-[#3a3228] focus:outline-none focus:border-[#96321F]/60 transition-colors text-base"
+                    className="w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3.5 text-[#242622] placeholder-[#9E8F7E] focus:outline-none focus:border-[#96321F] transition-colors text-base"
                   />
                 </div>
 
                 {error && (
-                  <p className="text-red-400 text-sm bg-red-950/30 border border-red-900/30 rounded-lg px-3 py-2.5">
+                  <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
                     {error}
                   </p>
                 )}
@@ -101,7 +101,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading || !email}
-                  className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base tracking-wide"
+                  className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base tracking-wide"
                 >
                   {loading ? 'Sending…' : 'Send Code'}
                 </button>
@@ -112,20 +112,20 @@ export default function LoginPage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#96321F]/10 border border-[#96321F]/25 mb-5">
                 <span className="text-3xl">✉️</span>
               </div>
-              <h2 className="text-lg font-semibold text-[#F1F1E7] mb-2">Check your email</h2>
-              <p className="text-sm text-[#7a6e5f] mb-6">
+              <h2 className="text-lg font-semibold text-[#242622] mb-2">Check your email</h2>
+              <p className="text-sm text-[#7E613F] mb-6">
                 We sent a sign-in code to<br />
-                <span className="text-[#F1F1E7]">{email}</span>
+                <span className="text-[#242622]">{email}</span>
               </p>
               <button
                 onClick={() => router.push('/auth/verify')}
-                className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-3.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base tracking-wide"
+                className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base tracking-wide"
               >
                 Enter Code →
               </button>
               <button
                 onClick={() => setSent(false)}
-                className="mt-3 w-full text-sm text-[#3a3228] hover:text-[#7a6e5f] py-2 transition-colors"
+                className="mt-3 w-full text-sm text-[#7E613F] hover:text-[#242622] py-2 transition-colors"
               >
                 Use a different email
               </button>
@@ -135,7 +135,7 @@ export default function LoginPage() {
 
         {/* Staff link */}
         <div className="mt-12">
-          <a href="/staff/login" className="text-xs text-[#2c2820] hover:text-[#3a3228] transition-colors tracking-wide">
+          <a href="/staff/login" className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors tracking-wide">
             Staff sign in →
           </a>
         </div>

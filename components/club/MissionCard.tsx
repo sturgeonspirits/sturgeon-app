@@ -27,22 +27,22 @@ export default function MissionCard({ mission, completed, userId }: Props) {
     <>
       <div
         className={cn(
-          'bg-[#161410] border rounded-xl p-4 transition-all',
+          'bg-[#FFFFFF] border rounded-xl p-4 transition-all',
           completed
-            ? 'border-[#2c2820] opacity-50'
-            : 'border-[#2c2820] hover:border-[#96321F]/30'
+            ? 'border-[#D4CFC3] opacity-50'
+            : 'border-[#D4CFC3] hover:border-[#96321F]/30'
         )}
       >
         <div className="flex items-center gap-3">
           <span className={cn('text-2xl', completed && 'grayscale')}>{mission.icon}</span>
           <div className="flex-1 min-w-0">
-            <p className={cn('font-semibold text-sm truncate', completed ? 'text-[#7a6e5f]' : 'text-[#F1F1E7]')}>
+            <p className={cn('font-semibold text-sm truncate', completed ? 'text-[#7E613F]' : 'text-[#242622]')}>
               {mission.title}
             </p>
             {mission.description && (
-              <p className="text-xs text-[#7a6e5f] mt-0.5 leading-relaxed">{mission.description}</p>
+              <p className="text-xs text-[#7E613F] mt-0.5 leading-relaxed">{mission.description}</p>
             )}
-            <p className="text-xs text-[#3a3228] mt-1">
+            <p className="text-xs text-[#9E8F7E] mt-1">
               {triggerLabel[mission.completion_trigger] ?? mission.completion_trigger}
             </p>
           </div>
@@ -52,7 +52,7 @@ export default function MissionCard({ mission, completed, userId }: Props) {
             ) : (
               <div>
                 <p className="text-[#96321F] text-sm font-bold">+{mission.points}</p>
-                <p className="text-xs text-[#7a6e5f]">pts</p>
+                <p className="text-xs text-[#7E613F]">pts</p>
               </div>
             )}
           </div>

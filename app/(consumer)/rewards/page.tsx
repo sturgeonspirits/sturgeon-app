@@ -31,8 +31,8 @@ export default async function RewardsPage() {
   return (
     <div className="p-4 max-w-lg mx-auto space-y-6">
       <div className="pt-4">
-        <h1 className="font-display text-xl font-bold text-[#F1F1E7]">Rewards</h1>
-        <p className="text-sm text-[#7a6e5f] mt-1">
+        <h1 className="font-display text-xl font-bold text-[#242622]">Rewards</h1>
+        <p className="text-sm text-[#7E613F] mt-1">
           Your balance: <span className="text-[#96321F] font-bold">{balance.toLocaleString()} pts</span>
         </p>
       </div>
@@ -40,14 +40,14 @@ export default async function RewardsPage() {
       {/* Pending redemptions */}
       {(myRedemptions ?? []).filter(r => r.status === 'pending').length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-[#7a6e5f] uppercase tracking-widest mb-3">Ready to Redeem</h2>
+          <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Ready to Redeem</h2>
           <div className="space-y-2">
             {myRedemptions!.filter(r => r.status === 'pending').map(r => (
               <div key={r.id} className="bg-[#96321F]/10 border border-[#96321F]/30 rounded-xl p-4 flex items-center gap-3">
                 <span className="text-2xl">{(r.rewards as any)?.icon}</span>
                 <div className="flex-1">
-                  <p className="font-semibold text-[#F1F1E7] text-sm">{(r.rewards as any)?.name}</p>
-                  <p className="text-xs text-[#7a6e5f]">Show this to staff to claim</p>
+                  <p className="font-semibold text-[#242622] text-sm">{(r.rewards as any)?.name}</p>
+                  <p className="text-xs text-[#7E613F]">Show this to staff to claim</p>
                 </div>
                 <span className="text-[#96321F] text-xl">→</span>
               </div>
@@ -58,22 +58,22 @@ export default async function RewardsPage() {
 
       {/* All rewards */}
       <section>
-        <h2 className="text-xs font-semibold text-[#7a6e5f] uppercase tracking-widest mb-3">All Rewards</h2>
+        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">All Rewards</h2>
         <div className="space-y-3">
           {(rewards ?? []).map(reward => {
             const canAfford = reward.redemption_method === 'points' ? balance >= reward.points_cost : null
             return (
-              <div key={reward.id} className="bg-[#161410] border border-[#2c2820] rounded-xl p-4">
+              <div key={reward.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">{reward.icon}</span>
                   <div className="flex-1">
-                    <p className="font-semibold text-[#F1F1E7] text-sm">{reward.name}</p>
+                    <p className="font-semibold text-[#242622] text-sm">{reward.name}</p>
                     {reward.description && (
-                      <p className="text-xs text-[#7a6e5f] mt-0.5">{reward.description}</p>
+                      <p className="text-xs text-[#7E613F] mt-0.5">{reward.description}</p>
                     )}
-                    <p className="text-xs text-[#3a3228] mt-1">{reward.reward_value}</p>
+                    <p className="text-xs text-[#9E8F7E] mt-1">{reward.reward_value}</p>
                     <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs bg-[#2c2820] text-[#7a6e5f] px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-[#EDE9DC] text-[#7E613F] px-2 py-0.5 rounded-full">
                         {METHOD_LABEL[reward.redemption_method]}
                       </span>
                       {reward.redemption_method === 'points' && (
@@ -106,7 +106,7 @@ function RedeemButton({ rewardId, pointsCost, canAfford, userId }: {
       <button
         type="submit"
         disabled={!canAfford}
-        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#96321F] text-[#F1F1E7] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#ae3a24] transition-colors"
+        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#96321F] text-[#FFFFFF] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#ae3a24] transition-colors"
       >
         {pointsCost.toLocaleString()} pts
       </button>

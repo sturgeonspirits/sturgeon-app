@@ -59,10 +59,10 @@ export default async function ClubPage() {
 
         <div className="relative">
           {/* Greeting */}
-          <p className="text-xs text-[#7a6e5f] uppercase tracking-[0.2em] mb-1">
+          <p className="text-xs text-[#7E613F] uppercase tracking-[0.2em] mb-1">
             {firstName ? `Welcome back` : 'Welcome'}
           </p>
-          <h1 className="font-display text-2xl font-bold text-[#F1F1E7] leading-tight">
+          <h1 className="font-display text-2xl font-bold text-[#242622] leading-tight">
             {firstName ?? 'Spearers Club'}
           </h1>
 
@@ -72,7 +72,7 @@ export default async function ClubPage() {
               <p className="text-4xl font-bold tabular-nums" style={{ color: tierColor }}>
                 {balance.toLocaleString()}
               </p>
-              <p className="text-xs text-[#7a6e5f] mt-0.5">points balance</p>
+              <p className="text-xs text-[#7E613F] mt-0.5">points balance</p>
             </div>
             <div className="mb-1.5">
               <span
@@ -106,26 +106,26 @@ export default async function ClubPage() {
                 const done     = required.filter(cm => completedIds.has(cm.mission_id)).length
                 const pct      = required.length ? Math.round((done / required.length) * 100) : 0
                 return (
-                  <div key={challenge.id} className="bg-[#161410] border border-[#2c2820] rounded-2xl p-4">
+                  <div key={challenge.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{challenge.icon}</span>
                         <div>
-                          <p className="text-sm font-semibold text-[#F1F1E7]">{challenge.title}</p>
-                          <p className="text-xs text-[#7a6e5f] mt-0.5">{challenge.description}</p>
+                          <p className="text-sm font-semibold text-[#242622]">{challenge.title}</p>
+                          <p className="text-xs text-[#7E613F] mt-0.5">{challenge.description}</p>
                         </div>
                       </div>
                       <span className="text-xs font-bold text-[#96321F] shrink-0 ml-2">
                         +{challenge.bonus_points} pts
                       </span>
                     </div>
-                    <div className="h-1 bg-[#2c2820] rounded-full overflow-hidden">
+                    <div className="h-1 bg-[#E8E4D6] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${pct}%`, background: '#96321F' }}
                       />
                     </div>
-                    <p className="text-xs text-[#3a3228] mt-1.5">{done}/{required.length} missions</p>
+                    <p className="text-xs text-[#9E8F7E] mt-1.5">{done}/{required.length} missions</p>
                   </div>
                 )
               })}
@@ -146,8 +146,8 @@ export default async function ClubPage() {
 function SectionHeader({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 mb-3">
-      <p className="text-xs font-semibold text-[#7a6e5f] uppercase tracking-[0.18em]">{label}</p>
-      <div className="flex-1 h-px bg-[#2c2820]" />
+      <p className="text-xs font-semibold text-[#7E613F] uppercase tracking-[0.18em]">{label}</p>
+      <div className="flex-1 h-px bg-[#D4CFC3]" />
     </div>
   )
 }

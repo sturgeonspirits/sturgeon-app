@@ -26,7 +26,7 @@ export default function MissionGrid({ missions, completedIds, userId }: Props) {
       ))}
       {completed.length > 0 && (
         <>
-          <p className="text-xs text-gray-600 uppercase tracking-wider mt-4 mb-2">Completed</p>
+          <p className="text-xs text-[#9E8F7E] uppercase tracking-wider mt-4 mb-2">Completed</p>
           {completed.map(m => (
             <MissionCard key={m.id} mission={m} completed userId={userId} />
           ))}

@@ -26,8 +26,8 @@ export default async function StaffDashboard() {
   return (
     <div className="space-y-6 py-4">
       <div>
-        <h1 className="text-xl font-bold text-[#F1F1E7]">Dashboard</h1>
-        <p className="text-sm text-[#7a6e5f]">
+        <h1 className="text-xl font-bold text-[#242622]">Dashboard</h1>
+        <p className="text-sm text-[#7E613F]">
           Welcome, {profile?.display_name ?? 'staff'} · <span className="text-[#96321F]">{profile?.role}</span>
         </p>
       </div>
@@ -39,10 +39,10 @@ export default async function StaffDashboard() {
           { href: '/staff/missions', icon: '📋', label: 'Missions',      desc: 'Mark completions'  },
         ].map(card => (
           <Link key={card.href} href={card.href}
-            className="bg-[#161410] border border-[#2c2820] rounded-xl p-4 hover:border-[#96321F]/30 transition-colors">
+            className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 hover:border-[#96321F]/30 transition-colors">
             <p className="text-2xl mb-2">{card.icon}</p>
-            <p className="font-semibold text-[#F1F1E7] text-sm">{card.label}</p>
-            <p className="text-xs text-[#7a6e5f] mt-0.5">{card.desc}</p>
+            <p className="font-semibold text-[#242622] text-sm">{card.label}</p>
+            <p className="text-xs text-[#7E613F] mt-0.5">{card.desc}</p>
           </Link>
         ))}
       </div>
@@ -50,16 +50,16 @@ export default async function StaffDashboard() {
       {/* Pending redemptions */}
       {(pending ?? []).length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-[#7a6e5f] uppercase tracking-widest mb-3">
+          <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">
             Pending Rewards ({pending!.length})
           </h2>
           <div className="space-y-2">
             {pending!.map(r => (
-              <div key={r.id} className="bg-[#161410] border border-[#96321F]/20 rounded-xl p-3 flex items-center gap-3">
+              <div key={r.id} className="bg-[#FFFFFF] border border-[#96321F]/20 rounded-xl p-3 flex items-center gap-3">
                 <span className="text-xl">{(r.rewards as any)?.icon}</span>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#F1F1E7]">{(r.rewards as any)?.name}</p>
-                  <p className="text-xs text-[#7a6e5f]">
+                  <p className="text-sm font-semibold text-[#242622]">{(r.rewards as any)?.name}</p>
+                  <p className="text-xs text-[#7E613F]">
                     {(r.profiles as any)?.display_name} · {(r.rewards as any)?.reward_value}
                   </p>
                 </div>
@@ -72,15 +72,15 @@ export default async function StaffDashboard() {
 
       {/* Recent activity */}
       <section>
-        <h2 className="text-xs font-semibold text-[#7a6e5f] uppercase tracking-widest mb-3">Recent Activity</h2>
+        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Recent Activity</h2>
         <div className="space-y-1">
           {(recentEvents ?? []).map(e => (
-            <div key={e.id} className="flex items-center gap-3 py-2 border-b border-[#1e1b16]">
+            <div key={e.id} className="flex items-center gap-3 py-2 border-b border-[#D4CFC3]">
               <div className="flex-1">
-                <p className="text-sm text-[#F1F1E7]">{(e.profiles as any)?.display_name ?? 'Unknown'}</p>
-                <p className="text-xs text-[#7a6e5f]">{e.event_type.replace('_', ' ')}</p>
+                <p className="text-sm text-[#242622]">{(e.profiles as any)?.display_name ?? 'Unknown'}</p>
+                <p className="text-xs text-[#7E613F]">{e.event_type.replace('_', ' ')}</p>
               </div>
-              <p className={`text-sm font-bold ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-400'}`}>
+              <p className={`text-sm font-bold ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-500'}`}>
                 {e.points_delta >= 0 ? '+' : ''}{e.points_delta} pts
               </p>
             </div>
@@ -98,7 +98,7 @@ function RedeemButton({ redemptionId, staffId }: { redemptionId: string; staffId
       <input type="hidden" name="redemptionId" value={redemptionId} />
       <input type="hidden" name="staffId"      value={staffId} />
       <button type="submit"
-        className="bg-[#96321F] text-[#F1F1E7] text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#ae3a24] transition-colors">
+        className="bg-[#96321F] text-[#FFFFFF] text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#ae3a24] transition-colors">
         Redeem
       </button>
     </form>

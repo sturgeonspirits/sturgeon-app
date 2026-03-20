@@ -65,7 +65,7 @@ export default function TabBar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-[#0e0d0b]/96 backdrop-blur-xl border-t border-[#2c2820] z-50"
+      className="fixed bottom-0 left-0 right-0 bg-[#242622] backdrop-blur-xl border-t border-[#D4CFC3] z-50"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-16">
@@ -77,7 +77,7 @@ export default function TabBar() {
               href={tab.href}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 transition-colors relative',
-                active ? 'text-[#96321F]' : 'text-[#3a3228] hover:text-[#7a6e5f]'
+                active ? 'text-[#96321F]' : 'text-[#C8BCA4] hover:text-[#D4CFC3]'
               )}
             >
               {/* Active indicator — rust red top bar */}
@@ -87,7 +87,7 @@ export default function TabBar() {
               {tab.icon(active)}
               <span className={cn(
                 'text-[9px] font-medium uppercase tracking-widest leading-none',
-                active ? 'text-[#96321F]' : 'text-[#3a3228]'
+                active ? 'text-[#96321F]' : 'text-[#C8BCA4]'
               )}>
                 {tab.label}
               </span>

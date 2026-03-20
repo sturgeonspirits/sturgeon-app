@@ -60,9 +60,9 @@ export default function JournalForm({ spirits, userId }: Props) {
     }
   }
 
-  const inputClass = "w-full bg-[#161410] border border-[#2c2820] rounded-xl px-4 py-3 text-[#F1F1E7] placeholder-[#3a3228] focus:outline-none focus:border-[#96321F]/60 transition-colors text-sm"
+  const inputClass = "w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3 text-[#242622] placeholder-[#9E8F7E] focus:outline-none focus:border-[#96321F] transition-colors text-sm"
   const textareaClass = `${inputClass} resize-none`
-  const labelClass = "block text-xs font-medium text-[#7a6e5f] mb-1.5 uppercase tracking-widest"
+  const labelClass = "block text-xs font-medium text-[#7E613F] mb-1.5 uppercase tracking-widest"
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-10">
@@ -122,7 +122,7 @@ export default function JournalForm({ spirits, userId }: Props) {
               onClick={() => setRating(rating === n ? 0 : n)}
               className="text-2xl transition-all hover:scale-110"
             >
-              <span className={n <= rating ? 'text-[#96321F]' : 'text-[#2c2820]'}>★</span>
+              <span className={n <= rating ? 'text-[#96321F]' : 'text-[#D4CFC3]'}>★</span>
             </button>
           ))}
         </div>
@@ -147,7 +147,7 @@ export default function JournalForm({ spirits, userId }: Props) {
       </div>
 
       {error && (
-        <p className="text-red-400 text-sm bg-red-900/20 border border-red-900/40 rounded-lg px-3 py-2">
+        <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
@@ -155,7 +155,7 @@ export default function JournalForm({ spirits, userId }: Props) {
       <button
         type="submit"
         disabled={loading || (!spiritId && !customName)}
-        className="w-full bg-[#96321F] text-[#F1F1E7] font-bold py-4 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
+        className="w-full bg-[#96321F] text-[#FFFFFF] font-bold py-4 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
       >
         {loading ? 'Saving…' : 'Save Entry'}
       </button>

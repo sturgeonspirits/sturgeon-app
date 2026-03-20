@@ -56,7 +56,7 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
     <div className="space-y-4">
       {/* Mission picker */}
       <div>
-        <label className="block text-xs text-[#7a6e5f] mb-2 uppercase tracking-widest">Mission</label>
+        <label className="block text-xs text-[#7E613F] mb-2 uppercase tracking-widest">Mission</label>
         <div className="space-y-2">
           {manualMissions.map(m => (
             <button
@@ -65,13 +65,13 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
               className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 selectedMission?.id === m.id
                   ? 'border-[#96321F] bg-[#96321F]/8'
-                  : 'border-[#2c2820] bg-[#161410]'
+                  : 'border-[#D4CFC3] bg-[#FFFFFF]'
               }`}
             >
               <span className="text-xl">{m.icon}</span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-[#F1F1E7]">{m.title}</p>
-                <p className="text-xs text-[#7a6e5f]">{m.completion_trigger.replace('_', ' ')} · +{m.points} pts</p>
+                <p className="text-sm font-medium text-[#242622]">{m.title}</p>
+                <p className="text-xs text-[#7E613F]">{m.completion_trigger.replace('_', ' ')} · +{m.points} pts</p>
               </div>
             </button>
           ))}
@@ -79,18 +79,18 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
       </div>
 
       {selectedMission && (
-        <div className="bg-[#161410] border border-[#2c2820] rounded-xl p-4 space-y-4">
-          <p className="text-sm font-semibold text-[#F1F1E7]">{selectedMission.icon} {selectedMission.title}</p>
+        <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 space-y-4">
+          <p className="text-sm font-semibold text-[#242622]">{selectedMission.icon} {selectedMission.title}</p>
 
           {/* QR code generation (for qr_scan missions) */}
           {selectedMission.completion_trigger === 'qr_scan' && (
             <div className="space-y-3">
-              <p className="text-xs text-[#7a6e5f]">Show this QR code for members to scan</p>
+              <p className="text-xs text-[#7E613F]">Show this QR code for members to scan</p>
               {qrCode ? (
                 <div className="text-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={qrCode} alt="QR Code" className="mx-auto w-48 h-48 rounded-xl" />
-                  <p className="text-xs text-[#7a6e5f] mt-2">Valid for 15 minutes</p>
+                  <p className="text-xs text-[#7E613F] mt-2">Valid for 15 minutes</p>
                   <button onClick={() => setQrCode(null)} className="text-xs text-[#96321F] hover:text-[#ae3a24] mt-2 transition-colors">
                     Generate new code
                   </button>
@@ -99,7 +99,7 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
                 <button
                   onClick={generateQr}
                   disabled={loading}
-                  className="w-full bg-[#96321F] text-[#F1F1E7] font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
+                  className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
                 >
                   {loading ? 'Generating…' : '📷 Generate QR Code'}
                 </button>
@@ -111,11 +111,11 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
           {['manual_staff', 'event_attendance'].includes(selectedMission.completion_trigger) && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-[#7a6e5f] mb-1.5 uppercase tracking-widest">Member</label>
+                <label className="block text-xs text-[#7E613F] mb-1.5 uppercase tracking-widest">Member</label>
                 <select
                   value={selectedMember}
                   onChange={e => setSelectedMember(e.target.value)}
-                  className="w-full bg-[#161410] border border-[#2c2820] rounded-lg px-3 min-h-[44px] text-[#F1F1E7] text-base focus:outline-none focus:border-[#96321F]/60"
+                  className="w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-lg px-3 min-h-[44px] text-[#242622] text-base focus:outline-none focus:border-[#96321F]"
                 >
                   <option value="">Select member</option>
                   {members.map(m => (
@@ -126,7 +126,7 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
               <button
                 onClick={markComplete}
                 disabled={!selectedMember || loading}
-                className="w-full bg-[#87A67F] text-[#0e0d0b] font-semibold py-3.5 rounded-xl text-base disabled:opacity-40 hover:bg-[#9ab891] active:scale-[0.98] transition-all"
+                className="w-full bg-[#87A67F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl text-base disabled:opacity-40 hover:bg-[#9ab891] active:scale-[0.98] transition-all"
               >
                 {loading ? 'Saving…' : '✓ Mark Complete'}
               </button>
@@ -134,7 +134,7 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
           )}
 
           {message && (
-            <p className={`text-sm ${message.startsWith('✓') ? 'text-[#87A67F]' : 'text-red-400'}`}>
+            <p className={`text-sm ${message.startsWith('✓') ? 'text-[#5dbb5d]' : 'text-red-500'}`}>
               {message}
             </p>
           )}

@@ -55,8 +55,8 @@ function AuthCallbackInner() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0e0d0b] flex items-center justify-center">
-      <p className="text-[#C8BCA4] text-sm">Signing in…</p>
+    <div className="min-h-screen bg-[#F1F1E7] flex items-center justify-center">
+      <p className="text-[#242622] text-sm">Signing in…</p>
     </div>
   )
 }
@@ -64,8 +64,8 @@ function AuthCallbackInner() {
 export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#0e0d0b] flex items-center justify-center">
-        <p className="text-[#C8BCA4] text-sm">Signing in…</p>
+      <div className="min-h-screen bg-[#F1F1E7] flex items-center justify-center">
+        <p className="text-[#242622] text-sm">Signing in…</p>
       </div>
     }>
       <AuthCallbackInner />
