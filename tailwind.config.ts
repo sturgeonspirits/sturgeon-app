@@ -10,19 +10,21 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          gold:   '#f5c842',
-          orange: '#e87c3e',
-          blue:   '#5aadff',
-          purple: '#b06aff',
-          green:  '#5dbb5d',
-          dark:   '#0f0f0f',
-          card:   '#1a1a1a',
-          border: '#2e2e2e',
+          rust:   '#96321F',   // primary accent
+          brown:  '#7E613F',   // secondary
+          cream:  '#F1F1E7',   // light text / backgrounds
+          tan:    '#C8BCA4',   // muted text, borders
+          olive:  '#87A67F',   // accent green
+          black:  '#242622',   // brand black
+          bg:     '#0e0d0b',   // near-black warm
+          surface:'#161410',   // warm dark surface
+          border: '#2c2820',   // warm dark border
         },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        mono: ['SF Mono', 'Fira Code', 'monospace'],
+        // Next.js font loader injects CSS variables on <html>; reference them here
+        sans:    ['var(--font-sans)', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
       },
     },
   },
