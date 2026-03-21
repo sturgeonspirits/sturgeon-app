@@ -108,7 +108,7 @@ export default function StaffLoginPage() {
             <input
               type="text"
               inputMode="numeric"
-              pattern="[0-9]{6,8}"
+              pattern="[0-9]{8}"
               maxLength={8}
               required
               autoFocus
@@ -120,7 +120,7 @@ export default function StaffLoginPage() {
             {error && <p className="text-[#96321F] text-sm text-center">{error}</p>}
             <button
               type="submit"
-              disabled={loading || code.length < 6}
+              disabled={loading || code.length < 8}
               className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
             >
               {loading ? 'Verifying…' : 'Sign In'}
