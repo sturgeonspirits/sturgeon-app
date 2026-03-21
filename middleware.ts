@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
     '/dev-login',
     '/api/dev-auth',
     '/staff/login',
+    '/staff/auth/callback',
   ]
   if (!user && !publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
