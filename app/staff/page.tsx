@@ -10,7 +10,24 @@ export default async function StaffDashboard() {
 
   // Role check using service client (bypasses RLS)
   const service = createServiceClient()
-  const { data: roleCheck } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  let { data: roleCheck } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+
+  // Auto-create profile for @sturgeonspirits.com staff who haven't been through onboarding
+  if (!roleCheck && user.email?.endsWith('@sturgeonspirits.com')) {
+    const { data: created } = await service
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        email: user.email,
+        role: 'staff',
+        display_name: user.email.split('@')[0],
+        full_name: user.email.split('@')[0],
+      }, { onConflict: 'id' })
+      .select('role')
+      .maybeSingle()
+    roleCheck = created
+  }
+
   if (!roleCheck || !['staff', 'admin'].includes(roleCheck.role ?? '')) redirect('/staff/login')
 
   // Recent member activity
