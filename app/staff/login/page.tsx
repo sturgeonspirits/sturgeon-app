@@ -37,8 +37,8 @@ export default function StaffLoginPage() {
     })
     if (error || !data.user) { setError('Invalid or expired code.'); setLoading(false); return }
 
-    // Session is set — middleware will verify the role when /staff loads
-    router.replace('/staff')
+    // Hard redirect so the browser sends fresh auth cookies to the server middleware
+    window.location.replace('/staff')
   }
 
   return (
