@@ -7,23 +7,44 @@ export default function StaffLoginPage() {
   const supabase = createClient()
   const [email,   setEmail]   = useState('')
   const [sent,    setSent]    = useState(false)
+  const [code,    setCode]    = useState('')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
-  async function requestLink(e: React.FormEvent) {
+  async function requestCode(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: window.location.origin + '/staff/auth/callback',
-      },
+      options: { shouldCreateUser: false },
     })
     if (error) { setError('Email not recognised. Contact your manager.'); setLoading(false); return }
     setSent(true)
     setLoading(false)
+  }
+
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    // Verify server-side so the session cookie is set before we navigate
+    const res = await fetch('/api/staff/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), token: code.trim() }),
+    })
+
+    const json = await res.json()
+    if (!res.ok) {
+      setError(json.error ?? 'Something went wrong.')
+      setLoading(false)
+      return
+    }
+
+    // Hard redirect — sends fresh server-set cookies to middleware
+    window.location.replace('/staff')
   }
 
   return (
@@ -42,7 +63,7 @@ export default function StaffLoginPage() {
         </div>
 
         {!sent ? (
-          <form onSubmit={requestLink} className="space-y-4">
+          <form onSubmit={requestCode} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-[#7E613F] mb-1.5 uppercase tracking-widest">
                 Staff email
@@ -62,24 +83,41 @@ export default function StaffLoginPage() {
               disabled={loading}
               className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
             >
-              {loading ? 'Sending…' : 'Send Login Link'}
+              {loading ? 'Sending…' : 'Send Code'}
             </button>
           </form>
         ) : (
-          <div className="text-center space-y-4">
-            <div className="text-4xl">📬</div>
-            <p className="text-[#242622] font-semibold">Check your email</p>
-            <p className="text-sm text-[#7E613F]">
-              We sent a login link to <span className="text-[#242622]">{email}</span>.<br />
-              Click it to access the staff console.
+          <form onSubmit={verifyCode} className="space-y-4">
+            <p className="text-sm text-[#7E613F] text-center mb-2">
+              Enter the code sent to <span className="text-[#242622]">{email}</span>
             </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={8}
+              required
+              autoFocus
+              value={code}
+              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="· · · · · ·"
+              className="w-full text-center text-2xl font-bold tracking-[0.4em] bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3.5 text-[#242622] focus:outline-none focus:border-[#96321F] transition-colors"
+            />
+            {error && <p className="text-[#96321F] text-sm text-center">{error}</p>}
             <button
-              onClick={() => { setSent(false); setEmail('') }}
-              className="text-sm text-[#9E8F7E] hover:text-[#7E613F] transition-colors mt-4"
+              type="submit"
+              disabled={loading || code.length < 6}
+              className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
             >
-              ← Try a different email
+              {loading ? 'Verifying…' : 'Sign In'}
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={() => { setSent(false); setCode('') }}
+              className="w-full text-[#7E613F] text-sm hover:text-[#242622] transition-colors"
+            >
+              ← Different email
+            </button>
+          </form>
         )}
 
         <div className="mt-8 text-center">
