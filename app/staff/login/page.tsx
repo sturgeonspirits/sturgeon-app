@@ -1,62 +1,33 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function StaffLoginPage() {
-  const router = useRouter()
   const supabase = createClient()
   const [email,   setEmail]   = useState('')
   const [sent,    setSent]    = useState(false)
-  const [code,    setCode]    = useState('')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
-  async function requestCode(e: React.FormEvent) {
+  async function requestLink(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: false },  // staff must pre-exist in DB
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: window.location.origin + '/staff/auth/callback',
+      },
     })
     if (error) { setError('Email not recognised. Contact your manager.'); setLoading(false); return }
     setSent(true)
     setLoading(false)
   }
 
-  async function verifyCode(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: code.trim(),
-      type: 'email',
-    })
-    if (error || !data.user) { setError('Invalid or expired code.'); setLoading(false); return }
-
-    // Confirm role before granting access
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
-
-    if (!profile || !['staff', 'admin'].includes(profile.role)) {
-      await supabase.auth.signOut()
-      setError('This account does not have staff access.')
-      setLoading(false)
-      return
-    }
-
-    router.replace('/staff')
-  }
-
   return (
     <div className="grain min-h-screen bg-[#F1F1E7] flex flex-col items-center justify-center p-6">
-      {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[400px] h-[300px] rounded-full bg-[#96321F]/8 blur-[120px]" />
       </div>
@@ -71,7 +42,7 @@ export default function StaffLoginPage() {
         </div>
 
         {!sent ? (
-          <form onSubmit={requestCode} className="space-y-4">
+          <form onSubmit={requestLink} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-[#7E613F] mb-1.5 uppercase tracking-widest">
                 Staff email
@@ -91,42 +62,24 @@ export default function StaffLoginPage() {
               disabled={loading}
               className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
             >
-              {loading ? 'Sending…' : 'Send Code'}
+              {loading ? 'Sending…' : 'Send Login Link'}
             </button>
           </form>
         ) : (
-          <form onSubmit={verifyCode} className="space-y-4">
-            <p className="text-sm text-[#7E613F] text-center mb-2">
-              Enter the code sent to <span className="text-[#242622]">{email}</span>
+          <div className="text-center space-y-4">
+            <div className="text-4xl">📬</div>
+            <p className="text-[#242622] font-semibold">Check your email</p>
+            <p className="text-sm text-[#7E613F]">
+              We sent a login link to <span className="text-[#242622]">{email}</span>.<br />
+              Click it to access the staff console.
             </p>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]{6,8}"
-              maxLength={8}
-              required
-              autoFocus
-              value={code}
-              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="· · · · · ·"
-              className="w-full text-center text-2xl font-bold tracking-[0.4em] bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3.5 text-[#242622] focus:outline-none focus:border-[#96321F] transition-colors"
-            />
-            {error && <p className="text-red-600 text-sm text-center">{error}</p>}
             <button
-              type="submit"
-              disabled={loading || code.length < 6}
-              className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
+              onClick={() => { setSent(false); setEmail('') }}
+              className="text-sm text-[#9E8F7E] hover:text-[#7E613F] transition-colors mt-4"
             >
-              {loading ? 'Verifying…' : 'Sign In'}
+              ← Try a different email
             </button>
-            <button
-              type="button"
-              onClick={() => setSent(false)}
-              className="w-full text-[#7E613F] text-sm hover:text-[#242622] transition-colors"
-            >
-              ← Different email
-            </button>
-          </form>
+          </div>
         )}
 
         <div className="mt-8 text-center">
