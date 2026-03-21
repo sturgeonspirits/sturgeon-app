@@ -52,20 +52,20 @@ export async function POST(req: NextRequest) {
     // 3. Link earn event back to log
     await supabase.from('tasting_logs').update({ earn_event_id: earnEvent.id }).eq('id', log.id)
 
-    // 4. Trigger mission completions
+    // 4. Trigger mission completions (best-effort — missing slugs won't fail the entry)
+    try {
+      await completeMission({ userId, missionSlug: 'taste-a-spirit', supabase })
+    } catch { /* mission not seeded yet */ }
 
-    // First tasting entry
-    await completeMission({ userId, missionSlug: 'taste-a-spirit', supabase })
-
-    // Count distinct spirits logged — check "taste-three-spirits" milestone
-    const { count } = await supabase
-      .from('tasting_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    if ((count ?? 0) >= 3) {
-      await completeMission({ userId, missionSlug: 'taste-three-spirits', supabase })
-    }
+    try {
+      const { count } = await supabase
+        .from('tasting_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      if ((count ?? 0) >= 3) {
+        await completeMission({ userId, missionSlug: 'taste-three-spirits', supabase })
+      }
+    } catch { /* mission not seeded yet */ }
 
     return NextResponse.json({
       success: true,
