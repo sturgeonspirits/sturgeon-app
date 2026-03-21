@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -6,6 +7,11 @@ export default async function StaffDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/staff/login')
+
+  // Role check using service client (bypasses RLS)
+  const service = createServiceClient()
+  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) redirect('/staff/login')
 
   // Recent member activity
   const { data: recentEvents } = await supabase

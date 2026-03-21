@@ -41,27 +41,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // ── Staff routes: require staff or admin role ───────────
-  if (pathname.startsWith('/staff') && !pathname.startsWith('/staff/login')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/staff/login', request.url))
-    }
-
-    // Use service role to bypass RLS — middleware is server-only, never exposed to browser
-    const serviceClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-    const { data: profile } = await serviceClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) {
-      return NextResponse.redirect(new URL('/staff/login', request.url))
-    }
+  // ── Staff routes: just ensure authenticated — page handles role check ──
+  if (pathname.startsWith('/staff') && !pathname.startsWith('/staff/login') && !pathname.startsWith('/staff/auth') && !user) {
+    return NextResponse.redirect(new URL('/staff/login', request.url))
   }
 
   return supabaseResponse
