@@ -43,7 +43,12 @@ export default function StaffLoginPage() {
       return
     }
 
-    // Hard redirect — sends fresh server-set cookies to middleware
+    // Set session in browser cookies via the client SDK, then hard-navigate
+    await supabase.auth.setSession({
+      access_token:  json.access_token,
+      refresh_token: json.refresh_token,
+    })
+
     window.location.replace('/staff')
   }
 
