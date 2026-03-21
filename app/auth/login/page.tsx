@@ -47,9 +47,8 @@ export default function LoginPage() {
       <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Brand mark */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#FFFFFF] border border-[#D4CFC3] mb-5 shadow-lg shadow-black/10">
-            <span className="text-4xl">🐟</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-full.png" alt="Sturgeon Spirits" className="h-20 w-auto mx-auto mb-5" />
           <h1 className="font-display text-3xl font-bold text-[#242622] tracking-tight">
             Sturgeon Spirits
           </h1>

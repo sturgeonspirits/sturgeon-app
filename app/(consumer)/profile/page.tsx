@@ -46,8 +46,9 @@ export default async function ProfilePage() {
       {/* Member card */}
       <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-5">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 rounded-full bg-[#EDE9DC] border border-[#D4CFC3] flex items-center justify-center text-2xl">
-            🐟
+          <div className="w-14 h-14 rounded-full bg-[#EDE9DC] border border-[#D4CFC3] flex items-center justify-center overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-full.png" alt="Sturgeon Spirits" className="w-12 h-auto" />
           </div>
           <div>
             <p className="font-bold text-[#242622] text-lg">{profile?.display_name ?? user.email}</p>

@@ -5,11 +5,9 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       {/* Staff nav bar */}
       <header className="bg-[#FFFFFF] border-b border-[#D4CFC3] px-4 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <span className="text-xl">🐟</span>
-          <div>
-            <p className="text-sm font-bold text-[#242622] leading-none">Sturgeon Spirits</p>
-            <p className="text-xs text-[#96321F] leading-none mt-0.5 tracking-wide">Staff Console</p>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-full.png" alt="Sturgeon Spirits" className="h-8 w-auto" />
+          <p className="text-xs text-[#96321F] font-semibold tracking-wide">Staff Console</p>
         </div>
         <nav className="flex gap-1">
           {[
