@@ -1,24 +1,31 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function StaffCallbackPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
     async function handle() {
-      // Exchange the token in the URL hash for a session
       const { data: { user }, error } = await supabase.auth.getUser()
 
       if (error || !user) {
-        router.replace('/staff/login?error=auth')
+        router.replace('/staff/login')
         return
       }
 
-      // Verify staff role
+      // Ensure a profile row exists (trigger may not have fired for manually-added users)
+      await supabase.from('profiles').upsert({
+        id:           user.id,
+        email:        user.email,
+        display_name: user.email?.split('@')[0] ?? 'Staff',
+      }, { onConflict: 'id', ignoreDuplicates: true })
+
+      // Check role
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
@@ -27,7 +34,7 @@ export default function StaffCallbackPage() {
 
       if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) {
         await supabase.auth.signOut()
-        router.replace('/staff/login?error=role')
+        setErrorMsg(`Access denied. Ask Karl to set your role to "staff" in Supabase.\n\nYour user ID: ${user.id}`)
         return
       }
 
@@ -36,6 +43,19 @@ export default function StaffCallbackPage() {
 
     handle()
   }, [])
+
+  if (errorMsg) {
+    return (
+      <div className="min-h-screen bg-[#F1F1E7] flex items-center justify-center p-6">
+        <div className="max-w-sm w-full bg-white rounded-2xl border border-[#C8BCA4] p-6 text-center space-y-4">
+          <div className="text-3xl">🔒</div>
+          <h2 className="font-display text-lg font-bold text-[#242622] uppercase">Access Denied</h2>
+          <p className="text-sm text-[#7E613F] whitespace-pre-line">{errorMsg}</p>
+          <a href="/staff/login" className="block text-sm text-[#96321F] hover:underline mt-2">← Back to login</a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F1F1E7] flex items-center justify-center">
