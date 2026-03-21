@@ -37,6 +37,7 @@ export default async function StaffDashboard() {
         {[
           { href: '/staff/scores',   icon: '🏆', label: 'Enter Scores',  desc: 'Cribbage & Trivia' },
           { href: '/staff/missions', icon: '📋', label: 'Missions',      desc: 'Mark completions'  },
+          { href: '/staff/menu',     icon: '🍹', label: 'Menu',          desc: 'View & sync recipes' },
         ].map(card => (
           <Link key={card.href} href={card.href}
             className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 hover:border-[#96321F]/30 transition-colors">
