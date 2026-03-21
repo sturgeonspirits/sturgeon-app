@@ -52,3 +52,11 @@ export function relativeTime(dateStr: string): string {
 export function dayOfWeekLabel(dow: number): string {
   return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dow] ?? ''
 }
+
+/** Privacy-safe display name: "Karl Brunner" → "Karl B.", "Karl" → "Karl" */
+export function privateName(name: string | null | undefined, fallback = 'Member'): string {
+  if (!name) return fallback
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0]
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`
+}

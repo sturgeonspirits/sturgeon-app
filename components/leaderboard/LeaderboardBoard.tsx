@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { EventType, LeaderboardPeriod } from '@/lib/supabase/types'
-import { ordinal, relativeTime } from '@/lib/utils'
+import { ordinal, relativeTime, privateName } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -92,7 +92,7 @@ function WinsLossesBoard({ entries, currentUserId }: { entries: any[]; currentUs
             <span className="text-[#7E613F] text-sm w-6 text-center font-mono">{ordinal(i + 1)}</span>
             <div className="flex-1">
               <p className={cn('font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
-                {e.profiles?.display_name ?? 'Unknown'}
+                {privateName(e.profiles?.display_name)}
                 {isMe && <span className="ml-2 text-xs text-[#96321F]/60">you</span>}
               </p>
               {total > 0 && (
@@ -130,7 +130,7 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
           )}>
             <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm">{i + 1}</span>}</span>
             <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#7E613F]' : 'text-[#242622]')}>
-              {e.profiles?.display_name ?? 'Unknown'}
+              {privateName(e.profiles?.display_name)}
               {isMe && <span className="ml-2 text-xs text-[#7E613F]/60">you</span>}
             </p>
             <p className="text-[#242622] font-bold">{e.score.toLocaleString()} pts</p>
@@ -168,7 +168,7 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
             <div className="flex flex-wrap gap-1 ml-10">
               {(team.leaderboard_team_members ?? []).map((m: any) => (
                 <span key={m.user_id} className="text-xs bg-[#EDE9DC] text-[#7E613F] px-2 py-0.5 rounded-full">
-                  {m.profiles?.display_name ?? 'Member'}
+                  {privateName(m.profiles?.display_name)}
                 </span>
               ))}
             </div>
@@ -199,7 +199,7 @@ function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventTy
           )}>
             <span className="text-[#7E613F] text-sm w-6 text-center font-mono">{i + 1}</span>
             <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
-              {row.profiles?.display_name ?? 'Unknown'}
+              {privateName(row.profiles?.display_name)}
               {isMe && <span className="ml-2 text-xs opacity-60">you</span>}
             </p>
             <div className="text-right">
