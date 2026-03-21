@@ -9,9 +9,12 @@ export default async function ClubPage() {
   if (!user) redirect('/auth/login')
 
   // Redirect to onboarding if profile hasn't been completed yet
-  const { data: profileCheck } = await supabase
-    .from('profiles').select('full_name').eq('id', user.id).single()
-  if (!profileCheck?.full_name) redirect('/onboarding')
+  const { data: profileCheck, error: profileCheckError } = await supabase
+    .from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+  // Only redirect if we got a clean response and full_name is genuinely missing
+  if (!profileCheckError && profileCheck !== null && !profileCheck?.full_name) {
+    redirect('/onboarding')
+  }
 
   const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
