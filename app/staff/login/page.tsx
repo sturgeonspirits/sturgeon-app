@@ -37,27 +37,7 @@ export default function StaffLoginPage() {
     })
     if (error || !data.user) { setError('Invalid or expired code.'); setLoading(false); return }
 
-    // Ensure profile exists
-    await supabase.from('profiles').upsert({
-      id:           data.user.id,
-      email:        data.user.email,
-      display_name: data.user.email?.split('@')[0] ?? 'Staff',
-    }, { onConflict: 'id', ignoreDuplicates: true })
-
-    // Verify staff role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .maybeSingle()
-
-    if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) {
-      await supabase.auth.signOut()
-      setError('This account does not have staff access.')
-      setLoading(false)
-      return
-    }
-
+    // Session is set — middleware will verify the role when /staff loads
     router.replace('/staff')
   }
 

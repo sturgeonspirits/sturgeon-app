@@ -57,10 +57,10 @@ export async function middleware(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (!profile || !['staff', 'admin'].includes(profile.role)) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+    if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) {
+      return NextResponse.redirect(new URL('/staff/login', request.url))
     }
   }
 
