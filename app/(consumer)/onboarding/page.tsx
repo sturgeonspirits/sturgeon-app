@@ -30,14 +30,15 @@ export default function OnboardingPage() {
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
+      .upsert({
+        id:             user.id,
+        email:          user.email,
         full_name:      fullName.trim(),
         preferred_name: preferredName.trim() || null,
         last_initial:   lastInitial || null,
         phone:          phone.trim() || null,
         display_name:   displayName,
-      })
-      .eq('id', user.id)
+      }, { onConflict: 'id' })
 
     if (updateError) {
       setError(`Could not save your info: ${updateError.message}`)
