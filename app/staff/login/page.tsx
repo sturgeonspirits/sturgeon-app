@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function StaffLoginPage() {
+  const router = useRouter()
   const supabase = createClient()
   const [email,   setEmail]   = useState('')
   const [sent,    setSent]    = useState(false)
@@ -68,8 +70,8 @@ export default function StaffLoginPage() {
       setLoading(false)
       return
     }
-    // Same pattern as /auth/verify — client session set, router navigates
-    window.location.href = '/staff'
+    // Exact same pattern as /auth/verify which is confirmed working
+    router.replace('/staff')
   }
 
   return (

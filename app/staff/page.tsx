@@ -8,27 +8,43 @@ export default async function StaffDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/staff/login')
 
-  // Role check using service client (bypasses RLS)
-  const service = createServiceClient()
-  let { data: roleCheck } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  // ── Role check (3 layers) ─────────────────────────────────────
+  // Layer 1: app_metadata — no DB query needed. Set with SQL:
+  //   UPDATE auth.users
+  //   SET raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}'::jsonb
+  //   WHERE email = 'your@email.com';
+  const STAFF_ROLES = ['staff', 'admin']
+  const appRole: string = (user as any).app_metadata?.role ?? ''
 
-  // Auto-create profile for @sturgeonspirits.com staff who haven't been through onboarding
-  if (!roleCheck && user.email?.endsWith('@sturgeonspirits.com')) {
-    const { data: created } = await service
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        role: 'staff',
-        display_name: user.email.split('@')[0],
-        full_name: user.email.split('@')[0],
-      }, { onConflict: 'id' })
-      .select('role')
-      .maybeSingle()
-    roleCheck = created
+  if (!STAFF_ROLES.includes(appRole)) {
+    // Layer 2 + 3: profiles table via service client
+    let profileRole = ''
+    try {
+      const service = createServiceClient()
+      const { data } = await service
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      profileRole = data?.role ?? ''
+
+      // Layer 3: auto-insert missing profile for @sturgeonspirits.com
+      if (!data && user.email?.endsWith('@sturgeonspirits.com')) {
+        await service.from('profiles').upsert({
+          id: user.id,
+          email: user.email,
+          role: 'staff',
+          display_name: user.email.split('@')[0],
+          full_name: user.email.split('@')[0],
+        }, { onConflict: 'id' })
+        profileRole = 'staff'
+      }
+    } catch { /* service key may not be configured */ }
+
+    if (!STAFF_ROLES.includes(profileRole)) {
+      redirect('/staff/login')
+    }
   }
-
-  if (!roleCheck || !['staff', 'admin'].includes(roleCheck.role ?? '')) redirect('/staff/login')
 
   // Recent member activity
   const { data: recentEvents } = await supabase
