@@ -10,8 +10,8 @@ export default async function StaffDashboard() {
 
   // Role check using service client (bypasses RLS)
   const service = createServiceClient()
-  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) redirect('/staff/login')
+  const { data: roleCheck } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (!roleCheck || !['staff', 'admin'].includes(roleCheck.role ?? '')) redirect('/staff/login')
 
   // Recent member activity
   const { data: recentEvents } = await supabase
