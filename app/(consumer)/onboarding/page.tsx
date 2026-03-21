@@ -40,7 +40,7 @@ export default function OnboardingPage() {
       .eq('id', user.id)
 
     if (updateError) {
-      setError('Could not save your info. Please try again.')
+      setError(`Could not save your info: ${updateError.message}`)
       setLoading(false)
       return
     }

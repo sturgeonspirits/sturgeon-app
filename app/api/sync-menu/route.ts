@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createServiceClient } from '@/lib/supabase/server'
 
 // Google Sheet ID — Recipes tab (gid=0)
 const SHEET_ID  = '1TO0jjaBG32-sEYNJ06zQdkO5Av9YOCg1_RLVumlgwEc'
