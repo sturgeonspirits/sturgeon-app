@@ -19,11 +19,10 @@ export default async function StaffScoresPage() {
     .eq('is_finalized', false)
     .order('starts_at', { ascending: false })
 
-  // All members for participant lookup
+  // All profiles — no role filter so staff can enter scores even before customers sign up
   const { data: members } = await supabase
     .from('profiles')
     .select('id, display_name, email')
-    .eq('role', 'customer')
     .order('display_name')
 
   return (

@@ -2,23 +2,28 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import type { Spirit } from '@/lib/supabase/types'
+
+interface Recipe {
+  id:           string
+  name:         string
+  menu_section: string | null
+  flavor_tags:  string[] | null
+}
 
 interface Props {
-  spirits: Pick<Spirit, 'id' | 'name' | 'category' | 'subcategory' | 'is_house'>[]
+  recipes: Recipe[]
   userId:  string
 }
 
-export default function JournalForm({ spirits, userId }: Props) {
-  const router   = useRouter()
-  const supabase = createClient()
+export default function JournalForm({ recipes, userId }: Props) {
+  const router  = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
-  const [spiritId,       setSpiritId]       = useState('')
+  // When a recipe is selected we use its name/section; otherwise custom entry
+  const [selectedId,     setSelectedId]     = useState('')
   const [customName,     setCustomName]      = useState('')
-  const [customCategory, setCustomCategory]  = useState('whiskey')
+  const [customCategory, setCustomCategory]  = useState('cocktail')
   const [nose,           setNose]            = useState('')
   const [palate,         setPalate]          = useState('')
   const [finish,         setFinish]          = useState('')
@@ -26,6 +31,11 @@ export default function JournalForm({ spirits, userId }: Props) {
   const [rating,         setRating]          = useState(0)
 
   const CATEGORIES = ['whiskey','gin','vodka','rum','brandy','liqueur','beer','wine','cocktail','other']
+
+  // Derive the name/category that will actually be submitted
+  const selectedRecipe = recipes.find(r => r.id === selectedId)
+  const submitName     = selectedRecipe ? selectedRecipe.name     : customName
+  const submitCategory = selectedRecipe ? (selectedRecipe.menu_section ?? 'cocktail') : customCategory
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,9 +48,9 @@ export default function JournalForm({ spirits, userId }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          spiritId:       spiritId || null,
-          spiritName:     spiritId ? null : customName,
-          spiritCategory: spiritId ? null : customCategory,
+          spiritId:       null,           // recipes live in their own table
+          spiritName:     submitName,
+          spiritCategory: submitCategory,
           nose,
           palate,
           finish,
@@ -60,58 +70,45 @@ export default function JournalForm({ spirits, userId }: Props) {
     }
   }
 
-  const inputClass = "w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3 text-[#242622] placeholder-[#9E8F7E] focus:outline-none focus:border-[#96321F] transition-colors text-sm"
+  // Group recipes by menu section
+  const sections = Array.from(new Set(recipes.map(r => r.menu_section ?? 'Other'))).sort()
+
+  const inputClass    = "w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-xl px-4 py-3 text-[#242622] placeholder-[#9E8F7E] focus:outline-none focus:border-[#96321F] transition-colors text-sm"
   const textareaClass = `${inputClass} resize-none`
-  const labelClass = "block text-xs font-medium text-[#7E613F] mb-1.5 uppercase tracking-widest"
+  const labelClass    = "block text-xs font-medium text-[#7E613F] mb-1.5 uppercase tracking-widest"
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-10">
-      {/* Spirit selection — grouped from menu */}
+      {/* Recipe / cocktail picker */}
       <div>
         <label className={labelClass}>What are you tasting?</label>
         <select
-          value={spiritId}
-          onChange={e => setSpiritId(e.target.value)}
+          value={selectedId}
+          onChange={e => setSelectedId(e.target.value)}
           className={inputClass}
         >
           <option value="">— Not on the menu —</option>
-          {/* House spirits first */}
-          {spirits.filter(s => s.is_house).length > 0 && (
-            <optgroup label="🏠 Sturgeon Spirits">
-              {spirits.filter(s => s.is_house).map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.name}{s.subcategory ? ` · ${s.subcategory}` : ''}
-                </option>
+          {sections.map(section => (
+            <optgroup key={section} label={section}>
+              {recipes.filter(r => (r.menu_section ?? 'Other') === section).map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </optgroup>
-          )}
-          {/* Other menu items grouped by category */}
-          {Array.from(new Set(spirits.filter(s => !s.is_house).map(s => s.category)))
-            .sort()
-            .map(cat => (
-              <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
-                {spirits.filter(s => !s.is_house && s.category === cat).map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}{s.subcategory ? ` · ${s.subcategory}` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))
-          }
+          ))}
         </select>
       </div>
 
-      {/* Custom spirit if not in catalogue */}
-      {!spiritId && (
+      {/* Custom entry if not on menu */}
+      {!selectedId && (
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className={labelClass}>Spirit name</label>
+            <label className={labelClass}>Name</label>
             <input
               type="text"
               required
               value={customName}
               onChange={e => setCustomName(e.target.value)}
-              placeholder="e.g. Ardbeg 10"
+              placeholder="e.g. Old Fashioned, Ardbeg 10…"
               className={inputClass}
             />
           </div>
@@ -167,7 +164,7 @@ export default function JournalForm({ spirits, userId }: Props) {
 
       <button
         type="submit"
-        disabled={loading || (!spiritId && !customName)}
+        disabled={loading || (!selectedId && !customName)}
         className="w-full bg-[#96321F] text-[#FFFFFF] font-bold py-4 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
       >
         {loading ? 'Saving…' : 'Save Entry'}

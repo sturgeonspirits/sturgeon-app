@@ -7,13 +7,13 @@ export default async function NewJournalEntryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // Load all active spirits from the menu — grouped by house vs. other
-  const { data: spirits } = await supabase
-    .from('spirits')
-    .select('id, name, category, subcategory, is_house')
+  // Load active recipes from the synced cocktail menu
+  const { data: recipes } = await supabase
+    .from('recipes')
+    .select('id, name, menu_section, flavor_tags')
     .eq('is_active', true)
-    .order('is_house', { ascending: false })
-    .order('category')
+    .order('menu_section')
+    .order('sort_order')
     .order('name')
 
   return (
@@ -27,7 +27,7 @@ export default async function NewJournalEntryPage() {
         </h1>
         <p className="text-sm text-[#7E613F] font-body mt-1">Earn 75 pts for logging a tasting</p>
       </div>
-      <JournalForm spirits={spirits ?? []} userId={user.id} />
+      <JournalForm recipes={recipes ?? []} userId={user.id} />
     </div>
   )
 }

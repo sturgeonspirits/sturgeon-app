@@ -7,14 +7,14 @@ export default async function StaffMissionsPage() {
 
   const [{ data: missions }, { data: members }] = await Promise.all([
     supabase.from('missions').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('profiles').select('id, display_name, email').eq('role', 'customer').order('display_name'),
+    supabase.from('profiles').select('id, display_name, email').order('display_name'),
   ])
 
   return (
     <div className="space-y-6 py-4">
       <div>
-        <h1 className="text-xl font-bold text-white">Mission Control</h1>
-        <p className="text-sm text-gray-500">Manually complete missions or generate QR codes</p>
+        <h1 className="text-xl font-bold text-[#242622]">Mission Control</h1>
+        <p className="text-sm text-[#7E613F]">Manually complete missions or generate QR codes</p>
       </div>
       <StaffMissionPanel missions={missions ?? []} members={members ?? []} staffId={user!.id} />
     </div>
