@@ -102,16 +102,21 @@ export async function POST(request: Request) {
       })
     }
 
+    // Deduplicate by name — last row wins (matches sheet order)
+    const seen = new Map<string, Record<string, any>>()
+    for (const r of recipes) seen.set(r.name, r)
+    const deduped = Array.from(seen.values())
+
     // Upsert into Supabase (match on name)
     const supabase = createServiceClient()
 
-    // Clear existing and re-insert for a clean sync
+    // Soft-delete all existing, then upsert fresh
     await supabase.from('recipes').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000')
 
     const BATCH = 100
     let inserted = 0
-    for (let i = 0; i < recipes.length; i += BATCH) {
-      const batch = recipes.slice(i, i + BATCH)
+    for (let i = 0; i < deduped.length; i += BATCH) {
+      const batch = deduped.slice(i, i + BATCH)
       const { error } = await supabase
         .from('recipes')
         .upsert(batch, { onConflict: 'name', ignoreDuplicates: false })
@@ -120,10 +125,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      success: true,
-      synced:  inserted,
-      total:   recipes.length,
-      message: `Synced ${inserted} recipes from Google Sheets`,
+      success:    true,
+      synced:     inserted,
+      total:      deduped.length,
+      duplicates: recipes.length - deduped.length,
+      message:    `Synced ${inserted} recipes from Google Sheets`,
     })
   } catch (err: any) {
     console.error('Menu sync error:', err)
