@@ -65,7 +65,7 @@ export default function TabBar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-[#242622] border-t border-[#3a3c38] z-50"
+      className="shrink-0 bg-[#242622] border-t border-[#3a3c38] z-50"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-16">

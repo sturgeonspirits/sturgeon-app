@@ -15,15 +15,19 @@ interface FbEvent {
   is_recurring_instance?: boolean
 }
 
+const TZ = 'America/Chicago'
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+    timeZone: TZ,
   })
 }
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit',
+    timeZone: TZ,
   })
 }
 
