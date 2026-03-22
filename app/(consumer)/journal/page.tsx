@@ -10,7 +10,7 @@ export default async function JournalPage() {
 
   const { data: logs } = await supabase
     .from('tasting_logs')
-    .select('*, spirits(name, category, is_house)')
+    .select('id, spirit_name, spirit_category, overall_notes, rating, visited_at')
     .eq('user_id', user.id)
     .order('visited_at', { ascending: false })
     .limit(50)
@@ -53,11 +53,10 @@ export default async function JournalPage() {
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
                   <p className="font-semibold text-[#242622]">
-                    {log.spirits?.name ?? log.spirit_name ?? 'Unknown Spirit'}
+                    {log.spirit_name ?? 'Unknown'}
                   </p>
                   <p className="text-xs text-[#7E613F] mt-0.5 capitalize">
-                    {log.spirits?.category ?? log.spirit_category ?? ''}
-                    {log.spirits?.is_house ? ' · House Spirit' : ''}
+                    {log.spirit_category ?? ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-0.5 ml-3">
