@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { relativeTime } from '@/lib/utils'
+import DeleteEntryButton from '@/components/journal/DeleteEntryButton'
 
 export default async function JournalPage() {
   const supabase = await createClient()
@@ -59,10 +60,15 @@ export default async function JournalPage() {
                     {log.spirit_category ?? ''}
                   </p>
                 </div>
-                <div className="flex items-center gap-0.5 ml-3">
-                  {log.rating && Array.from({ length: 5 }, (_, i) => (
-                    <span key={i} className={i < log.rating ? 'text-[#96321F]' : 'text-[#D4CFC3]'}>★</span>
-                  ))}
+                <div className="flex items-center gap-3 ml-3 shrink-0">
+                  {log.rating && (
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <span key={i} className={i < log.rating ? 'text-[#96321F]' : 'text-[#D4CFC3]'}>★</span>
+                      ))}
+                    </div>
+                  )}
+                  <DeleteEntryButton logId={log.id} />
                 </div>
               </div>
               {log.overall_notes && (

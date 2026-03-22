@@ -1,9 +1,9 @@
 /**
- * POST /api/journal-entry
- * Save a tasting log and emit earn events for missions.
+ * POST /api/journal-entry  — save a tasting log + emit earn events
+ * DELETE /api/journal-entry — remove a tasting log owned by the caller
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { emitEarnEvent, completeMission } from '@/lib/earn-events'
 
 export async function POST(req: NextRequest) {
@@ -74,6 +74,58 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error('Journal entry error:', err)
+    return NextResponse.json({ error: err.message ?? 'Internal error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { logId } = await req.json()
+    if (!logId) return NextResponse.json({ error: 'Missing logId' }, { status: 400 })
+
+    // Verify caller owns the log
+    const userClient = await createClient()
+    const { data: { user } } = await userClient.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+
+    const service = createServiceClient()
+
+    const { data: log } = await service
+      .from('tasting_logs')
+      .select('id, user_id, earn_event_id')
+      .eq('id', logId)
+      .single()
+
+    if (!log) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (log.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    // Delete the log
+    await service.from('tasting_logs').delete().eq('id', logId)
+
+    // Reverse the earn event if one exists (deduct points)
+    if (log.earn_event_id) {
+      const { data: earn } = await service
+        .from('earn_events')
+        .select('points_delta')
+        .eq('id', log.earn_event_id)
+        .single()
+
+      if (earn) {
+        await emitEarnEvent({
+          userId:      user.id,
+          eventType:   'journal_entry_removed',
+          pointsDelta: -Math.abs(earn.points_delta),
+          contextType: 'journal_entry',
+          contextId:   logId,
+          notes:       'Tasting entry removed',
+          supabase:    service,
+        })
+      }
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('Journal delete error:', err)
     return NextResponse.json({ error: err.message ?? 'Internal error' }, { status: 500 })
   }
 }
