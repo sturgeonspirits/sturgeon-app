@@ -10,7 +10,6 @@ export default async function MenuPage() {
     .from('recipes')
     .select('id, name, menu_section, menu_ingredients, price, flavor_tags, glassware, show_on_menu')
     .eq('is_active', true)
-    .eq('show_on_menu', true)
     .order('menu_section')
     .order('sort_order')
     .order('name')

@@ -2,9 +2,9 @@ import TabBar from '@/components/nav/TabBar'
 
 export default function ConsumerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col min-h-screen bg-[#F1F1E7]">
-      {/* Main content — scrollable, padded clear of tab bar + iOS home indicator */}
-      <main className="flex-1 pb-safe overflow-y-auto overscroll-y-contain">
+    <div className="flex flex-col h-screen bg-[#F1F1E7]">
+      {/* Main content — fixed height, scrollable, padded clear of tab bar */}
+      <main className="flex-1 overflow-y-auto overscroll-y-contain pb-20">
         {children}
       </main>
       <TabBar />
