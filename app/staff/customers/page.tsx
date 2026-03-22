@@ -18,7 +18,7 @@ export default async function StaffCustomersPage({
   let query = service
     .from('profiles')
     .select('id, display_name, full_name, email, role, points_total, created_at')
-    .eq('role', 'customer')
+    .not('role', 'in', '("staff","admin")')
     .order('created_at', { ascending: false })
     .limit(50)
 

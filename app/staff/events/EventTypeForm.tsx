@@ -5,6 +5,19 @@ import { useRouter } from 'next/navigation'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const PARTICIPANT_TYPES = [
+  { value: 'individual', label: 'Individual',        desc: 'Each player competes on their own' },
+  { value: 'team',       label: 'Teams',             desc: 'Players form teams each session'   },
+  { value: 'both',       label: 'Both',              desc: 'Has both individual and team boards' },
+]
+
+const SCORING_METHODS = [
+  { value: 'wins_losses', label: 'Wins / Losses',   desc: 'Cribbage-style — track W/L record' },
+  { value: 'points',      label: 'Points',           desc: 'Trivia-style — raw score total'    },
+  { value: 'placement',   label: 'Placement',        desc: 'Ranked finish (1st, 2nd, 3rd…)'   },
+  { value: 'time',        label: 'Time',             desc: 'Fastest time wins'                 },
+]
+
 interface EventType {
   id: string
   name: string
@@ -13,6 +26,8 @@ interface EventType {
   day_of_week: number | null
   typical_time: string | null
   description: string | null
+  participant_type: string | null
+  scoring_method: string | null
   is_active: boolean
   sort_order: number | null
 }
@@ -25,20 +40,21 @@ export default function EventTypeForm({ existing }: Props) {
   const router = useRouter()
   const isNew = !existing
 
-  const [name,         setName]        = useState(existing?.name ?? '')
-  const [slug,         setSlug]        = useState(existing?.slug ?? '')
-  const [icon,         setIcon]        = useState(existing?.icon ?? '📅')
-  const [dayOfWeek,    setDayOfWeek]   = useState<number | ''>(existing?.day_of_week ?? '')
-  const [typicalTime,  setTypicalTime] = useState(existing?.typical_time ?? '')
-  const [description,  setDesc]        = useState(existing?.description ?? '')
-  const [isActive,     setIsActive]    = useState(existing?.is_active ?? true)
-  const [sortOrder,    setSortOrder]   = useState<number | ''>(existing?.sort_order ?? '')
+  const [name,            setName]           = useState(existing?.name ?? '')
+  const [slug,            setSlug]           = useState(existing?.slug ?? '')
+  const [icon,            setIcon]           = useState(existing?.icon ?? '📅')
+  const [dayOfWeek,       setDayOfWeek]      = useState<number | ''>(existing?.day_of_week ?? '')
+  const [typicalTime,     setTypicalTime]    = useState(existing?.typical_time ?? '')
+  const [description,     setDesc]           = useState(existing?.description ?? '')
+  const [participantType, setParticipantType] = useState(existing?.participant_type ?? 'individual')
+  const [scoringMethod,   setScoringMethod]  = useState(existing?.scoring_method ?? 'points')
+  const [isActive,        setIsActive]       = useState(existing?.is_active ?? true)
+  const [sortOrder,       setSortOrder]      = useState<number | ''>(existing?.sort_order ?? '')
 
-  const [saving,   setSaving]  = useState(false)
+  const [saving,   setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [error,    setError]   = useState<string | null>(null)
+  const [error,    setError]    = useState<string | null>(null)
 
-  // Auto-generate slug from name
   function handleNameChange(v: string) {
     setName(v)
     if (isNew) {
@@ -52,15 +68,17 @@ export default function EventTypeForm({ existing }: Props) {
     setError(null)
     try {
       const body = {
-        id:           existing?.id,
+        id:               existing?.id,
         name,
-        slug:         slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        slug:             slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         icon,
-        day_of_week:  dayOfWeek === '' ? null : Number(dayOfWeek),
-        typical_time: typicalTime || null,
-        description:  description || null,
-        is_active:    isActive,
-        sort_order:   sortOrder === '' ? null : Number(sortOrder),
+        day_of_week:      dayOfWeek === '' ? null : Number(dayOfWeek),
+        typical_time:     typicalTime || null,
+        description:      description || null,
+        participant_type: participantType,
+        scoring_method:   scoringMethod,
+        is_active:        isActive,
+        sort_order:       sortOrder === '' ? null : Number(sortOrder),
       }
       const res = await fetch('/api/staff/event-type', {
         method:  isNew ? 'POST' : 'PATCH',
@@ -103,7 +121,7 @@ export default function EventTypeForm({ existing }: Props) {
   return (
     <form onSubmit={handleSave} className="space-y-5">
 
-      {/* Name + Icon row */}
+      {/* Name + Icon */}
       <div className="flex gap-3">
         <div className="flex-1">
           <label className={labelCls}>Event Name</label>
@@ -111,7 +129,7 @@ export default function EventTypeForm({ existing }: Props) {
             required
             value={name}
             onChange={e => handleNameChange(e.target.value)}
-            placeholder="e.g. Cribbage League"
+            placeholder="e.g. Trivia Night — Teams"
             className={inputCls}
           />
         </div>
@@ -133,13 +151,61 @@ export default function EventTypeForm({ existing }: Props) {
         <input
           value={slug}
           onChange={e => setSlug(e.target.value)}
-          placeholder="cribbage-league"
+          placeholder="trivia-teams"
           className={inputCls + " font-mono text-xs"}
         />
-        <p className="text-[10px] text-[#9E8F7E] mt-1">Used in leaderboard URL — no spaces, lowercase</p>
+        <p className="text-[10px] text-[#9E8F7E] mt-1">Used in leaderboard URL — lowercase, no spaces</p>
       </div>
 
-      {/* Day of week + Time row */}
+      {/* Participant type */}
+      <div>
+        <label className={labelCls}>Players</label>
+        <div className="grid grid-cols-3 gap-2">
+          {PARTICIPANT_TYPES.map(pt => (
+            <button
+              key={pt.value}
+              type="button"
+              onClick={() => setParticipantType(pt.value)}
+              className={`text-left p-3 rounded-xl border transition-colors ${
+                participantType === pt.value
+                  ? 'border-[#96321F] bg-[#96321F]/5'
+                  : 'border-[#D4CFC3] bg-[#FFFFFF] hover:border-[#C8BCA4]'
+              }`}
+            >
+              <p className={`text-xs font-semibold ${participantType === pt.value ? 'text-[#96321F]' : 'text-[#242622]'}`}>
+                {pt.label}
+              </p>
+              <p className="text-[10px] text-[#9E8F7E] mt-0.5 leading-tight">{pt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Scoring method */}
+      <div>
+        <label className={labelCls}>Scoring</label>
+        <div className="grid grid-cols-2 gap-2">
+          {SCORING_METHODS.map(sm => (
+            <button
+              key={sm.value}
+              type="button"
+              onClick={() => setScoringMethod(sm.value)}
+              className={`text-left p-3 rounded-xl border transition-colors ${
+                scoringMethod === sm.value
+                  ? 'border-[#96321F] bg-[#96321F]/5'
+                  : 'border-[#D4CFC3] bg-[#FFFFFF] hover:border-[#C8BCA4]'
+              }`}
+            >
+              <p className={`text-xs font-semibold ${scoringMethod === sm.value ? 'text-[#96321F]' : 'text-[#242622]'}`}>
+                {sm.label}
+              </p>
+              <p className="text-[10px] text-[#9E8F7E] mt-0.5 leading-tight">{sm.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Day + Time */}
       <div className="flex gap-3">
         <div className="flex-1">
           <label className={labelCls}>Day of Week</label>
@@ -177,7 +243,7 @@ export default function EventTypeForm({ existing }: Props) {
         />
       </div>
 
-      {/* Sort order + Active row */}
+      {/* Sort order + Active */}
       <div className="flex gap-3 items-end">
         <div className="w-28">
           <label className={labelCls}>Sort Order</label>
@@ -205,14 +271,10 @@ export default function EventTypeForm({ existing }: Props) {
         </div>
       </div>
 
-      {/* Error */}
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          {error}
-        </p>
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</p>
       )}
 
-      {/* Actions */}
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
@@ -230,7 +292,6 @@ export default function EventTypeForm({ existing }: Props) {
         </button>
       </div>
 
-      {/* Delete */}
       {!isNew && (
         <div className="pt-2 border-t border-[#D4CFC3]">
           <button
