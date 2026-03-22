@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import TierProgress from '@/components/club/TierProgress'
 import MissionGrid from '@/components/club/MissionGrid'
 
@@ -103,6 +104,50 @@ export default async function ClubPage() {
             tiers={tiers}
           />
         )}
+
+        {/* Quick access grid */}
+        <section>
+          <SectionHeader label="Explore" />
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { href: '/menu',        icon: '🍹', label: 'Cocktail Menu',   desc: 'Browse our drinks',          live: true  },
+              { href: '/journal',     icon: '✍️',  label: 'Tasting Journal', desc: 'Log + earn points',          live: true  },
+              { href: '/leaderboards',icon: '🏆',  label: 'Standings',       desc: 'Weekly leaderboards',        live: true  },
+              { href: '/rewards',     icon: '🎁',  label: 'Rewards',         desc: 'Redeem your points',         live: true  },
+              { href: '/events',      icon: '📅',  label: 'Events',          desc: 'What\'s on this week',       live: true  },
+              { href: '#',            icon: '📍',  label: 'Check In',        desc: 'Scan QR at the bar',         live: false },
+              { href: '#',            icon: '🛒',  label: 'Shop',            desc: 'Merch & bottle shop',        live: false },
+            ].map(item => (
+              item.live ? (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 flex flex-col gap-2 hover:border-[#C8BCA4] active:scale-[0.98] transition-all"
+                >
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#242622]">{item.label}</p>
+                    <p className="text-xs text-[#7E613F] mt-0.5">{item.desc}</p>
+                  </div>
+                </Link>
+              ) : (
+                <div
+                  key={item.label}
+                  className="bg-[#FFFFFF] border border-[#D4CFC3]/60 rounded-2xl p-4 flex flex-col gap-2 opacity-50"
+                >
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-[#242622]">{item.label}</p>
+                      <span className="text-[9px] font-bold text-[#9E8F7E] bg-[#EDE9DC] px-1.5 py-0.5 rounded-full uppercase">Soon</span>
+                    </div>
+                    <p className="text-xs text-[#9E8F7E] mt-0.5">{item.desc}</p>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        </section>
 
         {/* Challenges */}
         {challenges.length > 0 && (
