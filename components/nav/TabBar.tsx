@@ -78,7 +78,7 @@ export default function TabBar() {
               href={tab.href}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 transition-colors relative',
-                active ? 'text-[#96321F]' : 'text-[#D4CFC3] hover:text-[#FFFFFF]'
+                active ? 'text-[#96321F]' : 'text-[#FFFFFF]/60 hover:text-[#FFFFFF]'
               )}
             >
               {active && (
@@ -87,7 +87,7 @@ export default function TabBar() {
               {tab.icon(active)}
               <span className={cn(
                 'text-[9px] font-medium uppercase tracking-widest leading-none',
-                active ? 'text-[#96321F]' : 'text-[#C8BCA4]'
+                active ? 'text-[#96321F]' : 'text-[#FFFFFF]/60'
               )}>
                 {tab.label}
               </span>
