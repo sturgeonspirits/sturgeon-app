@@ -87,13 +87,21 @@ export async function POST(req: NextRequest) {
           results.push({ userId, pts, earnEventId: earnEvent.id })
         }
 
-        // Mission: participation
+        // Mission: participation (non-fatal — mission may not exist yet)
         if (eventType.participation_mission_slug) {
-          await completeMission({ userId, missionSlug: eventType.participation_mission_slug, supabase })
+          try {
+            await completeMission({ userId, missionSlug: eventType.participation_mission_slug, supabase })
+          } catch (e) {
+            console.warn('participation mission skip:', (e as Error).message)
+          }
         }
-        // Mission: win
+        // Mission: win (non-fatal)
         if (wins > 0 && eventType.win_mission_slug) {
-          await completeMission({ userId, missionSlug: eventType.win_mission_slug, supabase })
+          try {
+            await completeMission({ userId, missionSlug: eventType.win_mission_slug, supabase })
+          } catch (e) {
+            console.warn('win mission skip:', (e as Error).message)
+          }
         }
       }
     }
@@ -142,10 +150,18 @@ export async function POST(req: NextRequest) {
             })
           }
           if (eventType.participation_mission_slug) {
-            await completeMission({ userId, missionSlug: eventType.participation_mission_slug, supabase })
+            try {
+              await completeMission({ userId, missionSlug: eventType.participation_mission_slug, supabase })
+            } catch (e) {
+              console.warn('participation mission skip (team):', (e as Error).message)
+            }
           }
           if (placement === 1 && eventType.win_mission_slug) {
-            await completeMission({ userId, missionSlug: eventType.win_mission_slug, supabase })
+            try {
+              await completeMission({ userId, missionSlug: eventType.win_mission_slug, supabase })
+            } catch (e) {
+              console.warn('win mission skip (team):', (e as Error).message)
+            }
           }
           results.push({ userId, pts })
         }

@@ -14,12 +14,22 @@ function AuthCallbackInner() {
     async function handleCallback() {
       const supabase = createClient()
 
+      async function redirectByRole(userId: string) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single()
+        const role = (profile as any)?.role ?? 'customer'
+        router.replace(['staff', 'admin'].includes(role) ? '/staff' : '/club')
+      }
+
       // ── PKCE flow: ?code= query param (standard OTP / OAuth) ──────────
       const code = searchParams.get('code')
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (!error) {
-          router.replace('/club')
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!error && data.user) {
+          await redirectByRole(data.user.id)
           return
         }
       }
@@ -32,13 +42,13 @@ function AuthCallbackInner() {
         const refreshToken = params.get('refresh_token')
 
         if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           })
-          if (!error) {
+          if (!error && data.user) {
             window.history.replaceState(null, '', window.location.pathname)
-            router.replace('/club')
+            await redirectByRole(data.user.id)
             return
           }
         }
@@ -46,8 +56,8 @@ function AuthCallbackInner() {
 
       // ── Fallback: maybe already signed in ─────────────────────────────
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.replace('/club')
+      if (session?.user) {
+        await redirectByRole(session.user.id)
       } else {
         router.replace('/auth/login?error=callback_failed')
       }

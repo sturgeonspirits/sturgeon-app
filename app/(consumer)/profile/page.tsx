@@ -89,6 +89,20 @@ export default async function ProfilePage() {
         </div>
       </section>
 
+      {/* Staff portal — only visible to staff/admin */}
+      {['staff', 'admin'].includes(profile?.role ?? '') && (
+        <a href="/staff" className="flex items-center justify-between w-full bg-[#242622] text-[#F1F1E7] rounded-2xl px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">⚙️</span>
+            <div>
+              <p className="font-semibold text-sm">Staff Portal</p>
+              <p className="text-xs text-[#C8BCA4]">Manage events, scores & customers</p>
+            </div>
+          </div>
+          <span className="text-[#C8BCA4] text-lg">›</span>
+        </a>
+      )}
+
       {/* Sign out */}
       <form action={handleSignOut}>
         <button type="submit" className="w-full text-sm text-[#9E8F7E] hover:text-red-500 py-3 transition-colors">

@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -27,23 +26,26 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // ── Unauthenticated: redirect to login ──────────────────
+  // ── Public paths — no auth required ─────────────────────
   const publicPaths = [
     '/auth/login',
     '/auth/verify',
     '/auth/callback',
     '/dev-login',
     '/api/dev-auth',
-    '/staff/login',
-    '/staff/auth/callback',
   ]
-  if (!user && !publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+  if (publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+    return supabaseResponse
+  }
+
+  // ── /staff/login → redirect to unified login ─────────────
+  if (pathname === '/staff/login' || pathname.startsWith('/staff/login/')) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // ── Staff routes: just ensure authenticated — page handles role check ──
-  if (pathname.startsWith('/staff') && !pathname.startsWith('/staff/login') && !pathname.startsWith('/staff/auth') && !user) {
-    return NextResponse.redirect(new URL('/staff/login', request.url))
+  // ── Unauthenticated: redirect to login ───────────────────
+  if (!user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
   return supabaseResponse

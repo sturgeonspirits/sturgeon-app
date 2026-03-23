@@ -42,10 +42,12 @@ export default function EventScheduleManager({ eventTypeId, upcomingEvents: init
   const [notes, setNotes]         = useState('')
   const [saving, setSaving]       = useState(false)
   const [deleting, setDeleting]   = useState<string | null>(null)
+  const [error, setError]         = useState('')
 
   async function scheduleDate() {
     if (!date) return
     setSaving(true)
+    setError('')
     const res = await fetch('/api/staff/event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,6 +65,8 @@ export default function EventScheduleManager({ eventTypeId, upcomingEvents: init
       setTime('')
       setNotes('')
       setShowForm(false)
+    } else {
+      setError(json.error ?? 'Failed to save date')
     }
     setSaving(false)
   }
@@ -113,7 +117,7 @@ export default function EventScheduleManager({ eventTypeId, upcomingEvents: init
         </div>
       )}
 
-      {showForm ? (
+      {showForm && (
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <input
             type="date"
@@ -143,13 +147,19 @@ export default function EventScheduleManager({ eventTypeId, upcomingEvents: init
             {saving ? '…' : 'Add'}
           </button>
           <button
-            onClick={() => { setShowForm(false); setDate(''); setTime(''); setNotes('') }}
+            onClick={() => { setShowForm(false); setDate(''); setTime(''); setNotes(''); setError('') }}
             className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors"
           >
             Cancel
           </button>
         </div>
-      ) : (
+      )}
+
+      {error && (
+        <p className="text-xs text-red-500 mt-1">{error}</p>
+      )}
+
+      {!showForm && (
         <button
           onClick={() => setShowForm(true)}
           className="text-xs text-[#7E613F] hover:text-[#96321F] font-medium transition-colors flex items-center gap-1 pt-0.5"

@@ -50,13 +50,13 @@ export default function VerifyPage() {
     setError('')
     setLoading(true)
 
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       email,
       token: code,
       type: 'email',
     })
 
-    if (error) {
+    if (error || !data.user) {
       setError('Invalid or expired code. Try again.')
       setDigits(['', '', '', '', '', '', '', ''])
       inputRefs.current[0]?.focus()
@@ -65,7 +65,16 @@ export default function VerifyPage() {
     }
 
     sessionStorage.removeItem('otp_email')
-    router.replace('/club')
+
+    // Route by role — staff/admin go to the staff portal
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single()
+
+    const role = (profile as any)?.role ?? 'customer'
+    router.replace(['staff', 'admin'].includes(role) ? '/staff' : '/club')
   }
 
   async function resendCode() {
