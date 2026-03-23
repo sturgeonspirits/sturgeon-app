@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import LeaderboardBoard from '@/components/leaderboard/LeaderboardBoard'
 
@@ -7,9 +8,11 @@ interface Props { params: Promise<{ slug: string }> }
 export default async function LeaderboardDetailPage({ params }: Props) {
   const { slug } = await params
   const supabase  = await createClient()
+  // Use service client for leaderboard reads so RLS doesn't hide other users' scores
+  const service   = createServiceClient()
 
   // Fetch event type config — this drives ALL board behaviour
-  const { data: eventType } = await supabase
+  const { data: eventType } = await service
     .from('event_types')
     .select('*')
     .eq('slug', slug)
@@ -19,7 +22,7 @@ export default async function LeaderboardDetailPage({ params }: Props) {
   if (!eventType) notFound()
 
   // Fetch the most recent period for this event
-  const { data: periods } = await supabase
+  const { data: periods } = await service
     .from('leaderboard_periods')
     .select('*')
     .eq('event_type_id', eventType.id)
@@ -34,14 +37,14 @@ export default async function LeaderboardDetailPage({ params }: Props) {
 
   if (currentPeriod) {
     if (eventType.participant_type === 'team') {
-      const { data: teamData } = await supabase
+      const { data: teamData } = await service
         .from('leaderboard_teams')
         .select('*, leaderboard_team_members(user_id, profiles(display_name, avatar_url))')
         .eq('period_id', currentPeriod.id)
         .order('placement')
       teams = teamData ?? []
     } else {
-      const { data: entryData } = await supabase
+      const { data: entryData } = await service
         .from('leaderboard_events')
         .select('*, profiles(display_name, avatar_url, tier)')
         .eq('period_id', currentPeriod.id)
@@ -54,7 +57,7 @@ export default async function LeaderboardDetailPage({ params }: Props) {
   }
 
   // All-time cache
-  const { data: allTime } = await supabase
+  const { data: allTime } = await service
     .from('leaderboard_cache')
     .select('*, profiles(display_name, avatar_url)')
     .eq('event_type_id', eventType.id)

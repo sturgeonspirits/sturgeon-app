@@ -6,13 +6,17 @@ async function assertStaff() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthenticated')
 
-  const role: string = (user as any).app_metadata?.role ?? ''
-  if (['staff', 'admin'].includes(role)) return { supabase, user }
-
-  // Fallback: check profiles table
+  // Check profiles table using service client to bypass RLS
   const service = createServiceClient()
-  const { data } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (!['staff', 'admin'].includes(data?.role ?? '')) throw new Error('Forbidden')
+  const { data: profile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['staff', 'admin'].includes(profile.role ?? '')) {
+    throw new Error(`Forbidden (role: ${profile?.role ?? 'none'})`)
+  }
 
   return { supabase, user }
 }
@@ -26,14 +30,16 @@ export async function POST(req: NextRequest) {
     const { data, error } = await service
       .from('event_types')
       .insert({
-        name:         body.name,
-        slug:         body.slug,
-        icon:         body.icon ?? null,
-        day_of_week:  body.day_of_week ?? null,
-        typical_time: body.typical_time ?? null,
-        description:  body.description ?? null,
-        is_active:    body.is_active ?? true,
-        sort_order:   body.sort_order ?? null,
+        name:             body.name,
+        slug:             body.slug,
+        icon:             body.icon ?? null,
+        day_of_week:      body.day_of_week ?? null,
+        typical_time:     body.typical_time ?? null,
+        description:      body.description ?? null,
+        participant_type: body.participant_type ?? 'individual',
+        scoring_method:   body.scoring_method ?? 'points',
+        is_active:        body.is_active ?? true,
+        sort_order:       body.sort_order ?? null,
       })
       .select()
       .single()
@@ -57,14 +63,16 @@ export async function PATCH(req: NextRequest) {
     const { data, error } = await service
       .from('event_types')
       .update({
-        name:         fields.name,
-        slug:         fields.slug,
-        icon:         fields.icon ?? null,
-        day_of_week:  fields.day_of_week ?? null,
-        typical_time: fields.typical_time ?? null,
-        description:  fields.description ?? null,
-        is_active:    fields.is_active ?? true,
-        sort_order:   fields.sort_order ?? null,
+        name:             fields.name,
+        slug:             fields.slug,
+        icon:             fields.icon ?? null,
+        day_of_week:      fields.day_of_week ?? null,
+        typical_time:     fields.typical_time ?? null,
+        description:      fields.description ?? null,
+        participant_type: fields.participant_type ?? 'individual',
+        scoring_method:   fields.scoring_method ?? 'points',
+        is_active:        fields.is_active ?? true,
+        sort_order:       fields.sort_order ?? null,
       })
       .eq('id', id)
       .select()
