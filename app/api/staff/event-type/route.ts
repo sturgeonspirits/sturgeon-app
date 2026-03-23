@@ -6,9 +6,8 @@ async function assertStaff() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthenticated')
 
-  // Check profiles table using service client to bypass RLS
-  const service = createServiceClient()
-  const { data: profile } = await service
+  // Use the authenticated client — profiles are readable by the owner
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
