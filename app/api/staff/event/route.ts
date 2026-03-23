@@ -1,0 +1,67 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { createClient } from '@/lib/supabase/server'
+
+// POST  /api/staff/event  — schedule a specific event date
+export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || !['staff', 'admin'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const body = await req.json()
+  const { eventTypeId, eventDate, startTime, notes } = body
+
+  if (!eventTypeId || !eventDate) {
+    return NextResponse.json({ error: 'eventTypeId and eventDate are required' }, { status: 400 })
+  }
+
+  const service = createServiceClient()
+  const { data, error } = await service
+    .from('events')
+    .insert({
+      event_type_id: eventTypeId,
+      event_date: eventDate,          // 'YYYY-MM-DD'
+      start_time: startTime ?? null,  // 'HH:MM'
+      notes: notes ?? null,
+      is_cancelled: false,
+    })
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ event: data })
+}
+
+// DELETE /api/staff/event?id=xxx — cancel/remove a specific event date
+export async function DELETE(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || !['staff', 'admin'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const id = req.nextUrl.searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+  const service = createServiceClient()
+  const { error } = await service.from('events').delete().eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

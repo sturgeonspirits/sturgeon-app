@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -130,6 +131,21 @@ function SectionHeader({ label }: { label: string }) {
   )
 }
 
+// ── Format a DB event date ────────────────────────────────
+
+function fmtDbDate(dateStr: string, timeStr?: string | null) {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const d = new Date(year, month - 1, day)
+  const datePart = d.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  })
+  if (!timeStr) return datePart
+  const [h, m] = timeStr.split(':').map(Number)
+  const t = new Date(year, month - 1, day, h, m)
+  const timePart = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${datePart} · ${timePart}`
+}
+
 // ── Page ──────────────────────────────────────────────────
 
 export default async function EventsPage() {
@@ -137,17 +153,28 @@ export default async function EventsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const [fbEvents, { data: eventTypes }] = await Promise.all([
+  const service = createServiceClient()
+  const today = new Date().toLocaleDateString('en-CA')
+
+  const [fbEvents, { data: eventTypes }, { data: scheduledEvents }] = await Promise.all([
     fetchFbEvents(),
-    supabase
+    service
       .from('event_types')
       .select('id, name, slug, icon, day_of_week, typical_time, description')
       .eq('is_active', true)
       .order('sort_order'),
+    service
+      .from('events')
+      .select('id, event_date, start_time, notes, is_cancelled, event_types(id, name, slug, icon, description)')
+      .gte('event_date', today)
+      .eq('is_cancelled', false)
+      .order('event_date')
+      .limit(20),
   ])
 
   const featured = fbEvents[0] ?? null
   const rest     = fbEvents.slice(1)
+  const dbEvents = scheduledEvents ?? []
 
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -160,32 +187,65 @@ export default async function EventsPage() {
         <p className="text-sm text-[#7E613F] mt-1">Upcoming happenings at Sturgeon Spirits</p>
       </div>
 
-      {fbEvents.length === 0 ? (
+      {/* ── Scheduled specific dates (from DB) ───────────── */}
+      {dbEvents.length > 0 && (
+        <section className="mb-8">
+          <SectionHeader label="Upcoming" />
+          <div className="space-y-2">
+            {dbEvents.map(ev => {
+              const et = ev.event_types as any
+              if (!et) return null
+              return (
+                <Link
+                  key={ev.id}
+                  href={`/leaderboards/${et.slug ?? '#'}`}
+                  className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 hover:border-[#C8BCA4] transition-colors active:scale-[0.99]"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[#96321F]/10 border border-[#96321F]/20 flex items-center justify-center text-2xl shrink-0">
+                    {et.icon ?? '📅'}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[#242622]">{et.name}</p>
+                    <p className="text-xs font-semibold text-[#96321F] mt-0.5">
+                      {fmtDbDate(ev.event_date, ev.start_time)}
+                    </p>
+                    {ev.notes && (
+                      <p className="text-xs text-[#9E8F7E] mt-0.5">{ev.notes}</p>
+                    )}
+                  </div>
+                  <span className="text-[#C8BCA4] text-lg">›</span>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── Facebook events ───────────────────────────────── */}
+      {fbEvents.length > 0 && (
+        <>
+          {/* ── Next up (featured) ───────────────────────── */}
+          <section className="mb-8">
+            <SectionHeader label="From Facebook" />
+            {featured && <EventCard ev={featured} featured />}
+            {rest.length > 0 && (
+              <div className="space-y-3 mt-3">
+                {rest.map((ev, i) => (
+                  <EventCard key={i} ev={ev} />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* ── No events fallback ───────────────────────────── */}
+      {dbEvents.length === 0 && fbEvents.length === 0 && (
         <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-6 text-center mb-8">
           <p className="text-3xl mb-2">📅</p>
           <p className="text-sm font-semibold text-[#242622]">No upcoming events right now</p>
           <p className="text-xs text-[#7E613F] mt-1">Check back soon — we update this regularly</p>
         </div>
-      ) : (
-        <>
-          {/* ── Next up (featured) ───────────────────────── */}
-          <section className="mb-8">
-            <SectionHeader label="Next Up" />
-            {featured && <EventCard ev={featured} featured />}
-          </section>
-
-          {/* ── All upcoming ─────────────────────────────── */}
-          {rest.length > 0 && (
-            <section className="mb-8">
-              <SectionHeader label="All Upcoming" />
-              <div className="space-y-3">
-                {rest.map((ev, i) => (
-                  <EventCard key={i} ev={ev} />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
       )}
 
       {/* ── Weekly recurring (from DB) ───────────────────── */}

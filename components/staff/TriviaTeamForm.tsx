@@ -19,7 +19,7 @@ interface TeamRow {
   name:      string
   score:     number | ''
   memberIds: string[]
-  savedId?:  string   // id of the saved template this was loaded from
+  savedId?:  string
 }
 
 interface Props {
@@ -30,8 +30,10 @@ interface Props {
 }
 
 export default function TriviaTeamForm({ period, members, staffId, eventTypeId }: Props) {
-  const [teams,      setTeams]      = useState<TeamRow[]>([{ name: '', score: '', memberIds: [] }])
+  const [teams,      setTeams]      = useState<TeamRow[]>([])
   const [savedTeams, setSavedTeams] = useState<SavedTeam[]>([])
+  const [loaded,     setLoaded]     = useState(false)   // have saved teams been fetched?
+  const [selected,   setSelected]   = useState<Set<string>>(new Set())
   const [saving,     setSaving]     = useState(false)
   const [message,    setMessage]    = useState('')
 
@@ -39,8 +41,11 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
   useEffect(() => {
     fetch(`/api/staff/trivia-teams?eventTypeId=${eventTypeId}`)
       .then(r => r.json())
-      .then(d => setSavedTeams(d.teams ?? []))
-      .catch(() => {})
+      .then(d => {
+        setSavedTeams(d.teams ?? [])
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
   }, [eventTypeId])
 
   // Build a display name lookup
@@ -52,9 +57,37 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
     return m
   }, [members])
 
-  // ── Team mutations ────────────────────────────────────────
+  // ── Selection helpers ──────────────────────────────────
 
-  function addTeam() {
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    setSelected(new Set(savedTeams.map(t => t.id)))
+  }
+
+  function loadSelected() {
+    const toLoad = savedTeams.filter(st => selected.has(st.id))
+    const newCards: TeamRow[] = toLoad.map(st => ({
+      name:      st.name,
+      score:     '',
+      memberIds: st.trivia_team_members
+        .map(m => m.user_id)
+        .filter(id => members.some(mb => mb.id === id)),
+      savedId:   st.id,
+    }))
+    setTeams(prev => [...prev, ...newCards])
+    setSelected(new Set())
+  }
+
+  // ── Team card mutations ────────────────────────────────
+
+  function addBlankTeam() {
     setTeams(t => [...t, { name: '', score: '', memberIds: [] }])
   }
   function removeTeam(i: number) {
@@ -75,18 +108,6 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
     ))
   }
 
-  // Load a saved team template into a slot
-  function loadSavedTeam(teamIdx: number, saved: SavedTeam) {
-    const memberIds = saved.trivia_team_members
-      .map(m => m.user_id)
-      .filter(id => members.some(mb => mb.id === id)) // only load members who exist
-    setTeams(t => t.map((team, j) =>
-      j === teamIdx
-        ? { name: saved.name, score: team.score, memberIds, savedId: saved.id }
-        : team
-    ))
-  }
-
   // Save current roster back to template (or create new)
   async function saveRoster(teamIdx: number) {
     const team = teams[teamIdx]
@@ -103,17 +124,15 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
     })
     const json = await res.json()
     if (res.ok) {
-      // Refresh saved teams and update the savedId
-      const saved = await fetch(`/api/staff/trivia-teams?eventTypeId=${eventTypeId}`)
-        .then(r => r.json())
-      setSavedTeams(saved.teams ?? [])
+      const refreshed = await fetch(`/api/staff/trivia-teams?eventTypeId=${eventTypeId}`).then(r => r.json())
+      setSavedTeams(refreshed.teams ?? [])
       setTeamField(teamIdx, 'savedId', json.id)
       setMessage(`"${team.name}" roster saved ✓`)
       setTimeout(() => setMessage(''), 3000)
     }
   }
 
-  // ── Submit scores ─────────────────────────────────────────
+  // ── Submit scores ─────────────────────────────────────
 
   async function submitTeams() {
     const valid = teams.filter(t => t.name && t.score !== '' && t.memberIds.length > 0)
@@ -142,7 +161,7 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
     const json = await res.json()
     if (res.ok) {
       setMessage(`Scores saved for ${valid.length} team${valid.length > 1 ? 's' : ''} ✓`)
-      setTeams([{ name: '', score: '', memberIds: [] }])
+      setTeams([])
     } else {
       setMessage(json.error ?? 'Error saving scores')
     }
@@ -151,45 +170,114 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
 
   const allUsedIds = teams.flatMap(t => t.memberIds)
 
+  // ── Render ────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#7E613F]">
-        {members.length} members in roster · Load a saved team or build from scratch
-      </p>
 
-      {teams.map((team, i) => (
-        <TeamCard
-          key={i}
-          index={i}
-          team={team}
-          members={members}
-          memberMap={memberMap}
-          savedTeams={savedTeams}
-          allUsedIds={allUsedIds}
-          canRemove={teams.length > 1}
-          onRemove={() => removeTeam(i)}
-          onSetField={(field, value) => setTeamField(i, field, value)}
-          onAddMember={id => addMember(i, id)}
-          onRemoveMember={id => removeMember(i, id)}
-          onLoadSaved={saved => loadSavedTeam(i, saved)}
-          onSaveRoster={() => saveRoster(i)}
-        />
-      ))}
+      {/* ── Saved team selector ───────────────────────── */}
+      {loaded && savedTeams.length > 0 && (
+        <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-[#7E613F] uppercase tracking-widest">
+              Saved teams
+            </p>
+            {savedTeams.length > 1 && (
+              <button
+                onClick={selectAll}
+                className="text-xs text-[#96321F] font-semibold hover:underline"
+              >
+                Select all
+              </button>
+            )}
+          </div>
 
-      <button
-        onClick={addTeam}
-        className="text-sm text-[#96321F] hover:text-[#ae3a24] font-semibold transition-colors"
-      >
-        + Add another team
-      </button>
+          <div className="flex flex-wrap gap-2">
+            {savedTeams.map(st => {
+              const isSelected = selected.has(st.id)
+              // Is this team already loaded as a card?
+              const isLoaded = teams.some(t => t.savedId === st.id)
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => !isLoaded && toggleSelect(st.id)}
+                  disabled={isLoaded}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border font-medium transition-all ${
+                    isLoaded
+                      ? 'bg-[#87A67F]/15 border-[#87A67F]/40 text-[#87A67F] cursor-default'
+                      : isSelected
+                        ? 'bg-[#96321F] border-[#96321F] text-white'
+                        : 'bg-[#FFFFFF] border-[#D4CFC3] text-[#242622] hover:border-[#96321F]'
+                  }`}
+                >
+                  {isLoaded ? (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  ) : isSelected ? (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  ) : null}
+                  {st.name}
+                  <span className="text-[10px] opacity-60">({st.trivia_team_members.length})</span>
+                </button>
+              )
+            })}
+          </div>
 
-      <button
-        onClick={submitTeams}
-        disabled={saving || teams.every(t => !t.name || t.score === '' || t.memberIds.length === 0)}
-        className="w-full bg-[#96321F] text-white font-semibold py-2.5 rounded-xl disabled:opacity-40 text-sm hover:bg-[#ae3a24] transition-colors"
-      >
-        {saving ? 'Saving scores…' : 'Submit Results'}
-      </button>
+          {selected.size > 0 && (
+            <button
+              onClick={loadSelected}
+              className="w-full bg-[#96321F] text-white text-sm font-semibold py-2 rounded-xl hover:bg-[#ae3a24] transition-colors"
+            >
+              Load {selected.size} team{selected.size > 1 ? 's' : ''} →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Team cards ────────────────────────────────── */}
+      {teams.length > 0 && (
+        <div className="space-y-3">
+          {teams.map((team, i) => (
+            <TeamCard
+              key={i}
+              index={i}
+              team={team}
+              members={members}
+              memberMap={memberMap}
+              allUsedIds={allUsedIds}
+              canRemove={teams.length > 1}
+              onRemove={() => removeTeam(i)}
+              onSetField={(field, value) => setTeamField(i, field, value)}
+              onAddMember={id => addMember(i, id)}
+              onRemoveMember={id => removeMember(i, id)}
+              onSaveRoster={() => saveRoster(i)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Bottom actions ────────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={addBlankTeam}
+          className="text-sm text-[#96321F] hover:text-[#ae3a24] font-semibold transition-colors"
+        >
+          + Add team
+        </button>
+      </div>
+
+      {teams.length > 0 && (
+        <button
+          onClick={submitTeams}
+          disabled={saving || teams.every(t => !t.name || t.score === '' || t.memberIds.length === 0)}
+          className="w-full bg-[#96321F] text-white font-semibold py-2.5 rounded-xl disabled:opacity-40 text-sm hover:bg-[#ae3a24] transition-colors"
+        >
+          {saving ? 'Saving scores…' : 'Submit Results'}
+        </button>
+      )}
 
       {message && (
         <p className={`text-sm font-medium ${message.includes('✓') ? 'text-[#87A67F]' : 'text-red-500'}`}>
@@ -200,31 +288,28 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
   )
 }
 
-// ── Individual team card ──────────────────────────────────────
+// ── Individual team card ──────────────────────────────────
 
 interface TeamCardProps {
   index:          number
   team:           TeamRow
   members:        Member[]
   memberMap:      Record<string, string>
-  savedTeams:     SavedTeam[]
   allUsedIds:     string[]
   canRemove:      boolean
   onRemove:       () => void
   onSetField:     (field: keyof TeamRow, value: any) => void
   onAddMember:    (id: string) => void
   onRemoveMember: (id: string) => void
-  onLoadSaved:    (saved: SavedTeam) => void
   onSaveRoster:   () => void
 }
 
 function TeamCard({
-  index, team, members, memberMap, savedTeams, allUsedIds,
-  canRemove, onRemove, onSetField, onAddMember, onRemoveMember, onLoadSaved, onSaveRoster,
+  index, team, members, memberMap, allUsedIds,
+  canRemove, onRemove, onSetField, onAddMember, onRemoveMember, onSaveRoster,
 }: TeamCardProps) {
   const [search,       setSearch]       = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const suggestions = useMemo(() => {
@@ -247,7 +332,7 @@ function TeamCard({
 
   return (
     <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 space-y-3">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-bold text-[#96321F] uppercase tracking-widest shrink-0">
           Team {index + 1}
@@ -277,41 +362,6 @@ function TeamCard({
           className="w-20 border border-[#D4CFC3] rounded-lg px-3 py-2 text-sm text-[#242622] text-center focus:outline-none focus:border-[#96321F] transition-colors"
         />
       </div>
-
-      {/* Load saved team */}
-      {savedTeams.length > 0 && (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowTemplates(!showTemplates)}
-            className="text-xs text-[#7E613F] hover:text-[#96321F] font-medium transition-colors flex items-center gap-1"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
-            Load saved team
-            <svg className={`transition-transform ${showTemplates ? 'rotate-180' : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
-          </button>
-          {showTemplates && (
-            <div className="absolute top-6 left-0 z-20 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl shadow-lg min-w-48 py-1 max-h-48 overflow-y-auto">
-              {savedTeams.map(st => (
-                <button
-                  key={st.id}
-                  onClick={() => { onLoadSaved(st); setShowTemplates(false) }}
-                  className="w-full text-left px-3 py-2 text-sm text-[#242622] hover:bg-[#F1F1E7] transition-colors"
-                >
-                  <span className="font-medium">{st.name}</span>
-                  <span className="text-xs text-[#9E8F7E] ml-1.5">
-                    ({st.trivia_team_members.length} members)
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Current members */}
       {team.memberIds.length > 0 && (
@@ -380,7 +430,7 @@ function TeamCard({
         )}
       </div>
 
-      {/* Save roster link */}
+      {/* Save roster */}
       {team.memberIds.length > 0 && team.name && (
         <button
           type="button"
