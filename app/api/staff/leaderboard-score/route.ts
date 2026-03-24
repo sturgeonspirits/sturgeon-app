@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
           : score
 
         // Upsert leaderboard_events row
-        await supabase
+        const { error: upsertErr } = await supabase
           .from('leaderboard_events')
           .upsert({
             period_id:  periodId,
@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
             entered_by: staffId,
             entered_at: new Date().toISOString(),
           }, { onConflict: 'period_id,user_id' })
-          .select()
-          .single()
+
+        if (upsertErr) throw new Error(`Score save failed for user ${userId}: ${upsertErr.message}`)
 
         // Award points
         let pts = 0
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
         // Also write individual leaderboard_events rows for each member so the
         // individual standings page auto-populates — no separate data entry needed.
         for (const userId of memberIds) {
-          await supabase.from('leaderboard_events').upsert({
+          const { error: teamUpsertErr } = await supabase.from('leaderboard_events').upsert({
             period_id:  periodId,
             user_id:    userId,
             score:      score,
@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
             entered_by: staffId,
             entered_at: new Date().toISOString(),
           }, { onConflict: 'period_id,user_id' })
+          if (teamUpsertErr) throw new Error(`Team score save failed: ${teamUpsertErr.message}`)
         }
 
         // Award points to each team member

@@ -156,25 +156,32 @@ export default async function EventsPage() {
   const service = createServiceClient()
   const today = new Date().toLocaleDateString('en-CA')
 
-  const [fbEvents, { data: eventTypes }, { data: scheduledEvents }] = await Promise.all([
+  const [fbEvents, { data: eventTypes }, { data: scheduledEventsRaw }] = await Promise.all([
     fetchFbEvents(),
     service
       .from('event_types')
       .select('id, name, slug, icon, day_of_week, typical_time, description')
       .eq('is_active', true)
       .order('sort_order'),
+    // No FK join — PostgREST may not have refreshed its schema cache for the new `events` table.
+    // We match event_types in code using the already-fetched list.
     service
       .from('events')
-      .select('id, event_date, start_time, notes, is_cancelled, event_types(id, name, slug, icon, description)')
+      .select('id, event_type_id, event_date, start_time, notes, is_cancelled')
       .gte('event_date', today)
       .eq('is_cancelled', false)
       .order('event_date')
       .limit(20),
   ])
 
+  // Join event_types in code so we're not reliant on PostgREST FK cache
+  const etById = Object.fromEntries((eventTypes ?? []).map(et => [et.id, et]))
+  const dbEvents = (scheduledEventsRaw ?? [])
+    .map(ev => ({ ...ev, event_type: etById[ev.event_type_id] ?? null }))
+    .filter(ev => ev.event_type !== null)
+
   const featured = fbEvents[0] ?? null
   const rest     = fbEvents.slice(1)
-  const dbEvents = scheduledEvents ?? []
 
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -193,7 +200,7 @@ export default async function EventsPage() {
           <SectionHeader label="Upcoming" />
           <div className="space-y-2">
             {dbEvents.map(ev => {
-              const et = ev.event_types as any
+              const et = ev.event_type as any
               if (!et) return null
               return (
                 <Link

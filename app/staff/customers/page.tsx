@@ -9,7 +9,7 @@ export default async function StaffCustomersPage({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/staff/login')
+  if (!user) redirect('/auth/login')
 
   const service = createServiceClient()
   const { q: rawQ } = await searchParams
@@ -17,13 +17,13 @@ export default async function StaffCustomersPage({
 
   let query = service
     .from('profiles')
-    .select('id, display_name, full_name, email, role, points_total, created_at')
+    .select('id, display_name, email, role, tier, created_at')
     .not('role', 'in', '("staff","admin")')
     .order('created_at', { ascending: false })
     .limit(50)
 
   if (q) {
-    query = query.or(`display_name.ilike.%${q}%,full_name.ilike.%${q}%,email.ilike.%${q}%`)
+    query = query.or(`display_name.ilike.%${q}%,email.ilike.%${q}%`)
   }
 
   const { data: customers } = await query
@@ -86,18 +86,17 @@ export default async function StaffCustomersPage({
             <div key={c.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 flex items-center gap-4">
               <div className="w-9 h-9 rounded-full bg-[#96321F]/10 flex items-center justify-center shrink-0">
                 <span className="text-sm font-bold text-[#96321F]">
-                  {(c.display_name ?? c.full_name ?? c.email ?? '?')[0]?.toUpperCase()}
+                  {(c.display_name ?? c.email ?? '?')[0]?.toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-[#242622] truncate">
-                  {c.display_name ?? c.full_name ?? 'Unnamed'}
+                  {c.display_name ?? 'Unnamed'}
                 </p>
                 <p className="text-xs text-[#7E613F] truncate">{c.email}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-sm font-bold text-[#242622]">{c.points_total ?? 0}</p>
-                <p className="text-[10px] text-[#9E8F7E]">pts</p>
+                <p className="text-xs font-semibold text-[#7E613F] capitalize">{c.tier ?? 'newcomer'}</p>
               </div>
             </div>
           ))}

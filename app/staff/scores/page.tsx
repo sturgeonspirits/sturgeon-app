@@ -28,6 +28,17 @@ export default async function StaffScoresPage() {
     .select('id, display_name, email')
     .order('display_name')
 
+  // Scheduled event dates — look back 1 day and forward 14 days so "tonight" always appears
+  const weekAgo     = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
+  const twoWeeksOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
+  const { data: scheduledEvents } = await service
+    .from('events')
+    .select('id, event_type_id, event_date, start_time, notes')
+    .gte('event_date', weekAgo)
+    .lte('event_date', twoWeeksOut)
+    .eq('is_cancelled', false)
+    .order('event_date')
+
   return (
     <div className="space-y-6 py-4">
       <div>
@@ -39,6 +50,7 @@ export default async function StaffScoresPage() {
         openPeriods={openPeriods ?? []}
         members={members ?? []}
         staffId={user!.id}
+        scheduledEvents={scheduledEvents ?? []}
       />
     </div>
   )
