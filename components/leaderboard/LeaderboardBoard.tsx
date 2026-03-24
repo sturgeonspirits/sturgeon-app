@@ -78,6 +78,15 @@ function WinsLossesBoard({ entries, currentUserId }: { entries: any[]; currentUs
   const sorted = [...entries].sort((a, b) =>
     b.wins - a.wins || b.score - a.score || a.losses - b.losses
   )
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-10 text-[#7E613F]">
+        <p className="text-3xl mb-2">🃏</p>
+        <p className="font-medium text-sm">No scores recorded yet</p>
+        <p className="text-xs mt-1 text-[#9E8F7E]">Staff can enter tonight's results from the portal</p>
+      </div>
+    )
+  }
   return (
     <div className="space-y-2">
       {sorted.map((e, i) => {
@@ -118,6 +127,15 @@ function WinsLossesBoard({ entries, currentUserId }: { entries: any[]; currentUs
 
 function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId?: string }) {
   const sorted = [...entries].sort((a, b) => b.score - a.score)
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-10 text-[#7E613F]">
+        <p className="text-3xl mb-2">📊</p>
+        <p className="font-medium text-sm">No scores recorded yet</p>
+        <p className="text-xs mt-1 text-[#9E8F7E]">Staff can enter tonight's results from the portal</p>
+      </div>
+    )
+  }
   return (
     <div className="space-y-2">
       {sorted.map((e, i) => {
@@ -145,6 +163,15 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
 
 function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentUserId?: string; eventType: EventType }) {
   const sorted = [...teams].sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-10 text-[#7E613F]">
+        <p className="text-3xl mb-2">🏆</p>
+        <p className="font-medium text-sm">No scores recorded yet</p>
+        <p className="text-xs mt-1 text-[#9E8F7E]">Staff can enter tonight's results from the portal</p>
+      </div>
+    )
+  }
   return (
     <div className="space-y-2">
       {sorted.map((team, i) => {

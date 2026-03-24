@@ -41,6 +41,7 @@ function isToday(dateStr: string) {
 
 export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staffId, scheduledEvents }: Props) {
   const [selectedEventTypeId, setSelectedEventTypeId] = useState<string | null>(null)
+  const [periodError, setPeriodError] = useState('')
 
   const selectedET   = eventTypes.find(et => et.id === selectedEventTypeId)
   const activePeriod = openPeriods.find(p => p.event_type_id === selectedEventTypeId)
@@ -53,6 +54,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
     : []
 
   async function createPeriodForDate(eventTypeId: string, eventDate: string, startTime: string | null) {
+    setPeriodError('')
     const [year, month, day] = eventDate.split('-').map(Number)
     const d = new Date(year, month - 1, day)
     const label = d.toLocaleDateString('en-US', {
@@ -69,10 +71,16 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
         startsAt: now.toISOString(),
       }),
     })
-    if (res.ok) window.location.reload()
+    if (res.ok) {
+      window.location.reload()
+    } else {
+      const json = await res.json().catch(() => ({}))
+      setPeriodError(json.error ?? `Server error ${res.status}`)
+    }
   }
 
   async function createGenericPeriod(eventTypeId: string) {
+    setPeriodError('')
     const now   = new Date()
     const label = `Week of ${now.toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}`
     const res   = await fetch('/api/staff/period', {
@@ -80,7 +88,12 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ eventTypeId, label, periodType: 'weekly', startsAt: now.toISOString() }),
     })
-    if (res.ok) window.location.reload()
+    if (res.ok) {
+      window.location.reload()
+    } else {
+      const json = await res.json().catch(() => ({}))
+      setPeriodError(json.error ?? `Server error ${res.status}`)
+    }
   }
 
   return (
@@ -184,6 +197,10 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
                   + Start generic weekly period instead
                 </button>
               </div>
+
+              {periodError && (
+                <p className="text-xs text-red-500 mt-1">⚠️ {periodError}</p>
+              )}
             </div>
           ) : (
             <>
