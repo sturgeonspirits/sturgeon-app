@@ -15,15 +15,20 @@ interface ScheduledEvent {
   notes: string | null
 }
 
+// leaderboard_periods now has event_id linking it to a specific scheduled event
+interface Period extends LeaderboardPeriod {
+  event_id?: string | null
+}
+
 interface Props {
   eventTypes:      EventType[]
-  openPeriods:     LeaderboardPeriod[]
+  openPeriods:     Period[]
   members:         { id: string; display_name: string | null; email: string | null }[]
   staffId:         string
   scheduledEvents: ScheduledEvent[]
 }
 
-function fmtEventDate(dateStr: string, timeStr?: string | null) {
+function fmtDate(dateStr: string, timeStr?: string | null) {
   const [year, month, day] = dateStr.split('-').map(Number)
   const d = new Date(year, month - 1, day)
   const datePart = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -35,40 +40,67 @@ function fmtEventDate(dateStr: string, timeStr?: string | null) {
 }
 
 function isToday(dateStr: string) {
-  const today = new Date().toLocaleDateString('en-CA')
-  return dateStr === today
+  return dateStr === new Date().toLocaleDateString('en-CA')
+}
+
+function isPast(dateStr: string) {
+  return dateStr < new Date().toLocaleDateString('en-CA')
 }
 
 export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staffId, scheduledEvents }: Props) {
   const [selectedEventTypeId, setSelectedEventTypeId] = useState<string | null>(null)
-  const [periodError, setPeriodError] = useState('')
+  const [selectedPeriodId,    setSelectedPeriodId]    = useState<string | null>(null)
+  const [periodError,         setPeriodError]         = useState('')
 
-  const selectedET   = eventTypes.find(et => et.id === selectedEventTypeId)
-  const activePeriod = openPeriods.find(p => p.event_type_id === selectedEventTypeId)
+  const selectedET     = eventTypes.find(et => et.id === selectedEventTypeId)
+  const selectedPeriod = openPeriods.find(p => p.id === selectedPeriodId) ?? null
 
-  // Scheduled events for the selected event type, sorted soonest first
-  const upcomingForSelected = selectedEventTypeId
-    ? scheduledEvents
-        .filter(e => e.event_type_id === selectedEventTypeId)
-        .sort((a, b) => a.event_date.localeCompare(b.event_date))
+  // All open periods for the selected event type
+  const periodsForET = selectedEventTypeId
+    ? openPeriods.filter(p => p.event_type_id === selectedEventTypeId)
     : []
 
-  async function createPeriodForDate(eventTypeId: string, eventDate: string, startTime: string | null) {
+  // Scheduled events for the selected event type — past 30 days through 14 days out
+  const eventsForET = selectedEventTypeId
+    ? scheduledEvents
+        .filter(e => e.event_type_id === selectedEventTypeId)
+        .sort((a, b) => b.event_date.localeCompare(a.event_date)) // newest first
+    : []
+
+  // Build combined date list: scheduled events merged with any periods not yet tied to an event
+  // Each entry is either: { type:'event', event, period|null } or { type:'orphan', period }
+  type DateEntry =
+    | { type: 'event';  event: ScheduledEvent; period: Period | null }
+    | { type: 'orphan'; period: Period }
+
+  const eventIds = new Set(eventsForET.map(e => e.id))
+  const orphanPeriods = periodsForET.filter(p => !p.event_id || !eventIds.has(p.event_id))
+
+  const dateEntries: DateEntry[] = [
+    ...eventsForET.map(ev => ({
+      type: 'event' as const,
+      event: ev,
+      period: periodsForET.find(p => p.event_id === ev.id) ?? null,
+    })),
+    ...orphanPeriods.map(p => ({ type: 'orphan' as const, period: p })),
+  ]
+
+  async function createPeriodForEvent(ev: ScheduledEvent) {
     setPeriodError('')
-    const [year, month, day] = eventDate.split('-').map(Number)
+    const [year, month, day] = ev.event_date.split('-').map(Number)
     const d = new Date(year, month - 1, day)
     const label = d.toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     })
-    const now = new Date()
     const res = await fetch('/api/staff/period', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        eventTypeId,
+        eventTypeId: ev.event_type_id,
+        eventId:     ev.id,
         label,
-        periodType: 'single_night',
-        startsAt: now.toISOString(),
+        periodType:  'single_night',
+        startsAt:    new Date().toISOString(),
       }),
     })
     if (res.ok) {
@@ -82,7 +114,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
   async function createGenericPeriod(eventTypeId: string) {
     setPeriodError('')
     const now   = new Date()
-    const label = `Week of ${now.toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}`
+    const label = `Week of ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
     const res   = await fetch('/api/staff/period', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,19 +128,27 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
     }
   }
 
+  function handleSelectET(id: string) {
+    if (selectedEventTypeId === id) {
+      setSelectedEventTypeId(null)
+      setSelectedPeriodId(null)
+    } else {
+      setSelectedEventTypeId(id)
+      setSelectedPeriodId(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Event type picker */}
       <div className="grid gap-3">
         {eventTypes.map(et => {
-          const hasPeriod  = openPeriods.some(p => p.event_type_id === et.id)
-          const isSelected = selectedEventTypeId === et.id
-          // Show a dot badge if there are upcoming scheduled dates
-          const hasScheduled = scheduledEvents.some(e => e.event_type_id === et.id)
+          const periodCount  = openPeriods.filter(p => p.event_type_id === et.id).length
+          const isSelected   = selectedEventTypeId === et.id
           return (
             <button
               key={et.id}
-              onClick={() => setSelectedEventTypeId(isSelected ? null : et.id)}
+              onClick={() => handleSelectET(et.id)}
               className={`w-full text-left bg-[#FFFFFF] border rounded-xl p-4 transition-all ${
                 isSelected ? 'border-[#96321F]' : 'border-[#D4CFC3] hover:border-[#C8BCA4]'
               }`}
@@ -122,9 +162,9 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  hasPeriod ? 'bg-[#87A67F]/15 text-[#87A67F]' : 'bg-[#EDE9DC] text-[#7E613F]'
+                  periodCount > 0 ? 'bg-[#87A67F]/15 text-[#87A67F]' : 'bg-[#EDE9DC] text-[#7E613F]'
                 }`}>
-                  {hasPeriod ? 'Active' : 'No period'}
+                  {periodCount > 0 ? `${periodCount} date${periodCount > 1 ? 's' : ''}` : 'No periods'}
                 </span>
               </div>
             </button>
@@ -132,91 +172,127 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
         })}
       </div>
 
-      {/* Score entry for selected event */}
-      {selectedET && (
-        <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#242622]">{selectedET.name}</h3>
-          </div>
+      {/* Date list for selected event type */}
+      {selectedET && !selectedPeriod && (
+        <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 space-y-3">
+          <h3 className="font-semibold text-[#242622]">{selectedET.name} — Select a date</h3>
 
-          {!activePeriod ? (
-            <div className="space-y-3">
-              {/* Scheduled event dates — primary options */}
-              {upcomingForSelected.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-[#7E613F] uppercase tracking-wide">
-                    Start scoring for a scheduled date
-                  </p>
-                  {upcomingForSelected.map(ev => (
-                    <button
-                      key={ev.id}
-                      onClick={() => createPeriodForDate(selectedET.id, ev.event_date, ev.start_time)}
-                      className={`w-full text-left border rounded-xl px-4 py-3 flex items-center gap-3 transition-all hover:border-[#96321F]/40 ${
-                        isToday(ev.event_date)
-                          ? 'border-[#96321F]/30 bg-[#96321F]/5'
-                          : 'border-[#D4CFC3] bg-[#FAFAF7]'
+          {dateEntries.length === 0 ? (
+            <p className="text-sm text-[#7E613F]">
+              No scheduled dates found.{' '}
+              <a href="/staff/events" className="text-[#96321F] underline underline-offset-2">
+                Schedule a date
+              </a>{' '}
+              on the Events page, or start a generic period below.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {dateEntries.map(entry => {
+                if (entry.type === 'event') {
+                  const { event, period } = entry
+                  const today   = isToday(event.event_date)
+                  const past    = isPast(event.event_date)
+                  return (
+                    <div
+                      key={event.id}
+                      className={`border rounded-xl px-4 py-3 transition-all ${
+                        today ? 'border-[#96321F]/30 bg-[#96321F]/5' : 'border-[#D4CFC3] bg-[#FAFAF7]'
                       }`}
                     >
-                      <svg className={isToday(ev.event_date) ? 'text-[#96321F]' : 'text-[#7E613F]'} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                      </svg>
-                      <div className="flex-1">
-                        <p className={`text-sm font-semibold ${isToday(ev.event_date) ? 'text-[#96321F]' : 'text-[#242622]'}`}>
-                          {fmtEventDate(ev.event_date, ev.start_time)}
-                          {isToday(ev.event_date) && (
-                            <span className="ml-2 text-xs font-bold bg-[#96321F] text-white px-1.5 py-0.5 rounded-full">Tonight</span>
-                          )}
-                        </p>
-                        {ev.notes && (
-                          <p className="text-xs text-[#9E8F7E]">{ev.notes}</p>
+                      <div className="flex items-center gap-3">
+                        <svg className={today ? 'text-[#96321F]' : 'text-[#7E613F]'} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6"/>
+                          <line x1="8" y1="2" x2="8" y2="6"/>
+                          <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <div className="flex-1">
+                          <p className={`text-sm font-semibold ${today ? 'text-[#96321F]' : 'text-[#242622]'}`}>
+                            {fmtDate(event.event_date, event.start_time)}
+                            {today && <span className="ml-2 text-xs font-bold bg-[#96321F] text-white px-1.5 py-0.5 rounded-full">Tonight</span>}
+                            {past && !today && <span className="ml-2 text-xs text-[#9E8F7E]">past</span>}
+                          </p>
+                          {event.notes && <p className="text-xs text-[#9E8F7E]">{event.notes}</p>}
+                        </div>
+                        {period ? (
+                          <button
+                            onClick={() => setSelectedPeriodId(period.id)}
+                            className="text-xs font-bold text-[#87A67F] bg-[#87A67F]/10 px-3 py-1.5 rounded-lg hover:bg-[#87A67F]/20 transition-colors"
+                          >
+                            Enter scores →
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => createPeriodForEvent(event)}
+                            className="text-xs font-bold text-[#96321F] bg-[#96321F]/8 px-3 py-1.5 rounded-lg hover:bg-[#96321F]/15 transition-colors"
+                          >
+                            Start →
+                          </button>
                         )}
                       </div>
-                      <span className="text-xs font-bold text-[#96321F]">Start →</span>
+                    </div>
+                  )
+                }
+
+                // Orphan period (no linked event — generic weekly etc.)
+                const { period } = entry
+                return (
+                  <div key={period.id} className="border border-[#D4CFC3] bg-[#FAFAF7] rounded-xl px-4 py-3 flex items-center gap-3">
+                    <span className="text-[#7E613F]">📋</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-[#242622]">{period.label}</p>
+                      <p className="text-xs text-[#9E8F7E]">Generic period</p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedPeriodId(period.id)}
+                      className="text-xs font-bold text-[#87A67F] bg-[#87A67F]/10 px-3 py-1.5 rounded-lg hover:bg-[#87A67F]/20 transition-colors"
+                    >
+                      Enter scores →
                     </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-[#7E613F]">
-                  No scheduled dates found.{' '}
-                  <a href="/staff/events" className="text-[#96321F] underline underline-offset-2">
-                    Schedule a date
-                  </a>{' '}
-                  on the Events page, or start a generic period below.
-                </p>
-              )}
-
-              {/* Generic period fallback */}
-              <div className="pt-1 border-t border-[#F1F1E7]">
-                <button
-                  onClick={() => createGenericPeriod(selectedET.id)}
-                  className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors"
-                >
-                  + Start generic weekly period instead
-                </button>
-              </div>
-
-              {periodError && (
-                <p className="text-xs text-red-500 mt-1">⚠️ {periodError}</p>
-              )}
+                  </div>
+                )
+              })}
             </div>
-          ) : (
-            <>
-              <p className="text-xs text-[#7E613F]">Period: {activePeriod.label}</p>
+          )}
 
-              {/* Branch on scoring method — driven by DB config */}
-              {selectedET.scoring_method === 'wins_losses' && (
-                <CribbageScoreForm period={activePeriod} members={members} staffId={staffId} />
-              )}
-              {selectedET.scoring_method === 'points' && selectedET.participant_type === 'individual' && (
-                <TriviaIndividualForm period={activePeriod} members={members} staffId={staffId} />
-              )}
-              {selectedET.participant_type === 'team' && (
-                <TriviaTeamForm period={activePeriod} members={members} staffId={staffId} eventTypeId={selectedET.id} />
-              )}
-            </>
+          {/* Generic period fallback */}
+          <div className="pt-1 border-t border-[#F1F1E7]">
+            <button
+              onClick={() => createGenericPeriod(selectedET.id)}
+              className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors"
+            >
+              + Start generic period (not tied to a specific date)
+            </button>
+          </div>
+
+          {periodError && <p className="text-xs text-red-500 mt-1">⚠️ {periodError}</p>}
+        </div>
+      )}
+
+      {/* Score entry for selected period */}
+      {selectedET && selectedPeriod && (
+        <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-[#242622]">{selectedET.name}</h3>
+              <p className="text-xs text-[#7E613F] mt-0.5">📅 {selectedPeriod.label}</p>
+            </div>
+            <button
+              onClick={() => setSelectedPeriodId(null)}
+              className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors px-2 py-1 rounded-lg hover:bg-[#F1F1E7]"
+            >
+              ← All dates
+            </button>
+          </div>
+
+          {selectedET.scoring_method === 'wins_losses' && (
+            <CribbageScoreForm period={selectedPeriod} members={members} staffId={staffId} />
+          )}
+          {selectedET.scoring_method === 'points' && selectedET.participant_type === 'individual' && (
+            <TriviaIndividualForm period={selectedPeriod} members={members} staffId={staffId} />
+          )}
+          {selectedET.participant_type === 'team' && (
+            <TriviaTeamForm period={selectedPeriod} members={members} staffId={staffId} eventTypeId={selectedET.id} />
           )}
         </div>
       )}

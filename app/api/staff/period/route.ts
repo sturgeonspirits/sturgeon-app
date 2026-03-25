@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { eventTypeId, label, periodType, startsAt, endsAt } = await req.json()
+    const { eventTypeId, label, periodType, startsAt, endsAt, eventId } = await req.json()
     if (!eventTypeId || !label) {
       return NextResponse.json({ error: 'eventTypeId and label required' }, { status: 400 })
     }
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
         starts_at:     startsAt ?? new Date().toISOString(),
         ends_at:       endsAt ?? null,
         is_finalized:  false,
+        ...(eventId ? { event_id: eventId } : {}),
       })
       .select()
       .single()

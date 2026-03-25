@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { EventType, LeaderboardPeriod } from '@/lib/supabase/types'
-import { ordinal, relativeTime, privateName } from '@/lib/utils'
+import { ordinal, privateName } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -13,40 +14,94 @@ interface Props {
   teams:         any[]
   allTime:       any[]
   currentUserId?: string
+  slug:          string
 }
 
 type View = 'current' | 'alltime'
 
 export default function LeaderboardBoard({
-  eventType, currentPeriod, periods, entries, teams, allTime, currentUserId
+  eventType, currentPeriod, periods, entries, teams, allTime, currentUserId, slug
 }: Props) {
   const [view, setView] = useState<View>('current')
+  const router = useRouter()
+
+  function selectPeriod(periodId: string) {
+    router.push(`/leaderboards/${slug}?period=${periodId}`)
+  }
+
+  // Format a period label into a short date string for the picker
+  function shortLabel(period: LeaderboardPeriod) {
+    // Try to parse a date out of the label (e.g. "Thursday, March 26, 2026")
+    const d = new Date(period.label)
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    // Fallback: use starts_at
+    if (period.starts_at) {
+      const sd = new Date(period.starts_at)
+      if (!isNaN(sd.getTime())) {
+        return sd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }
+    }
+    return period.label
+  }
 
   return (
     <div className="space-y-4">
-      {/* Tab switcher */}
+      {/* Main tab switcher */}
       <div className="flex bg-[#EDE9DC] rounded-xl p-1 gap-1">
-        {(['current', 'alltime'] as View[]).map(v => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={cn(
-              'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
-              view === v
-                ? 'bg-[#FFFFFF] text-[#242622]'
-                : 'text-[#7E613F] hover:text-[#242622]'
-            )}
-          >
-            {v === 'current' ? (currentPeriod?.label ?? 'This Week') : 'All Time'}
-          </button>
-        ))}
+        <button
+          onClick={() => setView('current')}
+          className={cn(
+            'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
+            view === 'current'
+              ? 'bg-[#FFFFFF] text-[#242622]'
+              : 'text-[#7E613F] hover:text-[#242622]'
+          )}
+        >
+          {currentPeriod?.label ?? 'Nights'}
+        </button>
+        <button
+          onClick={() => setView('alltime')}
+          className={cn(
+            'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
+            view === 'alltime'
+              ? 'bg-[#FFFFFF] text-[#242622]'
+              : 'text-[#7E613F] hover:text-[#242622]'
+          )}
+        >
+          All Time
+        </button>
       </div>
+
+      {/* Date picker — shown in 'current' view when multiple periods exist */}
+      {view === 'current' && periods.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+          {periods.map(p => {
+            const isSelected = p.id === currentPeriod?.id
+            return (
+              <button
+                key={p.id}
+                onClick={() => selectPeriod(p.id)}
+                className={cn(
+                  'shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap',
+                  isSelected
+                    ? 'bg-[#96321F] text-white border-[#96321F]'
+                    : 'bg-[#FFFFFF] text-[#7E613F] border-[#D4CFC3] hover:border-[#96321F]/40'
+                )}
+              >
+                {shortLabel(p)}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* No data state */}
       {view === 'current' && !currentPeriod && (
         <div className="text-center py-12 text-[#7E613F]">
           <p className="text-4xl mb-3">{eventType.icon}</p>
-          <p className="font-medium">No active leaderboard yet</p>
+          <p className="font-medium">No scores recorded yet</p>
           <p className="text-sm mt-1">Check back after the next event night</p>
         </div>
       )}
@@ -191,7 +246,6 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
               </p>
               <p className="text-[#242622] font-bold text-sm">{team.score.toLocaleString()} pts</p>
             </div>
-            {/* Team members */}
             <div className="flex flex-wrap gap-1 ml-10">
               {(team.leaderboard_team_members ?? []).map((m: any) => (
                 <span key={m.user_id} className="text-xs bg-[#EDE9DC] text-[#7E613F] px-2 py-0.5 rounded-full">

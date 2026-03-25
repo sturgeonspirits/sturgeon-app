@@ -10,25 +10,31 @@ interface Recipe {
   price: number | null
   flavor_tags: string[] | null
   glassware: string | null
+  show_on_menu?: boolean
+  is_event_menu?: boolean
 }
 
 interface Props {
-  recipes: Recipe[]
+  regularRecipes: Recipe[]
+  eventRecipes:   Recipe[]
 }
 
-export default function MenuSearch({ recipes }: Props) {
-  const [query, setQuery] = useState('')
+export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
+  const [query,       setQuery]       = useState('')
+  const [isEventMenu, setIsEventMenu] = useState(false)
+
+  const activeRecipes = isEventMenu ? eventRecipes : regularRecipes
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return recipes
-    return recipes.filter(r =>
+    if (!q) return activeRecipes
+    return activeRecipes.filter(r =>
       r.name.toLowerCase().includes(q)
       || (r.menu_ingredients ?? '').toLowerCase().includes(q)
       || (r.flavor_tags ?? []).some(t => t.toLowerCase().includes(q))
       || (r.glassware ?? '').toLowerCase().includes(q)
     )
-  }, [recipes, query])
+  }, [activeRecipes, query])
 
   const sections = useMemo(() => {
     const map: Record<string, Recipe[]> = {}
@@ -44,6 +50,36 @@ export default function MenuSearch({ recipes }: Props) {
 
   return (
     <>
+      {/* Menu toggle — always visible, switches between show_on_menu (col B) and is_event_menu (col AA) */}
+      <div className="flex items-center bg-[#F1F1E7] rounded-xl p-1 mb-5 gap-1">
+        <button
+          onClick={() => { setIsEventMenu(false); setQuery('') }}
+          className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${
+            !isEventMenu
+              ? 'bg-[#FFFFFF] text-[#242622] shadow-sm'
+              : 'text-[#7E613F] hover:text-[#242622]'
+          }`}
+        >
+          Cocktail Menu
+        </button>
+        <button
+          onClick={() => { setIsEventMenu(true); setQuery('') }}
+          className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${
+            isEventMenu
+              ? 'bg-[#96321F] text-white shadow-sm'
+              : 'text-[#7E613F] hover:text-[#242622]'
+          }`}
+        >
+          ✨ Event Menu
+        </button>
+      </div>
+
+      {/* Count */}
+      <p className="text-xs text-[#9E8F7E] mb-4">
+        {activeRecipes.length} {activeRecipes.length === 1 ? 'cocktail' : 'cocktails'}
+        {isEventMenu ? ' on tonight\'s event menu' : ' · crafted in Oshkosh'}
+      </p>
+
       {/* Search bar */}
       <div className="relative mb-5">
         <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C8BCA4] pointer-events-none"
@@ -78,13 +114,26 @@ export default function MenuSearch({ recipes }: Props) {
       {/* No results */}
       {filtered.length === 0 && (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-4xl mb-3">🔍</p>
-          <p className="font-semibold text-[#242622] mb-1">No cocktails found</p>
-          <p className="text-sm text-[#7E613F]">Try a different name, spirit, or flavor</p>
-          <button onClick={() => setQuery('')}
-            className="mt-4 text-sm text-[#96321F] font-semibold hover:underline">
-            Clear search
-          </button>
+          <p className="text-4xl mb-3">{query ? '🔍' : '🍹'}</p>
+          {query ? (
+            <>
+              <p className="font-semibold text-[#242622] mb-1">No cocktails found</p>
+              <p className="text-sm text-[#7E613F]">Try a different name, spirit, or flavor</p>
+              <button onClick={() => setQuery('')}
+                className="mt-4 text-sm text-[#96321F] font-semibold hover:underline">
+                Clear search
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-[#242622] mb-1">
+                {isEventMenu ? 'No event menu tonight' : 'Menu coming soon'}
+              </p>
+              <p className="text-sm text-[#7E613F]">
+                {isEventMenu ? 'Check back closer to the event' : 'Staff will sync the cocktail menu shortly'}
+              </p>
+            </>
+          )}
         </div>
       )}
 

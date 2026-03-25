@@ -9,7 +9,7 @@ export default async function MenuPage() {
 
   const { data: recipes } = await supabase
     .from('recipes')
-    .select('id, name, menu_section, menu_ingredients, price, flavor_tags, glassware')
+    .select('id, name, menu_section, menu_ingredients, price, flavor_tags, glassware, show_on_menu, is_event_menu')
     .eq('is_active', true)
     .order('menu_section')
     .order('sort_order')
@@ -17,15 +17,18 @@ export default async function MenuPage() {
 
   const allRecipes = recipes ?? []
 
+  // Regular menu: show_on_menu (col B) = true
+  const regularRecipes = allRecipes.filter(r => r.show_on_menu)
+  // Event menu: is_event_menu (col AA) = true
+  const eventRecipes   = allRecipes.filter(r => r.is_event_menu)
+
   return (
     <div className="max-w-lg mx-auto px-4 pb-10">
       <div className="pt-10 mb-6">
         <h1 className="font-display text-2xl font-bold text-[#242622] uppercase tracking-wide">
           Cocktail Menu
         </h1>
-        <p className="text-sm text-[#7E613F] mt-1">
-          {allRecipes.length} cocktails · crafted in Oshkosh
-        </p>
+        <p className="text-sm text-[#7E613F] mt-1">crafted in Oshkosh</p>
       </div>
 
       {allRecipes.length === 0 ? (
@@ -35,7 +38,10 @@ export default async function MenuPage() {
           <p className="text-sm text-[#7E613F]">Staff will sync the cocktail menu shortly</p>
         </div>
       ) : (
-        <MenuSearch recipes={allRecipes} />
+        <MenuSearch
+          regularRecipes={regularRecipes}
+          eventRecipes={eventRecipes}
+        />
       )}
     </div>
   )

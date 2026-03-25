@@ -3,15 +3,18 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import LeaderboardBoard from '@/components/leaderboard/LeaderboardBoard'
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props {
+  params:      Promise<{ slug: string }>
+  searchParams: Promise<{ period?: string }>
+}
 
-export default async function LeaderboardDetailPage({ params }: Props) {
-  const { slug } = await params
-  const supabase  = await createClient()
-  // Use service client for leaderboard reads so RLS doesn't hide other users' scores
-  const service   = createServiceClient()
+export default async function LeaderboardDetailPage({ params, searchParams }: Props) {
+  const { slug }     = await params
+  const { period: periodParam } = await searchParams
+  const supabase     = await createClient()
+  const service      = createServiceClient()
 
-  // Fetch event type config — this drives ALL board behaviour
+  // Fetch event type config — drives all board behaviour
   const { data: eventType } = await service
     .from('event_types')
     .select('*')
@@ -21,23 +24,26 @@ export default async function LeaderboardDetailPage({ params }: Props) {
 
   if (!eventType) notFound()
 
-  // Fetch the most recent period for this event
+  // Fetch all finalized + open periods for this event, newest first
   const { data: periods } = await service
     .from('leaderboard_periods')
     .select('*')
     .eq('event_type_id', eventType.id)
     .order('starts_at', { ascending: false })
-    .limit(10)
+    .limit(20)
 
-  const currentPeriod = (periods ?? [])[0] ?? null
+  const allPeriods  = periods ?? []
+  // Which period to display: URL param → most recent
+  const currentPeriod = (periodParam
+    ? allPeriods.find(p => p.id === periodParam)
+    : null) ?? allPeriods[0] ?? null
 
-  // Fetch scores for current period
+  // Fetch scores for the selected period
   let entries: any[] = []
   let teams:   any[] = []
 
   if (currentPeriod) {
     if (eventType.participant_type === 'team') {
-      // Fetch teams and members separately to avoid PostgREST FK join issues
       const { data: teamData } = await service
         .from('leaderboard_teams')
         .select('*')
@@ -55,13 +61,12 @@ export default async function LeaderboardDetailPage({ params }: Props) {
           ? await service.from('profiles').select('id, display_name, avatar_url').in('id', memberUserIds)
           : { data: [] }
 
-        const profileMap = Object.fromEntries((memberProfiles ?? []).map((p: any) => [p.id, p]))
+        const profileMap    = Object.fromEntries((memberProfiles ?? []).map((p: any) => [p.id, p]))
         const membersByTeam: Record<string, any[]> = {}
         for (const m of memberData ?? []) {
           if (!membersByTeam[m.team_id]) membersByTeam[m.team_id] = []
           membersByTeam[m.team_id].push({ ...m, profiles: profileMap[m.user_id] ?? null })
         }
-
         teams = teamData.map((t: any) => ({
           ...t,
           leaderboard_team_members: membersByTeam[t.id] ?? [],
@@ -70,7 +75,7 @@ export default async function LeaderboardDetailPage({ params }: Props) {
         teams = teamData ?? []
       }
     } else {
-      // Two-step fetch: entries first, then profiles — avoids PostgREST FK cache issues
+      // Two-step: entries then profiles — avoids PostgREST FK cache issues
       const { data: entryData } = await service
         .from('leaderboard_events')
         .select('*')
@@ -98,7 +103,7 @@ export default async function LeaderboardDetailPage({ params }: Props) {
     }
   }
 
-  // All-time cache — two-step fetch to avoid PostgREST FK join issues
+  // All-time cache — two-step fetch
   const { data: allTimeRaw } = await service
     .from('leaderboard_cache')
     .select('*')
@@ -138,11 +143,12 @@ export default async function LeaderboardDetailPage({ params }: Props) {
       <LeaderboardBoard
         eventType={eventType}
         currentPeriod={currentPeriod}
-        periods={periods ?? []}
+        periods={allPeriods}
         entries={entries}
         teams={teams}
         allTime={allTime}
         currentUserId={user?.id}
+        slug={slug}
       />
     </div>
   )

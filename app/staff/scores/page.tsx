@@ -28,8 +28,8 @@ export default async function StaffScoresPage() {
     .select('id, display_name, email')
     .order('display_name')
 
-  // Scheduled event dates — look back 1 day and forward 14 days so "tonight" always appears
-  const weekAgo     = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
+  // Scheduled event dates — look back 30 days so staff can enter scores for past events
+  const weekAgo     = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
   const twoWeeksOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
   const { data: scheduledEvents } = await service
     .from('events')
