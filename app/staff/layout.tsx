@@ -11,12 +11,13 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         </div>
         <nav className="flex gap-1">
           {[
-            { href: '/staff',            label: 'Dashboard' },
-            { href: '/staff/scores',     label: 'Scores'    },
-            { href: '/staff/missions',   label: 'Missions'  },
-            { href: '/staff/menu',       label: 'Menu'      },
-            { href: '/staff/events',     label: 'Events'    },
-            { href: '/staff/customers',  label: 'Customers' },
+            { href: '/staff',            label: 'Dashboard'   },
+            { href: '/staff/scores',     label: 'Scores'      },
+            { href: '/leaderboards',     label: 'Leaderboards'},
+            { href: '/staff/missions',   label: 'Missions'    },
+            { href: '/staff/menu',       label: 'Menu'        },
+            { href: '/staff/events',     label: 'Events'      },
+            { href: '/staff/customers',  label: 'Customers'   },
           ].map(link => (
             <a
               key={link.href}

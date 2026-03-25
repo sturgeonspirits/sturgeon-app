@@ -37,32 +37,85 @@ export default async function LeaderboardDetailPage({ params }: Props) {
 
   if (currentPeriod) {
     if (eventType.participant_type === 'team') {
+      // Fetch teams and members separately to avoid PostgREST FK join issues
       const { data: teamData } = await service
         .from('leaderboard_teams')
-        .select('*, leaderboard_team_members(user_id, profiles(display_name, avatar_url))')
+        .select('*')
         .eq('period_id', currentPeriod.id)
         .order('placement')
-      teams = teamData ?? []
+
+      if (teamData && teamData.length > 0) {
+        const { data: memberData } = await service
+          .from('leaderboard_team_members')
+          .select('*')
+          .in('team_id', teamData.map((t: any) => t.id))
+
+        const memberUserIds = [...new Set((memberData ?? []).map((m: any) => m.user_id))]
+        const { data: memberProfiles } = memberUserIds.length > 0
+          ? await service.from('profiles').select('id, display_name, avatar_url').in('id', memberUserIds)
+          : { data: [] }
+
+        const profileMap = Object.fromEntries((memberProfiles ?? []).map((p: any) => [p.id, p]))
+        const membersByTeam: Record<string, any[]> = {}
+        for (const m of memberData ?? []) {
+          if (!membersByTeam[m.team_id]) membersByTeam[m.team_id] = []
+          membersByTeam[m.team_id].push({ ...m, profiles: profileMap[m.user_id] ?? null })
+        }
+
+        teams = teamData.map((t: any) => ({
+          ...t,
+          leaderboard_team_members: membersByTeam[t.id] ?? [],
+        }))
+      } else {
+        teams = teamData ?? []
+      }
     } else {
+      // Two-step fetch: entries first, then profiles — avoids PostgREST FK cache issues
       const { data: entryData } = await service
         .from('leaderboard_events')
-        .select('*, profiles(display_name, avatar_url, tier)')
+        .select('*')
         .eq('period_id', currentPeriod.id)
         .order(
           eventType.scoring_method === 'wins_losses' ? 'wins' : 'score',
           { ascending: false }
         )
-      entries = entryData ?? []
+
+      if (entryData && entryData.length > 0) {
+        const userIds = entryData.map((e: any) => e.user_id)
+        const { data: profileData } = await service
+          .from('profiles')
+          .select('id, display_name, avatar_url, tier')
+          .in('id', userIds)
+
+        const profileMap = Object.fromEntries((profileData ?? []).map((p: any) => [p.id, p]))
+        entries = entryData.map((e: any) => ({
+          ...e,
+          profiles: profileMap[e.user_id] ?? null,
+        }))
+      } else {
+        entries = entryData ?? []
+      }
     }
   }
 
-  // All-time cache
-  const { data: allTime } = await service
+  // All-time cache — two-step fetch to avoid PostgREST FK join issues
+  const { data: allTimeRaw } = await service
     .from('leaderboard_cache')
-    .select('*, profiles(display_name, avatar_url)')
+    .select('*')
     .eq('event_type_id', eventType.id)
     .order('total_wins', { ascending: false })
     .limit(20)
+
+  let allTime: any[] = []
+  if (allTimeRaw && allTimeRaw.length > 0) {
+    const atUserIds = allTimeRaw.map((r: any) => r.user_id)
+    const { data: atProfiles } = await service
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', atUserIds)
+    const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
+    allTime = allTimeRaw.map((r: any) => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
+  }
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -88,7 +141,7 @@ export default async function LeaderboardDetailPage({ params }: Props) {
         periods={periods ?? []}
         entries={entries}
         teams={teams}
-        allTime={allTime ?? []}
+        allTime={allTime}
         currentUserId={user?.id}
       />
     </div>
