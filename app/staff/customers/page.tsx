@@ -17,7 +17,7 @@ export default async function StaffCustomersPage({
 
   let query = service
     .from('profiles')
-    .select('id, display_name, email, role, tier, created_at')
+    .select('id, display_name, email, role, tier, created_at, pos_customer_id')
     .not('role', 'in', '("staff","admin")')
     .order('created_at', { ascending: false })
     .limit(50)
@@ -28,6 +28,22 @@ export default async function StaffCustomersPage({
 
   const { data: customers } = await query
   const rows = customers ?? []
+
+  // Pull points balances + Toast data for all returned profiles in one shot
+  const profileIds = rows.map(c => c.id)
+  const [{ data: ledgerRows }, { data: toastRows }] = await Promise.all([
+    profileIds.length > 0
+      ? service.from('points_ledger').select('user_id, balance').in('user_id', profileIds)
+      : { data: [] },
+    profileIds.length > 0
+      ? service.from('toast_loyalty_accounts')
+          .select('profile_id, toast_points, card_number, last_trans_at')
+          .in('profile_id', profileIds)
+      : { data: [] },
+  ])
+
+  const balanceMap = Object.fromEntries((ledgerRows ?? []).map(l => [l.user_id, l.balance]))
+  const toastMap   = Object.fromEntries((toastRows  ?? []).map(t => [t.profile_id, t]))
 
   return (
     <div className="space-y-6 py-4">
@@ -82,24 +98,42 @@ export default async function StaffCustomersPage({
         </div>
       ) : (
         <div className="space-y-1">
-          {rows.map(c => (
-            <div key={c.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 flex items-center gap-4">
-              <div className="w-9 h-9 rounded-full bg-[#96321F]/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-[#96321F]">
-                  {(c.display_name ?? c.email ?? '?')[0]?.toUpperCase()}
-                </span>
+          {rows.map(c => {
+            const balance  = balanceMap[c.id] ?? 0
+            const toast    = toastMap[c.id] ?? null
+            return (
+              <div key={c.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 flex items-center gap-4">
+                <div className="w-9 h-9 rounded-full bg-[#96321F]/10 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-[#96321F]">
+                    {(c.display_name ?? c.email ?? '?')[0]?.toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[#242622] truncate">
+                    {c.display_name ?? 'Unnamed'}
+                  </p>
+                  <p className="text-xs text-[#7E613F] truncate">{c.email}</p>
+                  {toast && (
+                    <p className="text-xs text-[#9E8F7E] mt-0.5">
+                      🍞 Toast: {toast.toast_points} pts
+                      {toast.last_trans_at && (
+                        <span className="ml-1 opacity-70">
+                          · last visit {new Date(toast.last_trans_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-bold text-[#242622]">{balance.toLocaleString()} pts</p>
+                  <p className="text-xs text-[#7E613F] capitalize">{c.tier ?? 'newcomer'}</p>
+                  {!toast && !c.pos_customer_id && (
+                    <p className="text-[10px] text-[#C8BCA4] mt-0.5">no Toast link</p>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[#242622] truncate">
-                  {c.display_name ?? 'Unnamed'}
-                </p>
-                <p className="text-xs text-[#7E613F] truncate">{c.email}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-xs font-semibold text-[#7E613F] capitalize">{c.tier ?? 'newcomer'}</p>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

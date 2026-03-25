@@ -11,9 +11,10 @@ export default function NewCustomerForm() {
   const [phone,     setPhone]     = useState('')
   const [sendInvite, setSendInvite] = useState(true)
 
-  const [saving,  setSaving]  = useState(false)
-  const [error,   setError]   = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [saving,    setSaving]    = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
+  const [success,   setSuccess]   = useState<string | null>(null)
+  const [toastInfo, setToastInfo] = useState<{ toastPoints: number; appPoints: number; alreadyHad: boolean } | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,6 +30,7 @@ export default function NewCustomerForm() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to create customer')
       setSuccess(`${fullName || email} was added successfully${sendInvite ? ' — invite email sent' : ''}.`)
+      setToastInfo(json.toastInfo ?? null)
       setFullName('')
       setEmail('')
       setPhone('')
@@ -106,12 +108,29 @@ export default function NewCustomerForm() {
 
       {/* Success */}
       {success && (
-        <div className="bg-[#87A67F]/10 border border-[#87A67F]/30 rounded-xl px-4 py-3">
+        <div className="bg-[#87A67F]/10 border border-[#87A67F]/30 rounded-xl px-4 py-3 space-y-2">
           <p className="text-sm text-[#5a7a54] font-semibold">✓ {success}</p>
+          {toastInfo ? (
+            toastInfo.alreadyHad ? (
+              <p className="text-xs text-[#5a7a54]">
+                🍞 Toast loyalty account already linked ({toastInfo.toastPoints.toLocaleString()} Toast pts)
+              </p>
+            ) : toastInfo.appPoints > 0 ? (
+              <p className="text-xs text-[#5a7a54]">
+                🍞 Toast loyalty account found — <strong>{toastInfo.appPoints.toLocaleString()} pts</strong> imported from {toastInfo.toastPoints.toLocaleString()} Toast pts
+              </p>
+            ) : (
+              <p className="text-xs text-[#5a7a54]">
+                🍞 Toast loyalty account linked (no points balance yet)
+              </p>
+            )
+          ) : (
+            <p className="text-xs text-[#9E8F7E]">No matching Toast loyalty account found</p>
+          )}
           <button
             type="button"
-            onClick={() => setSuccess(null)}
-            className="text-xs text-[#5a7a54] underline mt-1"
+            onClick={() => { setSuccess(null); setToastInfo(null) }}
+            className="text-xs text-[#5a7a54] underline"
           >
             Add another customer
           </button>

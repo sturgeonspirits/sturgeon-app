@@ -18,6 +18,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             { href: '/staff/menu',       label: 'Menu'        },
             { href: '/staff/events',     label: 'Events'      },
             { href: '/staff/customers',  label: 'Customers'   },
+            { href: '/staff/toast-sync', label: 'Toast Sync'  },
           ].map(link => (
             <a
               key={link.href}
