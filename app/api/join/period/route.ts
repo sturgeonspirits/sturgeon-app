@@ -9,10 +9,10 @@ export async function GET(req: NextRequest) {
 
   const service = createServiceClient()
 
-  // Find period by join_token
+  // Find period by join_token, including the linked scheduled event for its date
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, label, event_type_id, event_types(name, slug, icon), is_open')
+    .select('id, label, event_type_id, event_id, event_types(name, slug, icon), is_open, events(event_date, start_time)')
     .eq('join_token', token)
     .maybeSingle()
 
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   if (!period.is_open) return NextResponse.json({ error: 'This event has ended' }, { status: 410 })
 
   const et = (period as any).event_types
+  const ev = (period as any).events
 
   // Get current teams and members for this period
   const { data: teams } = await service
@@ -37,12 +38,27 @@ export async function GET(req: NextRequest) {
                    .filter(Boolean),
   }))
 
+  // Format the event date if available
+  let eventDateLabel: string | null = null
+  if (ev?.event_date) {
+    const [year, month, day] = ev.event_date.split('-').map(Number)
+    const d = new Date(year, month - 1, day)
+    eventDateLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    if (ev.start_time) {
+      const [h, m] = ev.start_time.split(':').map(Number)
+      const t = new Date(year, month - 1, day, h, m)
+      eventDateLabel += ' · ' + t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    }
+  }
+
   return NextResponse.json({
     period: {
       id:              period.id,
       label:           period.label,
-      eventTypeName:   et?.name   ?? 'Event',
-      eventTypeIcon:   et?.icon   ?? '🎉',
+      eventTypeName:   et?.name       ?? 'Event',
+      eventTypeIcon:   et?.icon       ?? '🎉',
+      eventDate:       ev?.event_date ?? null,
+      eventDateLabel:  eventDateLabel,
     },
     teams: teamList,
   })
