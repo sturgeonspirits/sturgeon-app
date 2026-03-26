@@ -6,7 +6,7 @@ export default async function RewardsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const [{ data: rewards }, { data: ledger }, { data: myRedemptions }] = await Promise.all([
+  const [{ data: rewards }, { data: ledger }, { data: myRedemptions }, { data: toastAccount }, { data: toastEarnEvents }] = await Promise.all([
     supabase.from('rewards').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('points_ledger').select('balance').eq('user_id', user.id).single(),
     supabase
@@ -15,9 +15,21 @@ export default async function RewardsPage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase
+      .from('toast_loyalty_accounts')
+      .select('toast_points')
+      .eq('profile_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('earn_events')
+      .select('points_delta')
+      .eq('user_id', user.id)
+      .eq('context_type', 'toast_import'),
   ])
 
-  const balance = ledger?.balance ?? 0
+  const toastPts   = toastAccount?.toast_points ?? 0
+  const appPts     = (ledger?.balance ?? 0) - (toastEarnEvents ?? []).reduce((s, e) => s + (e.points_delta ?? 0), 0)
+  const balance    = ledger?.balance ?? 0
 
   const METHOD_LABEL: Record<string, string> = {
     points:      'Redeem with points',
@@ -32,9 +44,28 @@ export default async function RewardsPage() {
     <div className="p-4 max-w-lg mx-auto space-y-6">
       <div className="pt-4">
         <h1 className="font-display text-xl font-bold text-[#242622]">Rewards</h1>
-        <p className="text-sm text-[#7E613F] mt-1">
-          Your balance: <span className="text-[#96321F] font-bold">{balance.toLocaleString()} pts</span>
-        </p>
+      </div>
+
+      {/* Points breakdown */}
+      <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🥂</span>
+            <span className="text-sm text-[#7E613F]">Toast Loyalty</span>
+          </div>
+          <span className="font-bold text-[#242622]">{toastPts.toLocaleString()} pts</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📱</span>
+            <span className="text-sm text-[#7E613F]">App Loyalty</span>
+          </div>
+          <span className="font-bold text-[#242622]">{Math.max(0, appPts).toLocaleString()} pts</span>
+        </div>
+        <div className="border-t border-[#D4CFC3] pt-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-[#242622]">Total</span>
+          <span className="text-lg font-bold text-[#96321F]">{balance.toLocaleString()} pts</span>
+        </div>
       </div>
 
       {/* Pending redemptions */}
