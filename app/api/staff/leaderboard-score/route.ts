@@ -68,10 +68,10 @@ export async function POST(req: NextRequest) {
         let pts = 0
         if (scoringMethod === 'wins_losses') {
           pts = wins > 0
-            ? (placementPoints['win'] ?? 150)
-            : (placementPoints['loss'] ?? 50)
+            ? (placementPoints['win'] ?? 10)   // cribbage win = 10 pts
+            : (placementPoints['loss'] ?? 5)   // cribbage loss = 5 pts (still participated)
         } else {
-          pts = placementPoints['participant'] ?? 25
+          pts = placementPoints['participant'] ?? 15  // trivia/other participation = 15 pts
         }
 
         if (pts > 0) {
@@ -137,7 +137,9 @@ export async function POST(req: NextRequest) {
         }
 
         // Award points to each team member
-        const pts = placementPoints[String(placement)] ?? placementPoints['participant'] ?? 25
+        // placement_points JSON: { "1": 65, "2": 40, "participant": 15 }
+        // 1st = 50 bonus + 15 participation = 65, 2nd = 25 + 15 = 40, others = 15
+        const pts = placementPoints[String(placement)] ?? placementPoints['participant'] ?? 15
         for (const userId of memberIds) {
           if (pts > 0) {
             await emitEarnEvent({

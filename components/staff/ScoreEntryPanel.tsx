@@ -285,6 +285,28 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
             </button>
           </div>
 
+          {/* QR join link — trivia team events only */}
+          {selectedET.participant_type === 'team' && (selectedPeriod as any).join_token && (
+            <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-3 flex items-center gap-3">
+              <span className="text-2xl">📱</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[#7E613F]">Player join link</p>
+                <p className="text-xs text-[#9E8F7E] truncate">
+                  {typeof window !== 'undefined' ? window.location.origin : ''}/join?t={(selectedPeriod as any).join_token}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/join?t=${(selectedPeriod as any).join_token}`
+                  navigator.clipboard.writeText(url)
+                }}
+                className="text-xs text-[#96321F] font-semibold hover:underline shrink-0"
+              >
+                Copy
+              </button>
+            </div>
+          )}
+
           {selectedET.scoring_method === 'wins_losses' && (
             <CribbageScoreForm period={selectedPeriod} members={members} staffId={staffId} />
           )}
