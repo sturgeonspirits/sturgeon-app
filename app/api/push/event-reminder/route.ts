@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import webpush from 'web-push'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
+function initWebPush() {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!,
+  )
+}
 
 // POST /api/push/event-reminder
 // Called by the scheduled task. Finds events in the next 2 days,
@@ -15,6 +17,7 @@ webpush.setVapidDetails(
 //
 // Auth: requires CRON_SECRET header (set in env) to prevent public access.
 export async function POST(req: NextRequest) {
+  initWebPush()
   const secret = req.headers.get('x-cron-secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import webpush from 'web-push'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
+function initWebPush() {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!,
+  )
+}
 
 async function assertStaff() {
   const supabase = await createClient()
@@ -24,6 +26,7 @@ async function assertStaff() {
 // Send a push notification to a set of user IDs (or all subscribers).
 // Body: { userIds?: string[], title: string, body: string, url?: string, tag?: string }
 export async function POST(req: NextRequest) {
+  initWebPush()
   try {
     await assertStaff()
   } catch (e: any) {
