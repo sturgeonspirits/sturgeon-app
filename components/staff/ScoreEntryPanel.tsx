@@ -23,7 +23,7 @@ interface Period extends LeaderboardPeriod {
 interface Props {
   eventTypes:      EventType[]
   openPeriods:     Period[]
-  members:         { id: string; display_name: string | null; email: string | null }[]
+  members:         { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }[]
   staffId:         string
   scheduledEvents: ScheduledEvent[]
 }

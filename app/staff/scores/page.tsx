@@ -25,8 +25,8 @@ export default async function StaffScoresPage() {
   // All profiles — no role filter so staff can enter scores even before customers sign up
   const { data: members } = await service
     .from('profiles')
-    .select('id, display_name, email')
-    .order('display_name')
+    .select('id, display_name, full_name, phone, email')
+    .order('full_name')
 
   // Scheduled event dates — look back 30 days so staff can enter scores for past events
   const weekAgo     = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')

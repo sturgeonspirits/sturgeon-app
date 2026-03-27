@@ -7,7 +7,7 @@ export default async function StaffMissionsPage() {
 
   const [{ data: missions }, { data: members }] = await Promise.all([
     supabase.from('missions').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('profiles').select('id, display_name, email').order('display_name'),
+    supabase.from('profiles').select('id, display_name, full_name, phone, email').order('full_name'),
   ])
 
   return (

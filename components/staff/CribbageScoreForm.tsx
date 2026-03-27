@@ -5,8 +5,14 @@ import type { LeaderboardPeriod } from '@/lib/supabase/types'
 
 interface Props {
   period:  LeaderboardPeriod
-  members: { id: string; display_name: string | null }[]
+  members: { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }[]
   staffId: string
+}
+
+type MemberOption = { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }
+function memberLabel(m: MemberOption) {
+  const name = m.full_name ?? m.display_name ?? m.email ?? '?'
+  return m.phone ? `${name} · ${m.phone}` : name
 }
 
 interface PlayerRow {
@@ -90,7 +96,7 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
               {members.map(m => (
                 <option key={m.id} value={m.id}
                   disabled={usedIds.includes(m.id) && m.id !== row.userId}>
-                  {m.display_name}
+                  {memberLabel(m)}
                 </option>
               ))}
             </select>

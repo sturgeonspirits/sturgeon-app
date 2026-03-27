@@ -3,9 +3,15 @@
 import { useState } from 'react'
 import type { Mission } from '@/lib/supabase/types'
 
+type MemberOption = { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }
+function memberLabel(m: MemberOption) {
+  const name = m.full_name ?? m.display_name ?? m.email ?? '?'
+  return m.phone ? `${name} · ${m.phone}` : name
+}
+
 interface Props {
   missions: Mission[]
-  members:  { id: string; display_name: string | null; email: string | null }[]
+  members:  MemberOption[]
   staffId:  string
 }
 
@@ -119,7 +125,7 @@ export default function StaffMissionPanel({ missions, members, staffId }: Props)
                 >
                   <option value="">Select member</option>
                   {members.map(m => (
-                    <option key={m.id} value={m.id}>{m.display_name ?? m.email}</option>
+                    <option key={m.id} value={m.id}>{memberLabel(m)}</option>
                   ))}
                 </select>
               </div>

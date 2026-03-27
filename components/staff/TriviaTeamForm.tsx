@@ -6,7 +6,14 @@ import type { LeaderboardPeriod } from '@/lib/supabase/types'
 interface Member {
   id: string
   display_name: string | null
+  full_name: string | null
+  phone: string | null
   email?: string | null
+}
+
+function memberLabel(m: Member) {
+  const name = m.full_name ?? m.display_name ?? m.email ?? '?'
+  return m.phone ? `${name} · ${m.phone}` : name
 }
 
 interface SavedTeam {
@@ -52,7 +59,7 @@ export default function TriviaTeamForm({ period, members, staffId, eventTypeId }
   const memberMap = useMemo(() => {
     const m: Record<string, string> = {}
     for (const mb of members) {
-      m[mb.id] = mb.display_name ?? mb.email ?? mb.id
+      m[mb.id] = memberLabel(mb)
     }
     return m
   }, [members])
@@ -318,7 +325,7 @@ function TeamCard({
     return members
       .filter(m =>
         !team.memberIds.includes(m.id) &&
-        (m.display_name ?? m.email ?? '').toLowerCase().includes(q)
+        memberLabel(m).toLowerCase().includes(q)
       )
       .slice(0, 8)
   }, [search, members, team.memberIds])
@@ -416,7 +423,7 @@ function TeamCard({
                       : 'text-[#242622] hover:bg-[#F1F1E7]'
                   }`}
                 >
-                  <span>{m.display_name ?? m.email}</span>
+                  <span>{memberLabel(m)}</span>
                   {onOther && <span className="text-[10px] text-[#C8BCA4]">on another team</span>}
                 </button>
               )
