@@ -102,7 +102,7 @@ export default async function StaffCustomersPage({
             const balance  = balanceMap[c.id] ?? 0
             const toast    = toastMap[c.id] ?? null
             return (
-              <div key={c.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 flex items-center gap-4">
+              <Link key={c.id} href={`/staff/customers/${c.id}`} className="block bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 flex items-center gap-4 hover:border-[#96321F]/40 transition-colors">
                 <div className="w-9 h-9 rounded-full bg-[#96321F]/10 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-[#96321F]">
                     {(c.display_name ?? c.email ?? '?')[0]?.toUpperCase()}
@@ -131,7 +131,7 @@ export default async function StaffCustomersPage({
                     <p className="text-[10px] text-[#C8BCA4] mt-0.5">no Toast link</p>
                   )}
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>

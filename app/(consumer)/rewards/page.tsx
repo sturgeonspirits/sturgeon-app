@@ -11,10 +11,10 @@ export default async function RewardsPage() {
     supabase.from('points_ledger').select('balance').eq('user_id', user.id).single(),
     supabase
       .from('reward_redemptions')
-      .select('*, rewards(name, icon)')
+      .select('*, rewards(name, icon, points_cost)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(10),
+      .limit(20),
     supabase
       .from('toast_loyalty_accounts')
       .select('toast_points')
@@ -81,6 +81,31 @@ export default async function RewardsPage() {
                   <p className="text-xs text-[#7E613F]">Show this to staff to claim</p>
                 </div>
                 <span className="text-[#96321F] text-xl">→</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Redemption history */}
+      {(myRedemptions ?? []).filter(r => r.status === 'redeemed').length > 0 && (
+        <section>
+          <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Redemption History</h2>
+          <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl overflow-hidden divide-y divide-[#F1F1E7]">
+            {(myRedemptions ?? []).filter(r => r.status === 'redeemed').map(r => (
+              <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="text-xl">{(r.rewards as any)?.icon ?? '🎁'}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#242622]">{(r.rewards as any)?.name}</p>
+                  <p className="text-xs text-[#9E8F7E]">
+                    {r.redeemed_at
+                      ? new Date(r.redeemed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                      : new Date(r.created_at!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+                {((r.rewards as any)?.points_cost ?? 0) > 0 && (
+                  <p className="text-sm font-bold text-red-400">−{(r.rewards as any).points_cost} pts</p>
+                )}
               </div>
             ))}
           </div>

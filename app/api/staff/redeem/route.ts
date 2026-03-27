@@ -1,35 +1,132 @@
 /**
  * POST /api/staff/redeem
- * Mark a reward redemption as fulfilled by staff.
+ *
+ * Two modes:
+ *
+ * 1. Fulfill a pending redemption (customer-initiated):
+ *    { redemptionId, staffId }
+ *    → marks it redeemed + deducts points
+ *
+ * 2. Direct staff redemption (staff-initiated at counter):
+ *    { userId, rewardId, staffId, notes? }
+ *    → creates redemption record + deducts points in one step
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { emitEarnEvent } from '@/lib/earn-events'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null)
-    // Support both JSON and form data
-    const redemptionId = body?.redemptionId ?? (await req.formData().then(f => f.get('redemptionId')))
-    const staffId      = body?.staffId      ?? (await req.formData().then(f => f.get('staffId')))
-
-    if (!redemptionId) return NextResponse.json({ error: 'redemptionId required' }, { status: 400 })
+    const body = await req.json()
+    const { redemptionId, userId, rewardId, staffId, notes } = body
 
     const supabase = createServiceClient()
 
-    const { error } = await supabase
+    // ── Mode 1: fulfill an existing pending redemption ────────────────────
+    if (redemptionId) {
+      // Fetch the redemption + its reward so we know the points cost
+      const { data: rr } = await supabase
+        .from('reward_redemptions')
+        .select('id, user_id, status, rewards(id, name, points_cost)')
+        .eq('id', redemptionId)
+        .eq('status', 'pending')
+        .single()
+
+      if (!rr) return NextResponse.json({ error: 'Redemption not found or already fulfilled' }, { status: 404 })
+
+      const reward = (rr as any).rewards
+      const cost   = reward?.points_cost ?? 0
+
+      // Mark redeemed
+      const { error: updateErr } = await supabase
+        .from('reward_redemptions')
+        .update({ status: 'redeemed', redeemed_at: new Date().toISOString(), redeemed_by: staffId ?? null })
+        .eq('id', redemptionId)
+
+      if (updateErr) throw updateErr
+
+      // Deduct points if the reward has a cost
+      if (cost > 0) {
+        await emitEarnEvent({
+          userId:       rr.user_id,
+          eventType:    'reward_redeemed',
+          pointsDelta:  -cost,
+          contextType:  'reward',
+          contextId:    reward.id,
+          notes:        `Redeemed: ${reward.name}`,
+          supabase,
+        })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // ── Mode 2: staff-initiated direct redemption ─────────────────────────
+    if (!userId || !rewardId) {
+      return NextResponse.json({ error: 'Provide either redemptionId or userId + rewardId' }, { status: 400 })
+    }
+
+    // Fetch reward
+    const { data: reward } = await supabase
+      .from('rewards')
+      .select('id, name, points_cost, is_active')
+      .eq('id', rewardId)
+      .single()
+
+    if (!reward || !reward.is_active) {
+      return NextResponse.json({ error: 'Reward not found or inactive' }, { status: 404 })
+    }
+
+    // Check customer has enough points
+    const { data: ledger } = await supabase
+      .from('points_ledger')
+      .select('balance')
+      .eq('user_id', userId)
+      .single()
+
+    const balance = ledger?.balance ?? 0
+    if (reward.points_cost > 0 && balance < reward.points_cost) {
+      return NextResponse.json({ error: `Not enough points (have ${balance}, need ${reward.points_cost})` }, { status: 400 })
+    }
+
+    // Create redemption record (already redeemed — no pending step)
+    const { data: rr, error: rrErr } = await supabase
       .from('reward_redemptions')
-      .update({
+      .insert({
+        user_id:     userId,
+        reward_id:   rewardId,
         status:      'redeemed',
         redeemed_at: new Date().toISOString(),
         redeemed_by: staffId ?? null,
+        notes:       notes ?? null,
       })
-      .eq('id', redemptionId)
-      .eq('status', 'pending')  // Only redeem pending ones
+      .select('id')
+      .single()
 
-    if (error) throw error
+    if (rrErr || !rr) throw rrErr ?? new Error('Could not create redemption')
 
-    return NextResponse.json({ success: true })
+    // Deduct points
+    if (reward.points_cost > 0) {
+      const earnEvent = await emitEarnEvent({
+        userId,
+        eventType:   'reward_redeemed',
+        pointsDelta: -reward.points_cost,
+        contextType: 'reward',
+        contextId:   reward.id,
+        notes:       `Redeemed: ${reward.name}${notes ? ` — ${notes}` : ''}`,
+        supabase,
+      })
+
+      // Link earn event to redemption
+      await supabase
+        .from('reward_redemptions')
+        .update({ earn_event_id: earnEvent.id })
+        .eq('id', rr.id)
+    }
+
+    return NextResponse.json({ success: true, redemptionId: rr.id })
   } catch (err: any) {
+    console.error('Redeem error:', err)
     return NextResponse.json({ error: err.message ?? 'Internal error' }, { status: 500 })
   }
 }
