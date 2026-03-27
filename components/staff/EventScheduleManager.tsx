@@ -80,9 +80,6 @@ export default function EventScheduleManager({ eventTypeId, upcomingEvents: init
     setDeleting(null)
   }
 
-  // Today's date as YYYY-MM-DD for min constraint
-  const today = new Date().toLocaleDateString('en-CA')
-
   return (
     <div className="mt-2 space-y-1.5">
       {events.length > 0 && (
@@ -122,7 +119,6 @@ export default function EventScheduleManager({ eventTypeId, upcomingEvents: init
           <input
             type="date"
             value={date}
-            min={today}
             onChange={e => setDate(e.target.value)}
             className="border border-[#D4CFC3] rounded-lg px-2 py-1.5 text-xs text-[#242622] focus:outline-none focus:border-[#96321F] transition-colors"
           />
