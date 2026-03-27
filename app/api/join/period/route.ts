@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
 
   if (!period) return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
-  if (!period.is_open) return NextResponse.json({ error: 'This event has ended' }, { status: 410 })
+  if (period.is_finalized) return NextResponse.json({ error: 'This event has ended' }, { status: 410 })
 
   const et = (period as any).event_types
   const ev = (period as any).events
