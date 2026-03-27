@@ -1,16 +1,25 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [email,   setEmail]   = useState('')
   const [loading, setLoading] = useState(false)
   const [sent,    setSent]    = useState(false)
   const [error,   setError]   = useState('')
+  const [notice,  setNotice]  = useState('')
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'callback_failed') {
+      setNotice('Your link has expired. Enter your email below to get a fresh code.')
+    }
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -67,6 +76,11 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {!sent ? (
             <>
+              {notice && (
+                <div className="mb-5 bg-[#96321F]/10 border border-[#96321F]/30 rounded-xl px-4 py-3 text-sm text-[#96321F]">
+                  {notice}
+                </div>
+              )}
               <div className="mb-6">
                 <h2 className="text-lg font-semibold text-[#242622]">Sign in</h2>
                 <p className="text-sm text-[#7E613F] mt-1">
@@ -140,5 +154,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F1F1E7] flex items-center justify-center">
+        <p className="text-[#242622] text-sm">Loading…</p>
+      </div>
+    }>
+      <LoginPageInner />
+    </Suspense>
   )
 }
