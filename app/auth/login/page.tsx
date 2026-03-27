@@ -146,12 +146,6 @@ function LoginPageInner() {
           )}
         </div>
 
-        {/* Staff link */}
-        <div className="mt-12">
-          <a href="/staff/login" className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors tracking-wide">
-            Staff sign in →
-          </a>
-        </div>
       </div>
     </div>
   )

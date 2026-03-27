@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   // Find period by join_token, including the linked scheduled event for its date
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, label, event_type_id, event_id, event_types(name, slug, icon), is_open, events(event_date, start_time)')
+    .select('id, label, event_type_id, event_id, is_finalized, event_types(name, slug, icon), events(event_date, start_time)')
     .eq('join_token', token)
     .maybeSingle()
 

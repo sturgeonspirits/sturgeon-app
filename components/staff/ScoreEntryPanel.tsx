@@ -51,6 +51,10 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
   const [selectedEventTypeId, setSelectedEventTypeId] = useState<string | null>(null)
   const [selectedPeriodId,    setSelectedPeriodId]    = useState<string | null>(null)
   const [periodError,         setPeriodError]         = useState('')
+  const [showDateForm,        setShowDateForm]        = useState(false)
+  const [quickDate,           setQuickDate]           = useState('')
+  const [quickTime,           setQuickTime]           = useState('')
+  const [quickSaving,         setQuickSaving]         = useState(false)
 
   const selectedET     = eventTypes.find(et => et.id === selectedEventTypeId)
   const selectedPeriod = openPeriods.find(p => p.id === selectedPeriodId) ?? null
@@ -125,6 +129,41 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
     } else {
       const json = await res.json().catch(() => ({}))
       setPeriodError(json.error ?? `Server error ${res.status}`)
+    }
+  }
+
+  async function scheduleAndStart(eventTypeId: string) {
+    if (!quickDate) return
+    setQuickSaving(true)
+    setPeriodError('')
+    // 1. Create the scheduled event
+    const evRes = await fetch('/api/staff/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventTypeId, eventDate: quickDate, startTime: quickTime || null }),
+    })
+    if (!evRes.ok) {
+      const j = await evRes.json().catch(() => ({}))
+      setPeriodError(j.error ?? 'Failed to create event date')
+      setQuickSaving(false)
+      return
+    }
+    const { event } = await evRes.json()
+    // 2. Create a period linked to that event
+    const [year, month, day] = quickDate.split('-').map(Number)
+    const d = new Date(year, month - 1, day)
+    const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    const prRes = await fetch('/api/staff/period', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventTypeId, eventId: event.id, label, periodType: 'single_night', startsAt: new Date().toISOString() }),
+    })
+    if (prRes.ok) {
+      window.location.reload()
+    } else {
+      const j = await prRes.json().catch(() => ({}))
+      setPeriodError(j.error ?? 'Failed to start period')
+      setQuickSaving(false)
     }
   }
 
@@ -255,11 +294,47 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
             </div>
           )}
 
-          {/* Generic period fallback */}
-          <div className="pt-1 border-t border-[#F1F1E7]">
+          {/* Quick schedule + start */}
+          <div className="pt-2 border-t border-[#F1F1E7] space-y-2">
+            {!showDateForm ? (
+              <button
+                onClick={() => setShowDateForm(true)}
+                className="text-xs font-semibold text-[#96321F] hover:underline"
+              >
+                + Schedule a specific date and start
+              </button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={quickDate}
+                  onChange={e => setQuickDate(e.target.value)}
+                  className="border border-[#D4CFC3] rounded-lg px-2 py-1.5 text-xs text-[#242622] focus:outline-none focus:border-[#96321F]"
+                />
+                <input
+                  type="time"
+                  value={quickTime}
+                  onChange={e => setQuickTime(e.target.value)}
+                  className="border border-[#D4CFC3] rounded-lg px-2 py-1.5 text-xs text-[#242622] focus:outline-none focus:border-[#96321F] w-28"
+                />
+                <button
+                  onClick={() => scheduleAndStart(selectedET.id)}
+                  disabled={!quickDate || quickSaving}
+                  className="text-xs bg-[#96321F] text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-[#ae3a24] disabled:opacity-40 transition-colors"
+                >
+                  {quickSaving ? '…' : 'Start →'}
+                </button>
+                <button
+                  onClick={() => { setShowDateForm(false); setQuickDate(''); setQuickTime('') }}
+                  className="text-xs text-[#9E8F7E] hover:text-[#7E613F]"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
             <button
               onClick={() => createGenericPeriod(selectedET.id)}
-              className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors"
+              className="block text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors"
             >
               + Start generic period (not tied to a specific date)
             </button>
