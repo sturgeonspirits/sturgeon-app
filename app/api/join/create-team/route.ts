@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // POST /api/join/create-team
-// Customer creates a new team for a trivia period and is auto-added as first member.
+// Creates a permanent team (if it doesn't exist), then creates/finds the
+// per-period leaderboard_teams row and adds the creator as the first member.
 // Body: { token: string, teamName: string }
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -30,13 +31,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This event does not use teams' }, { status: 400 })
   }
 
-  // Check if user is already on a team for this period
-  const { data: allTeams } = await service
+  // ── 1. Upsert the permanent team (creates if new, returns if existing) ────
+  const { data: permTeam, error: permErr } = await service
+    .from('permanent_teams')
+    .upsert(
+      { event_type_id: period.event_type_id, name: teamName.trim() },
+      { onConflict: 'event_type_id,name', ignoreDuplicates: false }
+    )
+    .select('id, name')
+    .single()
+
+  if (permErr || !permTeam) {
+    return NextResponse.json({ error: permErr?.message ?? 'Could not create team' }, { status: 500 })
+  }
+
+  // ── 2. Check if user is already on any team for this period ───────────────
+  const { data: allPeriodTeams } = await service
     .from('leaderboard_teams')
     .select('id')
     .eq('period_id', period.id)
 
-  const teamIds = (allTeams ?? []).map(t => t.id)
+  const teamIds = (allPeriodTeams ?? []).map((t: any) => t.id)
 
   if (teamIds.length > 0) {
     const { data: existingMembership } = await service
@@ -52,39 +67,32 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Check for duplicate team name in this period
-  const { data: duplicate } = await service
+  // ── 3. Find or create this period's leaderboard_teams row ─────────────────
+  const { data: periodTeam, error: ptErr } = await service
     .from('leaderboard_teams')
-    .select('id')
-    .eq('period_id', period.id)
-    .ilike('name', teamName.trim())
-    .maybeSingle()
-
-  if (duplicate) {
-    return NextResponse.json({ error: 'A team with that name already exists — try joining it instead' }, { status: 409 })
-  }
-
-  // Create the team
-  const { data: team, error: teamErr } = await service
-    .from('leaderboard_teams')
-    .insert({ period_id: period.id, name: teamName.trim(), score: 0, placement: 0 })
+    .upsert(
+      { period_id: period.id, permanent_team_id: permTeam.id, name: permTeam.name, score: 0, placement: 0 },
+      { onConflict: 'period_id,permanent_team_id', ignoreDuplicates: false }
+    )
     .select('id, name')
     .single()
 
-  if (teamErr || !team) {
-    return NextResponse.json({ error: teamErr?.message ?? 'Could not create team' }, { status: 500 })
+  if (ptErr || !periodTeam) {
+    return NextResponse.json({ error: ptErr?.message ?? 'Could not set up team for this period' }, { status: 500 })
   }
 
-  // Add creator as first member
-  await service.from('leaderboard_team_members').insert({ team_id: team.id, user_id: user.id })
+  // ── 4. Add creator as first member ────────────────────────────────────────
+  await service
+    .from('leaderboard_team_members')
+    .upsert({ team_id: periodTeam.id, user_id: user.id }, { onConflict: 'team_id,user_id', ignoreDuplicates: true })
 
-  // Add leaderboard_events row so creator appears in standings
+  // ── 5. Add leaderboard_events row so creator appears in standings ──────────
   await service.from('leaderboard_events').upsert({
     period_id: period.id,
     user_id:   user.id,
     score:     0,
   }, { onConflict: 'period_id,user_id' })
 
-  // Return a team-specific join token (reuse the period token + teamId)
-  return NextResponse.json({ ok: true, teamId: team.id, teamName: team.name })
+  // Return the permanent_team_id so the team QR link uses it
+  return NextResponse.json({ ok: true, teamId: permTeam.id, teamName: permTeam.name })
 }

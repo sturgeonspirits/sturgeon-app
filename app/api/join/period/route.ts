@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // GET /api/join/period?t=TOKEN
-// Returns period info and current teams for the QR join page.
+// Returns period info and ALL permanent teams for this event type.
+// Teams from previous weeks are included so players can re-join their usual team.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('t')
   if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
@@ -22,21 +23,35 @@ export async function GET(req: NextRequest) {
   const et = (period as any).event_types
   const ev = (period as any).events
 
-  // Get current teams and members for this period
-  const { data: teams } = await service
-    .from('leaderboard_teams')
-    .select('id, name, leaderboard_team_members(user_id, profiles(display_name))')
-    .eq('period_id', period.id)
+  // ── Load ALL permanent teams for this event type (persists across weeks) ──
+  const { data: permanentTeams } = await service
+    .from('permanent_teams')
+    .select('id, name')
+    .eq('event_type_id', period.event_type_id)
     .order('name')
 
-  const teamList = (teams ?? []).map((t: any) => ({
-    id:          t.id,
-    name:        t.name,
-    memberCount: t.leaderboard_team_members?.length ?? 0,
-    members:     (t.leaderboard_team_members ?? [])
-                   .map((m: any) => m.profiles?.display_name ?? '')
-                   .filter(Boolean),
-  }))
+  // ── Load this period's membership so we can show who's already in ─────────
+  const { data: periodTeams } = await service
+    .from('leaderboard_teams')
+    .select('permanent_team_id, leaderboard_team_members(user_id, profiles(display_name))')
+    .eq('period_id', period.id)
+
+  // Map permanent_team_id → this period's members
+  const memberMap = new Map(
+    (periodTeams ?? []).map((t: any) => [t.permanent_team_id, t.leaderboard_team_members ?? []])
+  )
+
+  const teamList = (permanentTeams ?? []).map((pt: any) => {
+    const members: any[] = memberMap.get(pt.id) ?? []
+    return {
+      id:          pt.id,   // permanent_team_id — used as the join handle
+      name:        pt.name,
+      memberCount: members.length,
+      members:     members
+                     .map((m: any) => m.profiles?.display_name ?? '')
+                     .filter(Boolean),
+    }
+  })
 
   // Format the event date if available
   let eventDateLabel: string | null = null

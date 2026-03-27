@@ -360,27 +360,26 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
             </button>
           </div>
 
-          {/* QR join link — trivia team events only */}
-          {selectedET.participant_type === 'team' && (selectedPeriod as any).join_token && (
-            <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-3 flex items-center gap-3">
-              <span className="text-2xl">📱</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[#7E613F]">Player join link</p>
-                <p className="text-xs text-[#9E8F7E] truncate">
-                  {typeof window !== 'undefined' ? window.location.origin : ''}/join?t={(selectedPeriod as any).join_token}
-                </p>
+          {/* QR join code — trivia team events only */}
+          {selectedET.participant_type === 'team' && (selectedPeriod as any).join_token && (() => {
+            const joinUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://app.sturgeonspirits.com'}/join?t=${(selectedPeriod as any).join_token}`
+            const qrSrc  = `https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl=${encodeURIComponent(joinUrl)}&choe=UTF-8`
+            return (
+              <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-4 flex flex-col items-center gap-3">
+                <p className="text-xs font-semibold text-[#7E613F] uppercase tracking-wide">📱 Players scan to join a team</p>
+                <img src={qrSrc} alt="Join QR code" width={200} height={200} className="rounded-xl" />
+                <div className="flex gap-2 w-full items-center">
+                  <p className="flex-1 text-xs text-[#9E8F7E] truncate">{joinUrl}</p>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(joinUrl)}
+                    className="text-xs text-[#96321F] font-semibold hover:underline shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}/join?t=${(selectedPeriod as any).join_token}`
-                  navigator.clipboard.writeText(url)
-                }}
-                className="text-xs text-[#96321F] font-semibold hover:underline shrink-0"
-              >
-                Copy
-              </button>
-            </div>
-          )}
+            )
+          })()}
 
           {selectedET.scoring_method === 'wins_losses' && (
             <CribbageScoreForm period={selectedPeriod} members={members} staffId={staffId} />
