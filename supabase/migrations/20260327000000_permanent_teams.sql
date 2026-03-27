@@ -39,11 +39,12 @@ JOIN   public.leaderboard_periods lp ON lt.period_id = lp.id
 ON CONFLICT (event_type_id, name) DO NOTHING;
 
 -- 6. Link existing leaderboard_teams rows to their permanent_teams
+-- (cannot reference the update target "lt" inside a FROM...JOIN, so use WHERE)
 UPDATE public.leaderboard_teams lt
 SET    permanent_team_id = pt.id
-FROM   public.leaderboard_periods lp
-JOIN   public.permanent_teams pt
-         ON pt.event_type_id = lp.event_type_id
-        AND pt.name = lt.name
+FROM   public.leaderboard_periods lp,
+       public.permanent_teams pt
 WHERE  lt.period_id = lp.id
+AND    pt.event_type_id = lp.event_type_id
+AND    pt.name = lt.name
 AND    lt.permanent_team_id IS NULL;
