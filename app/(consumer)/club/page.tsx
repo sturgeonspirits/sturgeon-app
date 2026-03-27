@@ -110,10 +110,10 @@ export default async function ClubPage() {
           <SectionHeader label="Explore" />
           <div className="grid grid-cols-2 gap-2">
             {[
-              { href: '/menu',        icon: '🍹', label: 'Cocktail Menu',   desc: 'Browse our drinks',          live: true  },
+              { href: '/menu',        icon: '🍸', label: 'Cocktail Menu',   desc: 'Browse our drinks',          live: true  },
               { href: '/journal',     icon: '✍️',  label: 'Tasting Journal', desc: 'Log + earn points',          live: true  },
-              { href: '/leaderboards',icon: '🏆',  label: 'Standings',       desc: 'Weekly leaderboards',        live: true  },
-              { href: '/rewards',     icon: '🎁',  label: 'Rewards',         desc: 'Redeem your points',         live: true  },
+              { href: '/leaderboards',icon: '🥃',  label: 'Standings',       desc: 'Weekly leaderboards',        live: true  },
+              { href: '/rewards',     icon: '🍾',  label: 'Rewards',         desc: 'Redeem your points',         live: true  },
               { href: '/events',      icon: '📅',  label: 'Events',          desc: 'What\'s on this week',       live: true  },
               { href: '#',            icon: '📍',  label: 'Check In',        desc: 'Scan QR at the bar',         live: false },
               { href: '#',            icon: '🛒',  label: 'Shop',            desc: 'Merch & bottle shop',        live: false },

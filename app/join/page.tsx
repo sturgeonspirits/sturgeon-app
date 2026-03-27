@@ -150,7 +150,7 @@ function JoinPageInner() {
   if (view === 'needsAuth') return (
     <Shell>
       <div className="space-y-5 w-full max-w-sm text-center">
-        <p className="text-4xl">{period?.eventTypeIcon ?? '🎉'}</p>
+        <p className="text-4xl">{period?.eventTypeIcon ?? '🍸'}</p>
         <div>
           <h1 className="text-xl font-bold text-[#242622]">{period?.eventTypeName}</h1>
           {period?.eventDateLabel ? (
@@ -173,7 +173,7 @@ function JoinPageInner() {
   if (view === 'joined') return (
     <Shell>
       <div className="text-center space-y-4 max-w-sm w-full">
-        <p className="text-5xl">🎉</p>
+        <p className="text-5xl">🍸</p>
         <h1 className="text-2xl font-bold text-[#242622]">You're in!</h1>
         <p className="text-[#7E613F]">
           You joined <strong>{joinedTeam}</strong> for {period?.eventTypeName}
@@ -190,7 +190,7 @@ function JoinPageInner() {
   if (view === 'created') return (
     <Shell>
       <div className="space-y-5 w-full max-w-sm text-center">
-        <p className="text-5xl">🏆</p>
+        <p className="text-5xl">🥃</p>
         <div>
           <h1 className="text-xl font-bold text-[#242622]">Team created!</h1>
           <p className="text-sm text-[#7E613F] mt-1">You're on <strong>{createdTeam}</strong></p>
@@ -224,7 +224,7 @@ function JoinPageInner() {
       <div className="w-full max-w-sm space-y-5">
         {/* Header */}
         <div className="text-center">
-          <p className="text-4xl mb-2">{period?.eventTypeIcon ?? '🎉'}</p>
+          <p className="text-4xl mb-2">{period?.eventTypeIcon ?? '🍸'}</p>
           <h1 className="text-xl font-bold text-[#242622]">{period?.eventTypeName}</h1>
           {period?.eventDateLabel ? (
             <p className="text-sm font-semibold text-[#96321F] mt-1">{period.eventDateLabel}</p>

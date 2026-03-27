@@ -221,7 +221,7 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
   if (sorted.length === 0) {
     return (
       <div className="text-center py-10 text-[#7E613F]">
-        <p className="text-3xl mb-2">🏆</p>
+        <p className="text-3xl mb-2">🥃</p>
         <p className="font-medium text-sm">No scores recorded yet</p>
         <p className="text-xs mt-1 text-[#9E8F7E]">Staff can enter tonight's results from the portal</p>
       </div>

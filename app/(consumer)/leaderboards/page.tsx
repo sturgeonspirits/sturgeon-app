@@ -25,7 +25,7 @@ export default async function LeaderboardsPage() {
 
       {events.length === 0 ? (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-5xl mb-4">🏆</p>
+          <p className="text-5xl mb-4">🥃</p>
           <p className="font-semibold text-[#242622] mb-1">Leaderboards coming soon</p>
           <p className="text-sm text-[#7E613F] px-6">
             Staff will set up event boards for Cribbage Night, Trivia, and more. Check back after your first event!

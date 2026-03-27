@@ -27,8 +27,10 @@ export default async function RewardsPage() {
       .eq('context_type', 'toast_import'),
   ])
 
-  const toastPts   = toastAccount?.toast_points ?? 0
-  const appPts     = (ledger?.balance ?? 0) - (toastEarnEvents ?? []).reduce((s, e) => s + (e.points_delta ?? 0), 0)
+  // Use earn_events sum for Toast pts — toast_loyalty_accounts may not be linked yet
+  const toastImportSum = (toastEarnEvents ?? []).reduce((s, e) => s + (e.points_delta ?? 0), 0)
+  const toastPts   = toastImportSum
+  const appPts     = (ledger?.balance ?? 0) - toastImportSum
   const balance    = ledger?.balance ?? 0
 
   const METHOD_LABEL: Record<string, string> = {
@@ -50,14 +52,14 @@ export default async function RewardsPage() {
       <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🥂</span>
+            <span className="text-lg">🍸</span>
             <span className="text-sm text-[#7E613F]">Toast Loyalty</span>
           </div>
           <span className="font-bold text-[#242622]">{toastPts.toLocaleString()} pts</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg">📱</span>
+            <span className="text-lg">🥃</span>
             <span className="text-sm text-[#7E613F]">App Loyalty</span>
           </div>
           <span className="font-bold text-[#242622]">{Math.max(0, appPts).toLocaleString()} pts</span>

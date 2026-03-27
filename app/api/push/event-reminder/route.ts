@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       : ''
 
     const payload = JSON.stringify({
-      title: `${et.icon ?? '🎉'} ${et.name} — ${dateStr}`,
+      title: `${et.icon ?? '🍸'} ${et.name} — ${dateStr}`,
       body:  `You're invited back! ${et.name}${timeStr}. Tap to see details.`,
       url:   '/events',
       tag:   `event-reminder-${event.id}`,

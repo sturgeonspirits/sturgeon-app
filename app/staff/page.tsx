@@ -74,7 +74,7 @@ export default async function StaffDashboard() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { href: '/staff/scores',     icon: '🏆', label: 'Enter Scores',  desc: 'Cribbage & Trivia'     },
+          { href: '/staff/scores',     icon: '🥃', label: 'Enter Scores',  desc: 'Cribbage & Trivia'     },
           { href: '/staff/missions',   icon: '📋', label: 'Missions',      desc: 'Mark completions'      },
           { href: '/staff/menu',       icon: '🍹', label: 'Menu',          desc: 'View & sync recipes'   },
           { href: '/staff/events',     icon: '📅', label: 'Events',        desc: 'Manage weekly events'  },

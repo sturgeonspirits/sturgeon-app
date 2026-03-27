@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       id:              period.id,
       label:           period.label,
       eventTypeName:   et?.name       ?? 'Event',
-      eventTypeIcon:   et?.icon       ?? '🎉',
+      eventTypeIcon:   et?.icon       ?? '🍸',
       eventDate:       ev?.event_date ?? null,
       eventDateLabel:  eventDateLabel,
     },
