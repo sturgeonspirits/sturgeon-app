@@ -20,12 +20,12 @@ interface PeriodInfo {
   eventDateLabel: string | null  // 'Thursday, March 27 · 7:00 PM'
 }
 
-// ── Simple QR code via Google Charts API ─────────────────────────────────────
+// ── QR code via qrserver.com ──────────────────────────────────────────────────
 function QRCode({ url }: { url: string }) {
   const encoded = encodeURIComponent(url)
   return (
     <img
-      src={`https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encoded}&choe=UTF-8`}
+      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encoded}&format=png`}
       alt="QR code"
       width={220}
       height={220}
