@@ -66,14 +66,18 @@ export default function VerifyPage() {
 
     sessionStorage.removeItem('otp_email')
 
-    // Route by role — staff/admin go to the staff portal
+    // Route by role — new users go to onboarding, staff/admin to staff portal
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, full_name')
       .eq('id', data.user.id)
-      .single()
+      .maybeSingle()
 
-    const role = (profile as any)?.role ?? 'customer'
+    if (!profile || !profile.full_name) {
+      router.replace('/onboarding')
+      return
+    }
+    const role = profile.role ?? 'customer'
     router.replace(['staff', 'admin'].includes(role) ? '/staff' : '/club')
   }
 

@@ -17,10 +17,15 @@ function AuthCallbackInner() {
       async function redirectByRole(userId: string) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, full_name')
           .eq('id', userId)
-          .single()
-        const role = (profile as any)?.role ?? 'customer'
+          .maybeSingle()
+        // No profile yet → send to onboarding to collect name/phone
+        if (!profile || !profile.full_name) {
+          router.replace('/onboarding')
+          return
+        }
+        const role = profile.role ?? 'customer'
         router.replace(['staff', 'admin'].includes(role) ? '/staff' : '/club')
       }
 
