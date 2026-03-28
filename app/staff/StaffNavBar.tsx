@@ -51,15 +51,15 @@ export default function StaffNavBar() {
         {/* Right side: customer view + logout (desktop), hamburger (mobile) */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link href="/club"
-            className="hidden sm:flex items-center gap-1.5 text-xs bg-[#F1F1E7] text-[#7E613F] px-3 py-1.5 rounded-lg hover:bg-[#D4CFC3] transition-colors whitespace-nowrap">
+            className="hidden lg:flex items-center gap-1.5 text-xs bg-[#F1F1E7] text-[#7E613F] px-3 py-1.5 rounded-lg hover:bg-[#D4CFC3] transition-colors whitespace-nowrap">
             <span>👤</span> Customer view
           </Link>
           <button onClick={handleLogout}
-            className="hidden sm:flex items-center gap-1.5 text-xs bg-[#F1F1E7] text-[#7E613F] px-3 py-1.5 rounded-lg hover:bg-[#D4CFC3] transition-colors whitespace-nowrap">
+            className="hidden lg:flex items-center gap-1.5 text-xs bg-[#F1F1E7] text-[#7E613F] px-3 py-1.5 rounded-lg hover:bg-[#D4CFC3] transition-colors whitespace-nowrap">
             Sign out
           </button>
 
-          {/* Hamburger button — visible on mobile */}
+          {/* Hamburger button — visible on anything below desktop */}
           <button
             onClick={() => setOpen(o => !o)}
             aria-label={open ? 'Close menu' : 'Open menu'}
