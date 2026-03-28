@@ -45,14 +45,14 @@ BEGIN
 
   -- Seed points if not already imported
   IF NOT v_toast.points_imported AND v_toast.toast_points > 0 THEN
-    v_app_pts := v_toast.toast_points * 10;  -- 1 Toast pt = $1 = 10 app pts
+    v_app_pts := v_toast.toast_points;  -- 1:1 import
 
     INSERT INTO public.earn_events
       (user_id, event_type, points_delta, context_type, context_id, notes)
     VALUES
       (NEW.id, 'purchase_recorded', v_app_pts,
        'toast_import', v_toast.id,
-       'Toast loyalty import: ' || v_toast.toast_points || ' Toast pts → ' || v_app_pts || ' app pts');
+       'Toast loyalty import: ' || v_toast.toast_points || ' Toast pts');
 
     UPDATE public.toast_loyalty_accounts
     SET points_imported = true, updated_at = now()
