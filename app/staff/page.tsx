@@ -79,6 +79,7 @@ export default async function StaffDashboard() {
           { href: '/staff/menu',       icon: '🍹', label: 'Menu',          desc: 'View & sync recipes'   },
           { href: '/staff/events',     icon: '📅', label: 'Events',        desc: 'Manage weekly events'  },
           { href: '/staff/customers',  icon: '👤', label: 'Customers',     desc: 'Add & search members'  },
+          { href: '/staff/rewards',    icon: '🎁', label: 'Rewards',        desc: 'Manage redemptions'    },
         ].map(card => (
           <Link key={card.href} href={card.href}
             className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 hover:border-[#96321F]/30 transition-colors">
