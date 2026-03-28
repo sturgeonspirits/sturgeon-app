@@ -1,15 +1,28 @@
 {
   "name": "Sturgeon Spirits",
   "short_name": "Sturgeon",
-  "description": "Spearers Club loyalty & events",
-  "start_url": "/",
+  "description": "Spearers Club — loyalty, events & tastings",
+  "start_url": "/club",
   "display": "standalone",
-  "background_color": "#0f0f0f",
-  "theme_color": "#f5c842",
+  "background_color": "#F1F1E7",
+  "theme_color": "#96321F",
   "orientation": "portrait",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "My Points",
+      "url": "/rewards",
+      "description": "View your points and rewards"
+    },
+    {
+      "name": "Standings",
+      "url": "/leaderboards",
+      "description": "View weekly leaderboards"
+    }
+  ],
+  "categories": ["food", "lifestyle", "entertainment"]
 }
