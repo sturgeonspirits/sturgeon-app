@@ -63,7 +63,7 @@ export default async function StaffDashboard() {
   const cards = [
     { href: '/staff/scores',       icon: '🥃', label: 'Enter Scores',   desc: 'Cribbage & Trivia'     },
     { href: '/staff/customers',    icon: '👤', label: 'Customers',       desc: 'Add & search members'  },
-    { href: '/staff/redemptions',  icon: '🎟️', label: 'Redemptions',     desc: 'Add & approve requests', badge: pendingCount ?? 0 },
+    { href: '/staff/redemptions',  icon: '🎟️', label: 'Redemptions',     desc: 'Approve member requests', badge: pendingCount ?? 0 },
     { href: '/staff/rewards',      icon: '🎁', label: 'Rewards',         desc: 'Add & edit catalog'    },
     { href: '/staff/missions',     icon: '📋', label: 'Missions',        desc: 'Add & mark completions'},
     { href: '/staff/events',       icon: '📅', label: 'Events',          desc: 'Manage weekly events'  },
