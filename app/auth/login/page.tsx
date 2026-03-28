@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Suspense } from 'react'
@@ -9,17 +9,32 @@ function LoginPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
-  const [email,   setEmail]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sent,    setSent]    = useState(false)
-  const [error,   setError]   = useState('')
-  const [notice,  setNotice]  = useState('')
+  const [email,     setEmail]     = useState('')
+  const [loading,   setLoading]   = useState(false)
+  const [sent,      setSent]      = useState(false)
+  const [error,     setError]     = useState('')
+  const [notice,    setNotice]    = useState('')
+  const [countdown, setCountdown] = useState(0)
+  const [resending, setResending] = useState(false)
+
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (searchParams.get('error') === 'callback_failed') {
       setNotice('Your link has expired. Enter your email below to get a fresh code.')
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    countdownRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(countdownRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(countdownRef.current!)
+  }, [countdown])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,7 +57,23 @@ function LoginPageInner() {
 
     sessionStorage.setItem('otp_email', email.trim().toLowerCase())
     setSent(true)
+    setCountdown(60)
     setLoading(false)
+  }
+
+  async function handleResend() {
+    setResending(true)
+    setError('')
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/auth/callback` },
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      setCountdown(60)
+    }
+    setResending(false)
   }
 
   return (
@@ -126,19 +157,40 @@ function LoginPageInner() {
                 <span className="text-3xl">✉️</span>
               </div>
               <h2 className="text-lg font-semibold text-[#242622] mb-2">Check your email</h2>
-              <p className="text-sm text-[#7E613F] mb-6">
+              <p className="text-sm text-[#7E613F] mb-1">
                 We sent a sign-in code to<br />
-                <span className="text-[#242622]">{email}</span>
+                <span className="text-[#242622] font-medium">{email}</span>
               </p>
+              <p className="text-xs text-[#9E8F7E] mb-6">It can take up to a minute — check your spam folder too.</p>
+
+              {error && (
+                <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 mb-4">
+                  {error}
+                </p>
+              )}
+
               <button
                 onClick={() => router.push('/auth/verify')}
                 className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-3.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all text-base tracking-wide"
               >
                 Enter Code →
               </button>
+
               <button
-                onClick={() => setSent(false)}
-                className="mt-3 w-full text-sm text-[#7E613F] hover:text-[#242622] py-2 transition-colors"
+                onClick={handleResend}
+                disabled={countdown > 0 || resending}
+                className="mt-3 w-full text-sm text-[#7E613F] hover:text-[#242622] py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resending
+                  ? 'Sending…'
+                  : countdown > 0
+                  ? `Resend code in ${countdown}s`
+                  : 'Resend code'}
+              </button>
+
+              <button
+                onClick={() => { setSent(false); setCountdown(0); setError('') }}
+                className="mt-1 w-full text-xs text-[#9E8F7E] hover:text-[#7E613F] py-1.5 transition-colors"
               >
                 Use a different email
               </button>
