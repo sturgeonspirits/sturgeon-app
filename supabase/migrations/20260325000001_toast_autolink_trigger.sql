@@ -51,7 +51,7 @@ BEGIN
       (user_id, event_type, points_delta, context_type, context_id, notes)
     VALUES
       (NEW.id, 'purchase_recorded', v_app_pts,
-       'toast_import', v_toast.id::text,
+       'toast_import', v_toast.id,
        'Toast loyalty import: ' || v_toast.toast_points || ' Toast pts → ' || v_app_pts || ' app pts');
 
     UPDATE public.toast_loyalty_accounts

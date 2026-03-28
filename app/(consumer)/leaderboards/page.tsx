@@ -49,7 +49,9 @@ export default async function LeaderboardsPage() {
                 <div className="flex-1">
                   <p className="font-semibold text-[#242622]">{et.name}</p>
                   <p className="text-xs text-[#7E613F] mt-0.5">
-                    {et.day_of_week != null ? `${dayOfWeekLabel(et.day_of_week)}s` : ''}
+                    {et.schedule_label
+                      ? et.schedule_label
+                      : et.day_of_week != null ? `${dayOfWeekLabel(et.day_of_week)}s` : ''}
                     {et.typical_time ? ` · ${et.typical_time}` : ''}
                     {et.participant_type ? ` · ${et.participant_type}` : ''}
                   </p>

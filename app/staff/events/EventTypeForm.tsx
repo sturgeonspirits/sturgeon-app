@@ -25,6 +25,7 @@ interface EventType {
   icon: string | null
   day_of_week: number | null
   typical_time: string | null
+  schedule_label: string | null
   description: string | null
   participant_type: string | null
   scoring_method: string | null
@@ -45,6 +46,7 @@ export default function EventTypeForm({ existing }: Props) {
   const [icon,            setIcon]           = useState(existing?.icon ?? '📅')
   const [dayOfWeek,       setDayOfWeek]      = useState<number | ''>(existing?.day_of_week ?? '')
   const [typicalTime,     setTypicalTime]    = useState(existing?.typical_time ?? '')
+  const [scheduleLabel,   setScheduleLabel]  = useState(existing?.schedule_label ?? '')
   const [description,     setDesc]           = useState(existing?.description ?? '')
   const [participantType, setParticipantType] = useState(existing?.participant_type ?? 'individual')
   const [scoringMethod,   setScoringMethod]  = useState(existing?.scoring_method ?? 'points')
@@ -74,6 +76,7 @@ export default function EventTypeForm({ existing }: Props) {
         icon,
         day_of_week:      dayOfWeek === '' ? null : Number(dayOfWeek),
         typical_time:     typicalTime || null,
+        schedule_label:   scheduleLabel || null,
         description:      description || null,
         participant_type: participantType,
         scoring_method:   scoringMethod,
@@ -229,6 +232,18 @@ export default function EventTypeForm({ existing }: Props) {
             className={inputCls}
           />
         </div>
+      </div>
+
+      {/* Schedule label override */}
+      <div>
+        <label className={labelCls}>Schedule Label <span className="normal-case font-normal text-[#9E8F7E]">(optional override)</span></label>
+        <input
+          value={scheduleLabel}
+          onChange={e => setScheduleLabel(e.target.value)}
+          placeholder="e.g. 1st & 3rd Wednesdays"
+          className={inputCls}
+        />
+        <p className="text-[10px] text-[#9E8F7E] mt-1">If set, replaces the auto-generated day label everywhere it appears</p>
       </div>
 
       {/* Description */}

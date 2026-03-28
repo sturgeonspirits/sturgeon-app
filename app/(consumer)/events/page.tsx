@@ -272,7 +272,9 @@ export default async function EventsPage() {
                 <div className="flex-1">
                   <p className="font-semibold text-[#242622]">{et.name}</p>
                   <p className="text-xs text-[#7E613F] mt-0.5">
-                    {et.day_of_week != null ? `Every ${DAYS[et.day_of_week]}` : ''}
+                    {et.schedule_label
+                      ? et.schedule_label
+                      : et.day_of_week != null ? `Every ${DAYS[et.day_of_week]}` : ''}
                     {et.typical_time ? ` · ${et.typical_time}` : ''}
                   </p>
                   {et.description && (

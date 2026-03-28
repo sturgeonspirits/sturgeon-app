@@ -19,7 +19,7 @@ export default async function StaffEventsPage() {
   const [{ data: eventTypes }, { data: upcomingEvents }] = await Promise.all([
     service
       .from('event_types')
-      .select('id, name, slug, icon, day_of_week, typical_time, description, is_active, sort_order')
+      .select('id, name, slug, icon, day_of_week, typical_time, schedule_label, description, is_active, sort_order')
       .order('sort_order')
       .order('name'),
     service
@@ -83,7 +83,9 @@ export default async function StaffEventsPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-[#242622] truncate">{et.name}</p>
                     <p className="text-xs text-[#7E613F] mt-0.5">
-                      {et.day_of_week != null ? `Every ${DAYS[et.day_of_week]}` : 'Day not set'}
+                      {et.schedule_label
+                        ? et.schedule_label
+                        : et.day_of_week != null ? `Every ${DAYS[et.day_of_week]}` : 'Day not set'}
                       {et.typical_time ? ` · ${et.typical_time}` : ''}
                     </p>
                   </div>
