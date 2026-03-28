@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase/service'
+import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import RewardToggle from './RewardToggle'
 

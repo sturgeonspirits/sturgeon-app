@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase/service'
+import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import RewardForm from '../RewardForm'
 
