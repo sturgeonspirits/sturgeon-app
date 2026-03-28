@@ -10,8 +10,8 @@ export function formatPoints(n: number): string {
 
 export function tierLabel(tier: string): string {
   const map: Record<string, string> = {
-    newcomer:  'Newcomer',
-    regular:   'Regular',
+    newcomer:  'Fingerling',
+    regular:   'Shanty',
     spearer:   'Spearer',
     harpooner: 'Harpooner',
     captain:   'Captain',

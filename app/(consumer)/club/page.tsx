@@ -45,8 +45,8 @@ export default async function ClubPage() {
     captain:   '#96321F',   // brand rust
   }
   const TIER_LABEL: Record<string, string> = {
-    newcomer:  'Newcomer',
-    regular:   'Regular',
+    newcomer:  'Fingerling',
+    regular:   'Shanty',
     spearer:   'Spearer',
     harpooner: 'Harpooner',
     captain:   'Captain',
