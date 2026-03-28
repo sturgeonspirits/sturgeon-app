@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -53,14 +52,24 @@ export default async function StaffDashboard() {
     .order('created_at', { ascending: false })
     .limit(10)
 
-  // Pending reward redemptions
-  const { data: pending } = await supabase
+  // Pending redemption count for badge
+  const { count: pendingCount } = await supabase
     .from('reward_redemptions')
-    .select('*, profiles(display_name), rewards(name, icon, reward_value)')
+    .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
-    .order('created_at', { ascending: false })
 
   const { data: profile } = await supabase.from('profiles').select('display_name, role').eq('id', user.id).single()
+
+  const cards = [
+    { href: '/staff/scores',       icon: '🥃', label: 'Enter Scores',   desc: 'Cribbage & Trivia'     },
+    { href: '/staff/customers',    icon: '👤', label: 'Customers',       desc: 'Add & search members'  },
+    { href: '/staff/redemptions',  icon: '🎟️', label: 'Redemptions',     desc: 'Approve requests', badge: pendingCount ?? 0 },
+    { href: '/staff/rewards',      icon: '🎁', label: 'Rewards',         desc: 'Create & edit catalog' },
+    { href: '/staff/missions',     icon: '📋', label: 'Missions',        desc: 'Mark completions'      },
+    { href: '/staff/events',       icon: '📅', label: 'Events',          desc: 'Manage weekly events'  },
+    { href: '/staff/menu',         icon: '🍹', label: 'Menu',            desc: 'View & sync recipes'   },
+    { href: '/staff/toast-sync',   icon: '🔄', label: 'Toast Sync',      desc: 'Import loyalty points' },
+  ]
 
   return (
     <div className="space-y-6 py-4">
@@ -73,16 +82,15 @@ export default async function StaffDashboard() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
-        {[
-          { href: '/staff/scores',     icon: '🥃', label: 'Enter Scores',  desc: 'Cribbage & Trivia'     },
-          { href: '/staff/missions',   icon: '📋', label: 'Missions',      desc: 'Mark completions'      },
-          { href: '/staff/menu',       icon: '🍹', label: 'Menu',          desc: 'View & sync recipes'   },
-          { href: '/staff/events',     icon: '📅', label: 'Events',        desc: 'Manage weekly events'  },
-          { href: '/staff/customers',  icon: '👤', label: 'Customers',     desc: 'Add & search members'  },
-          { href: '/staff/rewards',    icon: '🎁', label: 'Rewards',        desc: 'Manage redemptions'    },
-        ].map(card => (
+        {cards.map(card => (
           <Link key={card.href} href={card.href}
-            className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4 hover:border-[#96321F]/30 transition-colors">
+            className="relative bg-white border border-[#D4CFC3] rounded-xl p-4 hover:border-[#96321F]/30 transition-colors">
+            {/* Pending badge */}
+            {'badge' in card && (card.badge ?? 0) > 0 && (
+              <span className="absolute top-3 right-3 bg-[#96321F] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {card.badge}
+              </span>
+            )}
             <p className="text-2xl mb-2">{card.icon}</p>
             <p className="font-semibold text-[#242622] text-sm">{card.label}</p>
             <p className="text-xs text-[#7E613F] mt-0.5">{card.desc}</p>
@@ -90,40 +98,17 @@ export default async function StaffDashboard() {
         ))}
       </div>
 
-      {/* Pending redemptions */}
-      {(pending ?? []).length > 0 && (
-        <section>
-          <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">
-            Pending Rewards ({pending!.length})
-          </h2>
-          <div className="space-y-2">
-            {pending!.map(r => (
-              <div key={r.id} className="bg-[#FFFFFF] border border-[#96321F]/20 rounded-xl p-3 flex items-center gap-3">
-                <span className="text-xl">{(r.rewards as any)?.icon}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#242622]">{(r.rewards as any)?.name}</p>
-                  <p className="text-xs text-[#7E613F]">
-                    {(r.profiles as any)?.display_name} · {(r.rewards as any)?.reward_value}
-                  </p>
-                </div>
-                <RedeemButton redemptionId={r.id} staffId={user.id} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Recent activity */}
       <section>
         <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Recent Activity</h2>
         <div className="space-y-1">
           {(recentEvents ?? []).map(e => (
             <div key={e.id} className="flex items-center gap-3 py-2 border-b border-[#D4CFC3]">
-              <div className="flex-1">
-                <p className="text-sm text-[#242622]">{(e.profiles as any)?.display_name ?? 'Unknown'}</p>
-                <p className="text-xs text-[#7E613F]">{e.event_type.replace('_', ' ')}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-[#242622] truncate">{(e.profiles as any)?.display_name ?? 'Unknown'}</p>
+                <p className="text-xs text-[#7E613F]">{e.event_type.replace(/_/g, ' ')}</p>
               </div>
-              <p className={`text-sm font-bold ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-500'}`}>
+              <p className={`text-sm font-bold flex-shrink-0 ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-500'}`}>
                 {e.points_delta >= 0 ? '+' : ''}{e.points_delta} pts
               </p>
             </div>
@@ -131,19 +116,5 @@ export default async function StaffDashboard() {
         </div>
       </section>
     </div>
-  )
-}
-
-// Client component for the redeem button
-function RedeemButton({ redemptionId, staffId }: { redemptionId: string; staffId: string }) {
-  return (
-    <form action={`/api/staff/redeem`} method="POST">
-      <input type="hidden" name="redemptionId" value={redemptionId} />
-      <input type="hidden" name="staffId"      value={staffId} />
-      <button type="submit"
-        className="bg-[#96321F] text-[#FFFFFF] text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#ae3a24] transition-colors">
-        Redeem
-      </button>
-    </form>
   )
 }

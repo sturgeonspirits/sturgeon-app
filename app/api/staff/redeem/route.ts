@@ -22,8 +22,10 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient()
 
-    // ── Mode 1: fulfill an existing pending redemption ────────────────────
+    // ── Mode 1: fulfill or reject an existing pending redemption ─────────
     if (redemptionId) {
+      const action = body.status === 'rejected' ? 'rejected' : 'redeemed'
+
       // Fetch the redemption + its reward so we know the points cost
       const { data: rr } = await supabase
         .from('reward_redemptions')
@@ -37,16 +39,16 @@ export async function POST(req: NextRequest) {
       const reward = (rr as any).rewards
       const cost   = reward?.points_cost ?? 0
 
-      // Mark redeemed
+      // Update status
       const { error: updateErr } = await supabase
         .from('reward_redemptions')
-        .update({ status: 'redeemed', redeemed_at: new Date().toISOString(), redeemed_by: staffId ?? null })
+        .update({ status: action, redeemed_at: new Date().toISOString(), redeemed_by: staffId ?? null })
         .eq('id', redemptionId)
 
       if (updateErr) throw updateErr
 
-      // Deduct points if the reward has a cost
-      if (cost > 0) {
+      // Deduct points only on approval
+      if (action === 'redeemed' && cost > 0) {
         await emitEarnEvent({
           userId:       rr.user_id,
           eventType:    'reward_redeemed',
