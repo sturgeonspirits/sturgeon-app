@@ -25,7 +25,7 @@ export default async function CheckInPage({
           <div className="bg-white border border-[#D4CFC3] rounded-2xl p-4 text-left space-y-3">
             <Step n={1} text="Ask your bartender to show you the check-in QR code." />
             <Step n={2} text="Scan it with your phone camera." />
-            <Step n={3} text="Tap "Check In" and collect your points!" />
+            <Step n={3} text={'Tap "Check In" and collect your points!'} />
           </div>
           <a href="/club" className="block text-sm text-[#9E8F7E] hover:text-[#7E613F] py-2 transition-colors">
             ← Back to my profile
