@@ -12,6 +12,7 @@ export type EarnEventType =
   | 'badge_awarded'
   | 'staff_adjustment'
   | 'purchase_recorded'
+  | 'bar_checkin'
 
 export type CompletionTrigger =
   | 'qr_scan'

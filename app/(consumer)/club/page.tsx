@@ -115,7 +115,7 @@ export default async function ClubPage() {
               { href: '/leaderboards',icon: '🥃',  label: 'Standings',       desc: 'Weekly leaderboards',        live: true  },
               { href: '/rewards',     icon: '🍾',  label: 'Rewards',         desc: 'Redeem your points',         live: true  },
               { href: '/events',      icon: '📅',  label: 'Events',          desc: 'What\'s on this week',       live: true  },
-              { href: '#',            icon: '📍',  label: 'Check In',        desc: 'Scan QR at the bar',         live: false },
+              { href: '/checkin',     icon: '📍',  label: 'Check In',        desc: 'Scan QR at the bar',         live: true  },
               { href: '#',            icon: '🛒',  label: 'Shop',            desc: 'Merch & bottle shop',        live: false },
             ].map(item => (
               item.live ? (

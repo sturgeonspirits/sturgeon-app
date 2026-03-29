@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getDailyToken } from '@/lib/checkin-token'
 
 export default async function StaffDashboard() {
   const supabase = await createClient()
@@ -60,6 +61,10 @@ export default async function StaffDashboard() {
 
   const { data: profile } = await supabase.from('profiles').select('display_name, role').eq('id', user.id).single()
 
+  const checkinToken = getDailyToken()
+  const checkinUrl   = `https://club.sturgeonspirits.com/checkin?t=${checkinToken}`
+  const qrImageUrl   = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkinUrl)}&format=png`
+
   const cards = [
     { href: '/staff/scores',       icon: '🥃', label: 'Enter Scores',   desc: 'Cribbage & Trivia'     },
     { href: '/staff/customers',    icon: '👤', label: 'Customers',       desc: 'Add & search members'  },
@@ -78,6 +83,30 @@ export default async function StaffDashboard() {
         <p className="text-sm text-[#7E613F]">
           Welcome, {profile?.display_name ?? 'staff'} · <span className="text-[#96321F]">{profile?.role}</span>
         </p>
+      </div>
+
+      {/* Daily check-in QR */}
+      <div className="bg-white border border-[#D4CFC3] rounded-2xl p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <p className="text-sm font-semibold text-[#242622]">Today's Check-In QR</p>
+            <p className="text-xs text-[#7E613F] mt-0.5">Show this to customers — rotates at midnight</p>
+          </div>
+          <Link
+            href="/staff/checkin"
+            className="text-xs font-semibold text-[#96321F] border border-[#96321F]/30 px-3 py-1.5 rounded-xl hover:bg-[#96321F]/5 transition-colors"
+          >
+            Fullscreen ↗
+          </Link>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qrImageUrl} alt="Daily check-in QR code" width={100} height={100} className="rounded-xl shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] text-[#9E8F7E] break-all leading-relaxed">{checkinUrl}</p>
+            <p className="text-xs text-[#7E613F] mt-2">+15 pts per visit · once per day</p>
+          </div>
+        </div>
       </div>
 
       {/* Quick actions */}
