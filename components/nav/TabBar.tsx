@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -62,6 +63,12 @@ const TABS = [
 
 export default function TabBar() {
   const pathname = usePathname()
+  // Optimistic pending href — highlights the tapped tab instantly
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const [, startTransition] = useTransition()
+
+  // Clear pending once the route has actually changed
+  const effectivePathname = pathname
 
   return (
     <nav
@@ -70,12 +77,24 @@ export default function TabBar() {
     >
       <div className="flex items-stretch h-16">
         {TABS.map(tab => {
-          const active = pathname === tab.href ||
-            (tab.href !== '/club' && pathname.startsWith(tab.href))
+          const isCurrentRoute = effectivePathname === tab.href ||
+            (tab.href !== '/club' && effectivePathname.startsWith(tab.href))
+          const isPending = pendingHref === tab.href
+          const active = isCurrentRoute || isPending
+
           return (
             <Link
               key={tab.href}
               href={tab.href}
+              onClick={() => {
+                if (!isCurrentRoute) {
+                  // Highlight immediately — before navigation resolves
+                  setPendingHref(tab.href)
+                  startTransition(() => {
+                    setPendingHref(null)
+                  })
+                }
+              }}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 transition-colors relative',
                 active ? 'text-[#96321F]' : 'text-[#FFFFFF]/60 hover:text-[#FFFFFF]'
