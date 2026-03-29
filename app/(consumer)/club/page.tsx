@@ -68,25 +68,16 @@ export default async function ClubPage() {
 
         <div className="relative">
           {/* Brand header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="text-[10px] font-semibold text-[#9E8F7E] uppercase tracking-[0.25em]">
-                Sturgeon Spirits
-              </p>
-              <p className="font-display text-lg font-bold text-[#242622] leading-tight">
-                Spearers Club
-              </p>
-            </div>
-            {/* Tier badge — top right */}
-            <span
-              className="text-xs font-semibold px-3 py-1.5 rounded-full border"
-              style={{ color: tierColor, borderColor: `${tierColor}50`, background: `${tierColor}15` }}
-            >
-              {tierLabel}
-            </span>
+          <div className="mb-5">
+            <p className="text-[10px] font-semibold text-[#9E8F7E] uppercase tracking-[0.25em]">
+              Sturgeon Spirits
+            </p>
+            <p className="font-display text-lg font-bold text-[#242622] leading-tight">
+              Spearers Club
+            </p>
           </div>
 
-          {/* Greeting + points */}
+          {/* Greeting */}
           <p className="text-xs text-[#7E613F] uppercase tracking-[0.18em] mb-0.5">
             {firstName ? 'Welcome back,' : 'Welcome'}
           </p>
@@ -94,13 +85,21 @@ export default async function ClubPage() {
             {firstName ?? 'Member'}
           </h1>
 
-          {/* Points */}
+          {/* Points + tier pill */}
           <div className="flex items-end gap-3 mt-4">
             <div>
               <p className="text-4xl font-bold tabular-nums" style={{ color: tierColor }}>
                 {balance.toLocaleString()}
               </p>
               <p className="text-xs text-[#7E613F] mt-0.5">points balance</p>
+            </div>
+            <div className="mb-1.5">
+              <span
+                className="inline-block text-xs font-semibold px-3 py-1 rounded-full border"
+                style={{ color: tierColor, borderColor: `${tierColor}50`, background: `${tierColor}15` }}
+              >
+                {tierLabel}
+              </span>
             </div>
           </div>
         </div>
