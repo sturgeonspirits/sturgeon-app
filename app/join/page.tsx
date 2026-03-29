@@ -145,7 +145,7 @@ function JoinPageInner() {
     }
   }
 
-  const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://sturgeon-app.netlify.app'
+  const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://club.sturgeonspirits.com'
   const eventJoinUrl = `${siteOrigin}/join?t=${token}`
   const teamJoinUrl  = createdId ? `${siteOrigin}/join?t=${token}&team=${createdId}` : null
 
