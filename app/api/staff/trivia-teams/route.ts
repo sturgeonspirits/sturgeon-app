@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { requireStaff } from '@/lib/staff-auth'
 
 // GET  /api/staff/trivia-teams?eventTypeId=xxx  — list saved teams with members
 // POST                                          — create or update a saved team
 // DELETE                                        — delete a saved team
 
 export async function GET(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   const eventTypeId = req.nextUrl.searchParams.get('eventTypeId')
   if (!eventTypeId) return NextResponse.json({ teams: [] })
 
@@ -23,6 +27,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   const supabase = createServiceClient()
   const { id, name, eventTypeId, memberIds } = await req.json()
 
@@ -62,6 +69,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   const supabase = createServiceClient()
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

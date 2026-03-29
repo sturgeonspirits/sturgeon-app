@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
     const form = await req.formData()
     const file = form.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
+    if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
     csvText = await file.text()
   } catch {
     return NextResponse.json({ error: 'Failed to read uploaded file' }, { status: 400 })

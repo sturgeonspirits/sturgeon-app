@@ -47,8 +47,8 @@ function parseIngredients(cols: string[]): string[] {
 export async function POST(request: Request) {
   // Verify this is coming from staff (require service auth header)
   const authHeader = request.headers.get('x-sync-secret')
-  const syncSecret = process.env.SYNC_SECRET ?? 'sturgeon-sync'
-  if (authHeader !== syncSecret) {
+  const syncSecret = process.env.SYNC_SECRET
+  if (!syncSecret || authHeader !== syncSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

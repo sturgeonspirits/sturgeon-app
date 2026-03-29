@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-
-async function assertStaff(supabase: any, req: NextRequest) {
-  const { data: { user } } = await (await import('@/lib/supabase/server')).createClient().then(c => c.auth.getUser())
-  if (!user) throw new Error('Unauthorized')
-  const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!['staff', 'admin'].includes(data?.role ?? '')) throw new Error('Forbidden')
-}
+import { requireStaff } from '@/lib/staff-auth'
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   try {
     const supabase = createServiceClient()
     const body = await req.json()
@@ -40,6 +37,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   try {
     const supabase = createServiceClient()
     const body = await req.json()
@@ -56,12 +56,14 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   try {
     const supabase = createServiceClient()
     const { id } = await req.json()
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-    // Check for completions — soft delete if any exist
     const { count } = await supabase
       .from('mission_completions')
       .select('id', { count: 'exact', head: true })

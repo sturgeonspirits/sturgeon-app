@@ -5,8 +5,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { completeMission } from '@/lib/earn-events'
+import { requireStaff } from '@/lib/staff-auth'
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   try {
     const { missionSlug, userId, staffId, notes } = await req.json()
     if (!missionSlug || !userId) {

@@ -14,7 +14,10 @@ export async function POST(req: NextRequest) {
       nose, palate, finish, overallNotes, rating,
     } = body
 
-    if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+    const authClient = await createClient()
+    const { data: { user: authUser } } = await authClient.auth.getUser()
+    if (!authUser) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+    if (authUser.id !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const supabase = createServiceClient()
 

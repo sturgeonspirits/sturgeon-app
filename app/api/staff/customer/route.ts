@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-
-async function assertStaff() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthenticated')
-
-  const role: string = (user as any).app_metadata?.role ?? ''
-  if (['staff', 'admin'].includes(role)) return user
-
-  const service = createServiceClient()
-  const { data } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (!['staff', 'admin'].includes(data?.role ?? '')) throw new Error('Forbidden')
-  return user
-}
+import { requireStaff } from '@/lib/staff-auth'
 
 function normalizePhone(raw: string): string | null {
   const digits = (raw ?? '').replace(/\D/g, '')
@@ -107,8 +94,10 @@ async function linkToastAccount(service: ReturnType<typeof createServiceClient>,
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   try {
-    await assertStaff()
     const service = createServiceClient()
     const { fullName, email, phone, sendInvite } = await req.json()
 

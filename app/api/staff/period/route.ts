@@ -4,8 +4,12 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { requireStaff } from '@/lib/staff-auth'
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof Response) return auth
+
   try {
     const { eventTypeId, label, periodType, startsAt, endsAt, eventId } = await req.json()
     if (!eventTypeId || !label) {

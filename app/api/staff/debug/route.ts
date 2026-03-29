@@ -1,8 +1,12 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { requireStaff } from '@/lib/staff-auth'
 
 // Diagnostic endpoint — visit /api/staff/debug while logged in to see session state
 export async function GET() {
+  const authCheck = await requireStaff()
+  if (authCheck instanceof Response) return authCheck
+
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
