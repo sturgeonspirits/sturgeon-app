@@ -127,16 +127,21 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   return (
     <div className="p-4 max-w-lg mx-auto space-y-4">
       {/* Header */}
-      <div className="pt-4 flex items-center gap-3">
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-          style={{ backgroundColor: `${eventType.color ?? '#96321F'}20`, border: `1px solid ${eventType.color ?? '#96321F'}40` }}
-        >
-          {eventType.icon}
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-[#242622]">{eventType.name}</h1>
-          <p className="text-sm text-[#7E613F]">{eventType.description}</p>
+      <div className="pt-4">
+        <a href="/leaderboards" className="text-sm text-[#7E613F] hover:text-[#96321F] mb-3 inline-block transition-colors">
+          ← Standings
+        </a>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+            style={{ backgroundColor: `${eventType.color ?? '#96321F'}20`, border: `1px solid ${eventType.color ?? '#96321F'}40` }}
+          >
+            {eventType.icon}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-[#242622]">{eventType.name}</h1>
+            <p className="text-sm text-[#7E613F]">{eventType.description}</p>
+          </div>
         </div>
       </div>
 

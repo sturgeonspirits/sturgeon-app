@@ -36,17 +36,18 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
     )
   }, [activeRecipes, query])
 
-  const sections = useMemo(() => {
-    const map: Record<string, Recipe[]> = {}
+  // Build sections preserving the server's sort order (menu_section → sort_order → name).
+  // Do NOT re-sort with Object.keys().sort() — that alphabetises and ignores the DB ordering.
+  const { sections, sectionNames } = useMemo(() => {
+    const map:   Record<string, Recipe[]> = {}
+    const order: string[] = []
     for (const r of filtered) {
       const s = r.menu_section ?? 'Other'
-      if (!map[s]) map[s] = []
+      if (!map[s]) { map[s] = []; order.push(s) }
       map[s].push(r)
     }
-    return map
+    return { sections: map, sectionNames: order }
   }, [filtered])
-
-  const sectionNames = Object.keys(sections).sort()
 
   return (
     <>
