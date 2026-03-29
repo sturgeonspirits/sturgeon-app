@@ -93,12 +93,12 @@ export default function OnboardingPage() {
           <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-5 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-[#7E613F]">Toast points</p>
-              <p className="text-sm font-bold text-[#242622]">{toastInfo.toastPoints.toLocaleString()} pts</p>
+              <p className="text-sm font-bold text-[#242622]">{(toastInfo.toastPoints ?? 0).toLocaleString()} pts</p>
             </div>
             <div className="h-px bg-[#D4CFC3]" />
             <div className="flex items-center justify-between">
               <p className="text-sm text-[#242622] font-semibold">Spearers Club points</p>
-              <p className="text-lg font-bold text-[#96321F]">+{toastInfo.appPoints.toLocaleString()} pts</p>
+              <p className="text-lg font-bold text-[#96321F]">+{(toastInfo.appPoints ?? 0).toLocaleString()} pts</p>
             </div>
             {toastInfo.birthdaySaved && (
               <>

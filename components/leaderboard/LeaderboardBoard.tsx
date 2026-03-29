@@ -206,7 +206,7 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
               {privateName(e.profiles?.display_name)}
               {isMe && <span className="ml-2 text-xs text-[#7E613F]/60">you</span>}
             </p>
-            <p className="text-[#242622] font-bold">{e.score.toLocaleString()} pts</p>
+            <p className="text-[#242622] font-bold">{(e.score ?? 0).toLocaleString()} pts</p>
           </div>
         )
       })}
@@ -244,7 +244,7 @@ function TeamBoard({ teams, currentUserId, eventType }: { teams: any[]; currentU
                 {team.name}
                 {isMyTeam && <span className="ml-2 text-xs text-[#87A67F]/60">your team</span>}
               </p>
-              <p className="text-[#242622] font-bold text-sm">{team.score.toLocaleString()} pts</p>
+              <p className="text-[#242622] font-bold text-sm">{(team.score ?? 0).toLocaleString()} pts</p>
             </div>
             <div className="flex flex-wrap gap-1 ml-10">
               {(team.leaderboard_team_members ?? []).map((m: any) => (

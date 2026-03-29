@@ -75,7 +75,7 @@ export default async function RewardsPage() {
         <section>
           <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Ready to Redeem</h2>
           <div className="space-y-2">
-            {myRedemptions!.filter(r => r.status === 'pending').map(r => (
+            {(myRedemptions ?? []).filter(r => r.status === 'pending').map(r => (
               <div key={r.id} className="bg-[#96321F]/10 border border-[#96321F]/30 rounded-xl p-4 flex items-center gap-3">
                 <span className="text-2xl">{(r.rewards as any)?.icon}</span>
                 <div className="flex-1">

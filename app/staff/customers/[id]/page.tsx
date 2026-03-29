@@ -148,7 +148,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           ) : (recentEarns ?? []).map((e: any) => (
             <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
               <div className="flex-1">
-                <p className="text-xs text-[#242622]">{e.notes ?? e.event_type.replace(/_/g, ' ')}</p>
+                <p className="text-xs text-[#242622]">{e.notes ?? (e.event_type ?? '').replace(/_/g, ' ')}</p>
                 <p className="text-[10px] text-[#9E8F7E]">
                   {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </p>

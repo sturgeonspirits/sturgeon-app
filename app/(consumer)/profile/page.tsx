@@ -78,7 +78,7 @@ export default async function ProfilePage() {
           {(recentEvents ?? []).map((e, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-[#EDE9DC]">
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-[#242622] truncate">{e.notes ?? e.event_type.replace('_', ' ')}</p>
+                <p className="text-sm text-[#242622] truncate">{e.notes ?? (e.event_type ?? '').replace(/_/g, ' ')}</p>
                 <p className="text-xs text-[#7E613F]">{relativeTime(e.created_at)}</p>
               </div>
               <p className={`text-sm font-bold shrink-0 ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-500'}`}>

@@ -87,43 +87,62 @@ function JoinPageInner() {
   }, [token])
 
   async function doJoin(teamId: string, teamList?: Team[]) {
+    if (submitting) return
     setSubmitting(true)
-    const res = await fetch('/api/join/team', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, teamId }),
-    })
-    const json = await res.json()
-    if (res.ok) {
-      setJoinedTeam(json.teamName)
-      setView('joined')
-    } else {
-      setError(json.error ?? 'Could not join team')
-      // Stay on teams view with error
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 12000)
+      const res = await fetch('/api/join/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, teamId }),
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      const json = await res.json()
+      if (res.ok) {
+        setJoinedTeam(json.teamName)
+        setView('joined')
+      } else {
+        setError(json.error ?? 'Could not join team')
+        setView('teams')
+        setTeams(teamList ?? teams)
+      }
+    } catch {
+      setError('Request timed out — please try again.')
       setView('teams')
-      setTeams(teamList ?? teams)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function doCreate() {
-    if (!newName.trim()) return
+    if (!newName.trim() || submitting) return
     setSubmitting(true)
     setError(null)
-    const res = await fetch('/api/join/create-team', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, teamName: newName.trim() }),
-    })
-    const json = await res.json()
-    if (res.ok) {
-      setCreatedTeam(json.teamName)
-      setCreatedId(json.teamId)
-      setView('created')
-    } else {
-      setError(json.error ?? 'Could not create team')
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 12000)
+      const res = await fetch('/api/join/create-team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, teamName: newName.trim() }),
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      const json = await res.json()
+      if (res.ok) {
+        setCreatedTeam(json.teamName)
+        setCreatedId(json.teamId)
+        setView('created')
+      } else {
+        setError(json.error ?? 'Could not create team')
+      }
+    } catch {
+      setError('Request timed out — please try again.')
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://sturgeon-app.netlify.app'

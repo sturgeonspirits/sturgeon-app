@@ -19,10 +19,14 @@ const TIER_COLORS: Record<string, string> = {
 export default function TierProgress({ currentTier, lifetimeEarned, tiers }: Props) {
   const sortedTiers = [...tiers].sort((a, b) => a.min_lifetime - b.min_lifetime)
   const currentIdx  = sortedTiers.findIndex(t => t.tier === currentTier)
-  const nextTier    = sortedTiers[currentIdx + 1]
 
-  if (!nextTier) {
-    // Captain — max tier
+  // No tier config in DB yet — render nothing
+  if (sortedTiers.length === 0) return null
+
+  const nextTier    = currentIdx >= 0 ? sortedTiers[currentIdx + 1] : sortedTiers[0]
+
+  if (!nextTier || currentIdx < 0) {
+    // Max tier reached (or tier not found in thresholds — treat as max)
     return (
       <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">

@@ -106,7 +106,7 @@ export default async function StaffDashboard() {
             <div key={e.id} className="flex items-center gap-3 py-2 border-b border-[#D4CFC3]">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[#242622] truncate">{(e.profiles as any)?.display_name ?? 'Unknown'}</p>
-                <p className="text-xs text-[#7E613F]">{e.event_type.replace(/_/g, ' ')}</p>
+                <p className="text-xs text-[#7E613F]">{(e.event_type ?? '').replace(/_/g, ' ')}</p>
               </div>
               <p className={`text-sm font-bold flex-shrink-0 ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-500'}`}>
                 {e.points_delta >= 0 ? '+' : ''}{e.points_delta} pts
