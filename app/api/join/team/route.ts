@@ -83,11 +83,16 @@ export async function POST(req: NextRequest) {
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
 
   // Also upsert a leaderboard_events row so they appear in standings
-  await service.from('leaderboard_events').upsert({
+  const { error: evErr } = await service.from('leaderboard_events').upsert({
     period_id: period.id,
     user_id:   user.id,
     score:     0,
   }, { onConflict: 'period_id,user_id' })
+
+  if (evErr) {
+    console.error('leaderboard_events upsert failed:', evErr)
+    return NextResponse.json({ error: 'Joined team but could not register for standings. Please try again.' }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, teamName: permTeam.name })
 }

@@ -23,7 +23,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     { data: rewards },
     { data: recentEarns },
   ] = await Promise.all([
-    service.from('points_ledger').select('balance').eq('user_id', id).single(),
+    service.from('points_ledger').select('balance').eq('user_id', id).maybeSingle(),
     service.from('toast_loyalty_accounts').select('toast_points, card_number, last_trans_at').eq('profile_id', id).maybeSingle(),
     service
       .from('reward_redemptions')
@@ -150,7 +150,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <div className="flex-1">
                 <p className="text-xs text-[#242622]">{e.notes ?? (e.event_type ?? '').replace(/_/g, ' ')}</p>
                 <p className="text-[10px] text-[#9E8F7E]">
-                  {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {e.created_at ? new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                 </p>
               </div>
               <p className={`text-sm font-bold ${e.points_delta >= 0 ? 'text-[#87A67F]' : 'text-red-500'}`}>

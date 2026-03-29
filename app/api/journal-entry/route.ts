@@ -97,7 +97,7 @@ export async function DELETE(req: NextRequest) {
       .from('tasting_logs')
       .select('id, user_id, earn_event_id')
       .eq('id', logId)
-      .single()
+      .maybeSingle()
 
     if (!log) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (log.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -111,7 +111,7 @@ export async function DELETE(req: NextRequest) {
         .from('earn_events')
         .select('points_delta')
         .eq('id', log.earn_event_id)
-        .single()
+        .maybeSingle()
 
       if (earn) {
         await emitEarnEvent({

@@ -86,7 +86,7 @@ function RedemptionRow({
 }) {
   const reward   = r.rewards   as any
   const profile  = r.profiles  as any
-  const date     = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const date     = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'
 
   return (
     <div className="bg-white border border-[#D4CFC3] rounded-xl p-3 flex items-center gap-3">

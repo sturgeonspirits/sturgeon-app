@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       .from('missions')
       .select('title, points')
       .eq('slug', payload.missionSlug)
-      .single()
+      .maybeSingle()
 
     return NextResponse.json({
       success: true,

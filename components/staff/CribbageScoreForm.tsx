@@ -55,13 +55,14 @@ export default function CribbageScoreForm({ period, members, staffId }: Props) {
       }),
     })
 
-    const json = await res.json()
+    let json: any = {}
+    try { json = await res.json() } catch { /* non-JSON response (e.g. gateway error) */ }
     if (res.ok) {
       setMessage(`${valid.length} player${valid.length > 1 ? 's' : ''} saved!`)
       setRows([{ userId: '', wins: '', spread: '' }])
       setTimeout(() => setMessage(''), 3000)
     } else {
-      setMessage(json.error ?? 'Error saving scores')
+      setMessage(json.error ?? 'Server error — please try again')
     }
     setSaving(false)
   }

@@ -100,9 +100,9 @@ export default async function RewardsPage() {
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-[#242622]">{(r.rewards as any)?.name}</p>
                   <p className="text-xs text-[#9E8F7E]">
-                    {r.redeemed_at
-                      ? new Date(r.redeemed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                      : new Date(r.created_at!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    {(r.redeemed_at ?? r.created_at)
+                      ? new Date(r.redeemed_at ?? r.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                      : '—'}
                   </p>
                 </div>
                 {((r.rewards as any)?.points_cost ?? 0) > 0 && (

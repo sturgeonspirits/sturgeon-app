@@ -19,7 +19,7 @@ export default async function ClubPage() {
 
   const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('points_ledger').select('*').eq('user_id', user.id).single(),
+    supabase.from('points_ledger').select('*').eq('user_id', user.id).maybeSingle(),
     supabase.from('missions').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('mission_completions').select('mission_id, completed_at').eq('user_id', user.id),
     supabase.from('challenges').select('*, challenge_missions(mission_id)').eq('is_active', true).order('sort_order'),

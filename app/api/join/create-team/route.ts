@@ -82,16 +82,26 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 4. Add creator as first member ────────────────────────────────────────
-  await service
+  const { error: memberErr } = await service
     .from('leaderboard_team_members')
     .upsert({ team_id: periodTeam.id, user_id: user.id }, { onConflict: 'team_id,user_id', ignoreDuplicates: true })
 
+  if (memberErr) {
+    console.error('leaderboard_team_members upsert failed:', memberErr)
+    return NextResponse.json({ error: 'Team created but could not add you as member. Please try joining again.' }, { status: 500 })
+  }
+
   // ── 5. Add leaderboard_events row so creator appears in standings ──────────
-  await service.from('leaderboard_events').upsert({
+  const { error: evErr } = await service.from('leaderboard_events').upsert({
     period_id: period.id,
     user_id:   user.id,
     score:     0,
   }, { onConflict: 'period_id,user_id' })
+
+  if (evErr) {
+    console.error('leaderboard_events upsert failed:', evErr)
+    return NextResponse.json({ error: 'Team created but could not register for standings. Please try again.' }, { status: 500 })
+  }
 
   // Return the permanent_team_id so the team QR link uses it
   return NextResponse.json({ ok: true, teamId: permTeam.id, teamName: permTeam.name })

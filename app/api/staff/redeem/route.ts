@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         .select('id, user_id, status, rewards(id, name, points_cost)')
         .eq('id', redemptionId)
         .eq('status', 'pending')
-        .single()
+        .maybeSingle()
 
       if (!rr) return NextResponse.json({ error: 'Redemption not found or already fulfilled' }, { status: 404 })
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       .from('rewards')
       .select('id, name, points_cost, is_active')
       .eq('id', rewardId)
-      .single()
+      .maybeSingle()
 
     if (!reward || !reward.is_active) {
       return NextResponse.json({ error: 'Reward not found or inactive' }, { status: 404 })
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       .from('points_ledger')
       .select('balance')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     const balance = ledger?.balance ?? 0
     if (reward.points_cost > 0 && balance < reward.points_cost) {

@@ -45,13 +45,14 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
       }),
     })
 
-    const json = await res.json()
+    let json: any = {}
+    try { json = await res.json() } catch { /* non-JSON response (e.g. gateway error) */ }
     if (res.ok) {
       setMessage(`${valid.length} score${valid.length > 1 ? 's' : ''} saved!`)
       setRows([{ userId: '', score: '' }])
       setTimeout(() => setMessage(''), 3000)
     } else {
-      setMessage(json.error ?? 'Error saving scores')
+      setMessage(json.error ?? 'Server error — please try again')
     }
     setSaving(false)
   }

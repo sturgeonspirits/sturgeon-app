@@ -18,7 +18,7 @@ export default async function ProfilePage() {
 
   const [{ data: profile }, { data: ledger }, { data: recentEvents }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('points_ledger').select('*').eq('user_id', user.id).single(),
+    supabase.from('points_ledger').select('*').eq('user_id', user.id).maybeSingle(),
     supabase
       .from('earn_events')
       .select('event_type, points_delta, notes, created_at')
