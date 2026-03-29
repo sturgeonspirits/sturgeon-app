@@ -55,7 +55,12 @@ export default function RedeemPanel({ userId, balance, rewards }: Props) {
   }
 
   if (redeemable.length === 0) {
-    return <p className="text-xs text-[#9E8F7E]">No redeemable rewards configured</p>
+    return (
+      <p className="text-xs text-[#9E8F7E]">
+        No rewards available to grant. Add rewards with method "Points" or "Staff grant" in the{' '}
+        <a href="/staff/rewards" className="text-[#96321F] hover:underline">Rewards catalog</a>.
+      </p>
+    )
   }
 
   return (

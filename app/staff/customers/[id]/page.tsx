@@ -93,9 +93,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         )}
       </div>
 
-      {/* Redeem a reward */}
+      {/* Grant a reward */}
       <section>
-        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Redeem a Reward</h2>
+        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Grant Reward</h2>
         <RedeemPanel
           userId={id}
           balance={balance}
