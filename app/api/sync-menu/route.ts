@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
-// Google Sheet ID — Recipes tab (gid=0)
-const SHEET_ID  = '1TO0jjaBG32-sEYNJ06zQdkO5Av9YOCg1_RLVumlgwEc'
-const SHEET_GID = '0'
-const CSV_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`
+// Google Sheet ID
+const SHEET_ID = '1TO0jjaBG32-sEYNJ06zQdkO5Av9YOCg1_RLVumlgwEc'
+
+// Tab URLs — use sheet name so we never need to chase GIDs
+const RECIPES_URL    = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`
+const CATEGORIES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Categories`
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = []
@@ -44,6 +46,26 @@ function parseIngredients(cols: string[]): string[] {
   return cols.filter(Boolean)
 }
 
+/** Fetch the Categories tab and return a map of section name → sort order */
+async function fetchSectionOrder(): Promise<Map<string, number>> {
+  const map = new Map<string, number>()
+  try {
+    const res = await fetch(CATEGORIES_URL, { cache: 'no-store' })
+    if (!res.ok) return map
+    const csv   = await res.text()
+    const lines = csv.split('\n').filter(l => l.trim())
+    for (let i = 1; i < lines.length; i++) {
+      const cols    = parseCSVLine(lines[i])
+      const name    = cols[0]?.trim()
+      const sortNum = parseInt(cols[1]) || 999
+      if (name) map.set(name, sortNum)
+    }
+  } catch {
+    // Non-fatal: fall back to 999 for all sections if tab unreachable
+  }
+  return map
+}
+
 export async function POST(request: Request) {
   // Verify this is coming from staff (require service auth header)
   const authHeader = request.headers.get('x-sync-secret')
@@ -53,13 +75,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Fetch CSV from Google Sheets
-    const res = await fetch(CSV_URL, { cache: 'no-store' })
-    if (!res.ok) throw new Error(`Google Sheets fetch failed: ${res.status}`)
+    // Fetch both tabs in parallel
+    const [recipesRes, sectionOrder] = await Promise.all([
+      fetch(RECIPES_URL, { cache: 'no-store' }),
+      fetchSectionOrder(),
+    ])
 
-    const csv = await res.text()
+    if (!recipesRes.ok) throw new Error(`Google Sheets fetch failed: ${recipesRes.status}`)
+
+    const csv   = await recipesRes.text()
     const lines = csv.split('\n').filter(l => l.trim())
-    const header = parseCSVLine(lines[0])
 
     // Parse all rows
     const recipes: Record<string, any>[] = []
@@ -75,6 +100,8 @@ export async function POST(request: Request) {
       const name = cols[0]
       if (!name || name === 'Recipe Name') continue
 
+      const menuSection = cols[3]?.trim() || null
+
       const ingredients = parseIngredients([
         cols[8],  cols[9],  cols[10], cols[11], cols[12],
         cols[13], cols[14], cols[15], cols[16], cols[17],
@@ -82,23 +109,24 @@ export async function POST(request: Request) {
 
       recipes.push({
         name,
-        show_on_menu:     parseBool(cols[1]),
-        price:            parsePrice(cols[2]),
-        menu_section:     cols[3] || null,
-        tags:             parseTags(cols[4]),
-        flavor_tags:      parseTags(cols[5]),
-        sort_order:       parseInt(cols[6]) || 999,
-        menu_ingredients: cols[7] || null,
+        show_on_menu:      parseBool(cols[1]),
+        price:             parsePrice(cols[2]),
+        menu_section:      menuSection,
+        tags:              parseTags(cols[4]),
+        flavor_tags:       parseTags(cols[5]),
+        sort_order:        parseInt(cols[6]) || 999,
+        section_sort_order: menuSection ? (sectionOrder.get(menuSection) ?? 999) : 999,
+        menu_ingredients:  cols[7] || null,
         ingredients,
-        instructions:     cols[18] || null,
-        photo_url:        cols[19] || null,
-        glassware:        cols[20] || null,
-        author:           cols[22] || null,
-        recipe_date:      cols[23] || null,
-        notes:            cols[25] || null,
-        is_event_menu:    parseBool(cols[26]),
-        grocery_override: cols[27] || null,
-        is_active:        true,
+        instructions:      cols[18] || null,
+        photo_url:         cols[19] || null,
+        glassware:         cols[20] || null,
+        author:            cols[22] || null,
+        recipe_date:       cols[23] || null,
+        notes:             cols[25] || null,
+        is_event_menu:     parseBool(cols[26]),
+        grocery_override:  cols[27] || null,
+        is_active:         true,
       })
     }
 
@@ -129,7 +157,8 @@ export async function POST(request: Request) {
       synced:     inserted,
       total:      deduped.length,
       duplicates: recipes.length - deduped.length,
-      message:    `Synced ${inserted} recipes from Google Sheets`,
+      sections:   sectionOrder.size,
+      message:    `Synced ${inserted} recipes across ${sectionOrder.size} sections`,
     })
   } catch (err: any) {
     console.error('Menu sync error:', err)

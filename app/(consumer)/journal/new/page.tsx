@@ -12,7 +12,7 @@ export default async function NewJournalEntryPage() {
     .from('recipes')
     .select('id, name, menu_section, flavor_tags')
     .eq('is_active', true)
-    .order('menu_section')
+    .order('section_sort_order')
     .order('sort_order')
     .order('name')
 
