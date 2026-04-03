@@ -311,13 +311,14 @@ function TeamBoard({
                   {team.name}
                   {isMyTeam && <span className="ml-2 text-xs text-[#87A67F]/60">your team</span>}
                 </p>
-                {showJoinBtn ? (
-                  <span className="text-xs font-bold text-[#96321F] shrink-0">
-                    {isJoining ? 'Joining…' : 'Join →'}
-                  </span>
-                ) : (
+                <div className="flex items-center gap-2 shrink-0">
                   <p className="text-[#242622] font-bold text-sm">{(team.score ?? 0).toLocaleString()} pts</p>
-                )}
+                  {showJoinBtn && (
+                    <span className="text-xs font-bold text-[#96321F]">
+                      {isJoining ? '…' : 'Join'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-1 ml-10">
                 {(team.leaderboard_team_members ?? []).map((m: any) => (

@@ -24,12 +24,15 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
   if (!eventType) notFound()
 
-  // Fetch all finalized + open periods for this event, newest first
+  // Fetch all finalized + open periods for this event, newest first.
+  // Secondary sort by created_at ASC so the original period (created first)
+  // always beats an accidentally-created duplicate with the same starts_at.
   const { data: periods } = await service
     .from('leaderboard_periods')
     .select('*')
     .eq('event_type_id', eventType.id)
     .order('starts_at', { ascending: false })
+    .order('created_at', { ascending: true })
     .limit(20)
 
   const rawPeriods = periods ?? []
@@ -132,10 +135,17 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   let openPeriodId:      string | null = null
   let userCurrentTeamId: string | null = null
 
+  // Only offer in-app joining for events that started within the last 24 hours.
+  // Past events that were never formally finalized should NOT show join UI.
+  const periodAgeHours = currentPeriod?.starts_at
+    ? (Date.now() - new Date(currentPeriod.starts_at).getTime()) / (1000 * 60 * 60)
+    : 999
+
   if (
     user &&
     currentPeriod &&
     !currentPeriod.is_finalized &&
+    periodAgeHours < 24 &&
     eventType.participant_type === 'team' &&
     teams.length >= 0
   ) {
