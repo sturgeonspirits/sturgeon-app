@@ -103,12 +103,39 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     }
   }
 
-  // All-time cache — two-step fetch
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // ── Check if user is already on a team for the current open period ─────────
+  let openPeriodId:      string | null = null
+  let userCurrentTeamId: string | null = null
+
+  if (
+    user &&
+    currentPeriod &&
+    !currentPeriod.is_finalized &&
+    eventType.participant_type === 'team' &&
+    teams.length >= 0
+  ) {
+    openPeriodId = currentPeriod.id
+    const periodTeamIds = teams.map((t: any) => t.id)
+    if (periodTeamIds.length > 0) {
+      const { data: membership } = await service
+        .from('leaderboard_team_members')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .in('team_id', periodTeamIds)
+        .maybeSingle()
+      userCurrentTeamId = membership?.team_id ?? null
+    }
+  }
+
+  // All-time cache — two-step fetch, sort by the right metric for this event type
+  const allTimeSortCol = eventType.scoring_method === 'wins_losses' ? 'total_wins' : 'total_score'
   const { data: allTimeRaw } = await service
     .from('leaderboard_cache')
     .select('*')
     .eq('event_type_id', eventType.id)
-    .order('total_wins', { ascending: false })
+    .order(allTimeSortCol, { ascending: false })
     .limit(20)
 
   let allTime: any[] = []
@@ -121,8 +148,6 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
     allTime = allTimeRaw.map((r: any) => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
   }
-
-  const { data: { user } } = await supabase.auth.getUser()
 
   return (
     <div className="p-4 max-w-lg mx-auto space-y-4">
@@ -154,6 +179,8 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
         allTime={allTime}
         currentUserId={user?.id}
         slug={slug}
+        openPeriodId={openPeriodId}
+        userCurrentTeamId={userCurrentTeamId}
       />
     </div>
   )

@@ -81,6 +81,49 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const { logId, spiritName, spiritCategory, nose, palate, finish, overallNotes, rating } = await req.json()
+    if (!logId) return NextResponse.json({ error: 'Missing logId' }, { status: 400 })
+
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+    const supabase = createServiceClient()
+
+    // Verify ownership
+    const { data: existing } = await supabase
+      .from('tasting_logs')
+      .select('id, user_id')
+      .eq('id', logId)
+      .maybeSingle()
+
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (existing.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const { error: updateErr } = await supabase
+      .from('tasting_logs')
+      .update({
+        spirit_name:     spiritName     ?? null,
+        spirit_category: spiritCategory ?? null,
+        nose:            nose           ?? null,
+        palate:          palate         ?? null,
+        finish:          finish         ?? null,
+        overall_notes:   overallNotes   ?? null,
+        rating:          rating         ?? null,
+      })
+      .eq('id', logId)
+
+    if (updateErr) throw updateErr
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('Journal update error:', err)
+    return NextResponse.json({ error: err.message ?? 'Internal error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const { logId } = await req.json()

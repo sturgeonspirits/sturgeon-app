@@ -153,6 +153,12 @@ export default function JournalSearch({ entries }: Props) {
                     ))}
                   </div>
                 )}
+                <Link
+                  href={`/journal/${log.id}/edit`}
+                  className="text-xs text-[#7E613F] hover:text-[#96321F] font-medium transition-colors"
+                >
+                  Edit
+                </Link>
                 <DeleteEntryButton logId={log.id} />
               </div>
             </div>

@@ -10,40 +10,53 @@ interface Recipe {
   flavor_tags:  string[] | null
 }
 
+interface Entry {
+  id:              string
+  spirit_name:     string | null
+  spirit_category: string | null
+  nose:            string | null
+  palate:          string | null
+  finish:          string | null
+  overall_notes:   string | null
+  rating:          number | null
+}
+
 interface Props {
+  entry:   Entry
   recipes: Recipe[]
   userId:  string
 }
 
-export default function JournalForm({ recipes, userId }: Props) {
+export default function JournalEditForm({ entry, recipes, userId }: Props) {
   const router  = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
-  // Cocktail search/autocomplete state
+  // Try to find a matching recipe by name for pre-selection
+  const initialRecipe = recipes.find(r => r.name === entry.spirit_name) ?? null
+
+  // Cocktail search state
   const [query,          setQuery]          = useState('')
   const [showDropdown,   setShowDropdown]   = useState(false)
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(initialRecipe)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Custom entry (for not-on-menu items)
-  const [customName,     setCustomName]     = useState('')
-  const [customCategory, setCustomCategory] = useState('cocktail')
+  // Custom entry fields — pre-populated for non-menu items
+  const [customName,     setCustomName]     = useState(initialRecipe ? '' : (entry.spirit_name ?? ''))
+  const [customCategory, setCustomCategory] = useState(entry.spirit_category ?? 'cocktail')
 
-  // Tasting note fields
-  const [nose,    setNose]    = useState('')
-  const [palate,  setPalate]  = useState('')
-  const [finish,  setFinish]  = useState('')
-  const [notes,   setNotes]   = useState('')
-  const [rating,  setRating]  = useState(0)
+  // Tasting notes — pre-populated
+  const [nose,   setNose]   = useState(entry.nose          ?? '')
+  const [palate, setPalate] = useState(entry.palate        ?? '')
+  const [finish, setFinish] = useState(entry.finish        ?? '')
+  const [notes,  setNotes]  = useState(entry.overall_notes ?? '')
+  const [rating, setRating] = useState(entry.rating        ?? 0)
 
   const CATEGORIES = ['whiskey','gin','vodka','rum','brandy','liqueur','beer','wine','cocktail','other']
 
-  // Derive submit values
   const submitName     = selectedRecipe ? selectedRecipe.name : customName
   const submitCategory = selectedRecipe ? (selectedRecipe.menu_section ?? 'cocktail') : customCategory
 
-  // Filter recipes by query
   const filteredRecipes = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return recipes.slice(0, 10)
@@ -70,16 +83,17 @@ export default function JournalForm({ recipes, userId }: Props) {
 
     try {
       const res = await fetch('/api/journal-entry', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
-          spiritId:       null,
-          spiritName:     submitName,
-          spiritCategory: submitCategory,
-          nose, palate, finish,
-          overallNotes: notes,
-          rating: rating || null,
+          logId:          entry.id,
+          spiritName:     submitName     || null,
+          spiritCategory: submitCategory || null,
+          nose:           nose   || null,
+          palate:         palate || null,
+          finish:         finish || null,
+          overallNotes:   notes  || null,
+          rating:         rating || null,
         }),
       })
 
@@ -105,7 +119,6 @@ export default function JournalForm({ recipes, userId }: Props) {
         <label className={labelClass}>What are you tasting?</label>
 
         {selectedRecipe ? (
-          /* Selected: show a pill with clear button */
           <div className="flex items-center gap-2 bg-[#EDE9DC] border border-[#C8BCA4] rounded-xl px-4 py-3">
             <div className="flex-1">
               <p className="text-sm font-semibold text-[#242622]">{selectedRecipe.name}</p>
@@ -125,7 +138,6 @@ export default function JournalForm({ recipes, userId }: Props) {
             </button>
           </div>
         ) : (
-          /* Search input with dropdown */
           <div className="relative">
             <input
               ref={inputRef}
@@ -175,7 +187,7 @@ export default function JournalForm({ recipes, userId }: Props) {
         )}
       </div>
 
-      {/* Custom entry fields when no recipe is selected */}
+      {/* Custom entry fields */}
       {!selectedRecipe && (
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
@@ -244,7 +256,7 @@ export default function JournalForm({ recipes, userId }: Props) {
         disabled={loading || (!selectedRecipe && !customName)}
         className="w-full bg-[#96321F] text-[#FFFFFF] font-bold py-4 rounded-xl disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
       >
-        {loading ? 'Saving…' : 'Save Entry'}
+        {loading ? 'Saving…' : 'Save Changes'}
       </button>
     </form>
   )
