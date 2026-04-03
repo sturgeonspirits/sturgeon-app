@@ -32,10 +32,33 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     .order('starts_at', { ascending: false })
     .limit(20)
 
-  const allPeriods  = periods ?? []
+  const rawPeriods = periods ?? []
+
+  // Deduplicate periods that share the same calendar date (can happen when a
+  // period is accidentally created twice for the same night). For each date,
+  // prefer the finalized period (it has real results); otherwise keep the first
+  // in the sorted list (newest starts_at).
+  const allPeriods: typeof rawPeriods = (() => {
+    const seen = new Map<string, (typeof rawPeriods)[0]>()
+    for (const p of rawPeriods) {
+      const dateKey = p.starts_at
+        ? new Date(p.starts_at).toISOString().slice(0, 10)   // YYYY-MM-DD
+        : p.label                                             // fallback
+      const existing = seen.get(dateKey)
+      if (!existing) {
+        seen.set(dateKey, p)
+      } else if (p.is_finalized && !existing.is_finalized) {
+        // Replace an empty/open period with the finalized one for the same night
+        seen.set(dateKey, p)
+      }
+      // else: keep existing (finalized already, or both same state → keep first/newest)
+    }
+    return Array.from(seen.values())
+  })()
+
   // Which period to display: URL param → most recent
   const currentPeriod = (periodParam
-    ? allPeriods.find(p => p.id === periodParam)
+    ? allPeriods.find((p: any) => p.id === periodParam)
     : null) ?? allPeriods[0] ?? null
 
   // Fetch scores for the selected period
