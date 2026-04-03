@@ -6,12 +6,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SignJWT } from 'jose'
 import { createServiceClient } from '@/lib/supabase/server'
+import { requireStaff } from '@/lib/staff-auth'
 
 const SECRET = new TextEncoder().encode(process.env.QR_HMAC_SECRET!)
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof NextResponse) return auth
+
   try {
-    const { missionId, staffId, locationId } = await req.json()
+    const { missionId, locationId } = await req.json()
+    // Derive staffId from the verified session — never trust the client body
+    const staffId = auth.user.id
     if (!missionId) return NextResponse.json({ error: 'missionId required' }, { status: 400 })
 
     const supabase = createServiceClient()

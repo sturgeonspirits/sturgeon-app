@@ -26,13 +26,20 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // ── API routes — never redirect, each handles its own auth ──
+  // Routes use requireStaff(), user session cookies, or a secret
+  // header (x-sync-secret, x-cron-secret). Redirecting here would
+  // return an HTML login page to JSON callers.
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   // ── Public paths — no auth required ─────────────────────
   const publicPaths = [
     '/auth/login',
     '/auth/verify',
     '/auth/callback',
     '/dev-login',
-    '/api/dev-auth',
   ]
   if (publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
     return supabaseResponse

@@ -14,11 +14,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEarnEvent } from '@/lib/earn-events'
+import { requireStaff } from '@/lib/staff-auth'
 
 export async function POST(req: NextRequest) {
+  const auth = await requireStaff()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await req.json()
-    const { redemptionId, userId, rewardId, staffId, notes } = body
+    const { redemptionId, userId, rewardId, notes } = body
+    // Derive staffId from verified session — never trust the client body
+    const staffId = auth.user.id
 
     const supabase = createServiceClient()
 
