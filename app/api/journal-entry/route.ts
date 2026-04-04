@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const earnEvent = await emitEarnEvent({
       userId,
       eventType:   'journal_entry',
-      pointsDelta: 25,  // base points per entry
+      pointsDelta: 15,  // base points per entry
       contextType: 'journal_entry',
       contextId:   log.id,
       notes:       'Tasting journal entry',

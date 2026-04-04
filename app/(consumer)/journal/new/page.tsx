@@ -25,7 +25,7 @@ export default async function NewJournalEntryPage() {
         <h1 className="font-display text-2xl font-bold text-[#242622] uppercase tracking-wide">
           New Tasting Entry
         </h1>
-        <p className="text-sm text-[#7E613F] font-body mt-1">Earn 75 pts for logging a tasting</p>
+        <p className="text-sm text-[#7E613F] font-body mt-1">Earn 15 pts for logging a tasting</p>
       </div>
       <JournalForm recipes={recipes ?? []} userId={user.id} />
     </div>
