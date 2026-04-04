@@ -274,13 +274,6 @@ function TeamBoard({
 
   return (
     <div className="space-y-2">
-      {/* Banner when the night is open and user hasn't joined yet */}
-      {canJoin && (
-        <div className="bg-[#EDE9DC] border border-[#C8BCA4] rounded-xl px-4 py-3 text-sm text-[#7E613F]">
-          🍸 Tap a team below to join and earn points!
-        </div>
-      )}
-
       {joinError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-700">
           {joinError}
