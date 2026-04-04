@@ -264,7 +264,13 @@ function TeamBoard({
     }
   }
 
-  const sorted = [...teams].sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
+  // placement 0 or null means staff haven't set it yet — fall back to score DESC
+  const sorted = [...teams].sort((a, b) => {
+    const pa = a.placement && a.placement > 0 ? a.placement : 999
+    const pb = b.placement && b.placement > 0 ? b.placement : 999
+    if (pa !== pb) return pa - pb
+    return (b.score ?? 0) - (a.score ?? 0)
+  })
 
   return (
     <div className="space-y-2">

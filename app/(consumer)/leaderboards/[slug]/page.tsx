@@ -24,37 +24,35 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
   if (!eventType) notFound()
 
-  // Fetch all finalized + open periods for this event, newest first.
-  // Secondary sort by created_at ASC so the original period (created first)
-  // always beats an accidentally-created duplicate with the same starts_at.
+  // Only single_night periods — weekly/monthly/season periods are not used.
+  // Sort newest first; for ties on starts_at use created_at ASC (original beats duplicate).
   const { data: periods } = await service
     .from('leaderboard_periods')
     .select('*')
     .eq('event_type_id', eventType.id)
+    .eq('period_type', 'single_night')
     .order('starts_at', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(20)
 
   const rawPeriods = periods ?? []
 
-  // Deduplicate periods that share the same calendar date (can happen when a
-  // period is accidentally created twice for the same night). For each date,
-  // prefer the finalized period (it has real results); otherwise keep the first
-  // in the sorted list (newest starts_at).
+  // Deduplicate same-date periods (accidental duplicates).
+  // Priority: finalized > has join_token (staff set it up properly) > first created.
   const allPeriods: typeof rawPeriods = (() => {
     const seen = new Map<string, (typeof rawPeriods)[0]>()
     for (const p of rawPeriods) {
       const dateKey = p.starts_at
-        ? new Date(p.starts_at).toISOString().slice(0, 10)   // YYYY-MM-DD
-        : p.label                                             // fallback
+        ? new Date(p.starts_at).toISOString().slice(0, 10)
+        : p.label
       const existing = seen.get(dateKey)
       if (!existing) {
         seen.set(dateKey, p)
-      } else if (p.is_finalized && !existing.is_finalized) {
-        // Replace an empty/open period with the finalized one for the same night
-        seen.set(dateKey, p)
+        continue
       }
-      // else: keep existing (finalized already, or both same state → keep first/newest)
+      const pScore    = (p.is_finalized ? 2 : 0)         + ((p as any).join_token ? 1 : 0)
+      const exScore   = (existing.is_finalized ? 2 : 0)  + ((existing as any).join_token ? 1 : 0)
+      if (pScore > exScore) seen.set(dateKey, p)
     }
     return Array.from(seen.values())
   })()
