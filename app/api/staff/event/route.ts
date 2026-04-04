@@ -38,6 +38,28 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-create a leaderboard period so customers can sign up immediately.
+  // starts_at is noon Chicago time on the event date so timezone date matching works.
+  const [year, month, day] = eventDate.split('-').map(Number)
+  const label = new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  })
+  // Build a noon-Chicago ISO string for starts_at
+  const chicagoNoon = new Date(`${eventDate}T12:00:00`)
+  const offsetMs    = new Date(chicagoNoon.toLocaleString('en-US', { timeZone: 'America/Chicago' })).getTime()
+                    - new Date(chicagoNoon.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
+  const startsAt    = new Date(chicagoNoon.getTime() - offsetMs).toISOString()
+
+  await service.from('leaderboard_periods').insert({
+    event_type_id: eventTypeId,
+    event_id:      data.id,
+    label,
+    period_type:   'single_night',
+    starts_at:     startsAt,
+    is_finalized:  false,
+  })
+
   return NextResponse.json({ event: data })
 }
 

@@ -154,17 +154,15 @@ export default async function EventsPage() {
   if (!user) redirect('/auth/login')
 
   const service = createServiceClient()
-  const today = new Date().toLocaleDateString('en-CA')
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
-  const [fbEvents, { data: eventTypes }, { data: scheduledEventsRaw }] = await Promise.all([
+  const [fbEvents, { data: eventTypes }, { data: scheduledEventsRaw }, { data: openPeriods }] = await Promise.all([
     fetchFbEvents(),
     service
       .from('event_types')
-      .select('id, name, slug, icon, day_of_week, typical_time, description')
+      .select('id, name, slug, icon, day_of_week, typical_time, description, participant_type')
       .eq('is_active', true)
       .order('sort_order'),
-    // No FK join — PostgREST may not have refreshed its schema cache for the new `events` table.
-    // We match event_types in code using the already-fetched list.
     service
       .from('events')
       .select('id, event_type_id, event_date, start_time, notes, is_cancelled')
@@ -172,12 +170,43 @@ export default async function EventsPage() {
       .eq('is_cancelled', false)
       .order('event_date')
       .limit(20),
+    // Fetch upcoming open leaderboard periods — match by event_id (most reliable)
+    // Also fall back to event_type_id+date for older periods without event_id
+    service
+      .from('leaderboard_periods')
+      .select('id, event_id, event_type_id, starts_at, event_types(participant_type)')
+      .eq('is_finalized', false)
+      .eq('period_type', 'single_night')
+      .order('starts_at')
+      .limit(40),
   ])
+
+  // Build lookup maps for period matching
+  const periodByEventId      = new Map<string, string>() // event.id   -> period.id
+  const periodByTypeAndDate  = new Map<string, string>() // typeId::date -> period.id
+  for (const p of (openPeriods ?? [])) {
+    const et = (p as any).event_types
+    if (et?.participant_type !== 'team') continue
+    if ((p as any).event_id) {
+      periodByEventId.set((p as any).event_id, p.id)
+    }
+    const dateKey = new Date(p.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+    if (dateKey >= today) {
+      periodByTypeAndDate.set(`${p.event_type_id}::${dateKey}`, p.id)
+    }
+  }
 
   // Join event_types in code so we're not reliant on PostgREST FK cache
   const etById = Object.fromEntries((eventTypes ?? []).map(et => [et.id, et]))
   const dbEvents = (scheduledEventsRaw ?? [])
-    .map(ev => ({ ...ev, event_type: etById[ev.event_type_id] ?? null }))
+    .map(ev => {
+      const et = etById[ev.event_type_id] ?? null
+      // Prefer event_id match, fall back to type+date
+      const periodId = periodByEventId.get(ev.id)
+        ?? periodByTypeAndDate.get(`${ev.event_type_id}::${ev.event_date}`)
+        ?? null
+      return { ...ev, event_type: et, period: periodId ? { id: periodId } : null }
+    })
     .filter(ev => ev.event_type !== null)
 
   const featured = fbEvents[0] ?? null
@@ -203,25 +232,34 @@ export default async function EventsPage() {
               const et = ev.event_type as any
               if (!et) return null
               return (
-                <Link
+                <div
                   key={ev.id}
-                  href={`/leaderboards/${et.slug ?? '#'}`}
-                  className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 hover:border-[#C8BCA4] transition-colors active:scale-[0.99]"
+                  className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#96321F]/10 border border-[#96321F]/20 flex items-center justify-center text-2xl shrink-0">
-                    {et.icon ?? '📅'}
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#96321F]/10 border border-[#96321F]/20 flex items-center justify-center text-2xl shrink-0">
+                      {et.icon ?? '📅'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-[#242622]">{et.name}</p>
+                      <p className="text-xs font-semibold text-[#96321F] mt-0.5">
+                        {fmtDbDate(ev.event_date, ev.start_time)}
+                      </p>
+                      {ev.notes && (
+                        <p className="text-xs text-[#9E8F7E] mt-0.5">{ev.notes}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-[#242622]">{et.name}</p>
-                    <p className="text-xs font-semibold text-[#96321F] mt-0.5">
-                      {fmtDbDate(ev.event_date, ev.start_time)}
-                    </p>
-                    {ev.notes && (
-                      <p className="text-xs text-[#9E8F7E] mt-0.5">{ev.notes}</p>
-                    )}
-                  </div>
-                  <span className="text-[#C8BCA4] text-lg">›</span>
-                </Link>
+                  {/* Sign-up button if a leaderboard period exists for this event */}
+                  {ev.period && (
+                    <Link
+                      href={`/events/${ev.period.id}/signup`}
+                      className="mt-3 w-full flex items-center justify-center gap-2 bg-[#96321F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all"
+                    >
+                      Sign Up for This Night
+                    </Link>
+                  )}
+                </div>
               )
             })}
           </div>

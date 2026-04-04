@@ -241,7 +241,7 @@ function TeamBoard({
   // canJoin: open period, user logged in, not already on a team
   const canJoin = !!openPeriodId && !!currentUserId && !joinedTeamId
 
-  async function handleJoin(permanentTeamId: string, periodTeamId: string) {
+  async function handleJoin(permanentTeamId: string) {
     if (!openPeriodId || joiningId) return
     setJoiningId(permanentTeamId)
     setJoinError(null)
@@ -253,7 +253,7 @@ function TeamBoard({
       })
       const json = await res.json()
       if (res.ok) {
-        setJoinedTeamId(periodTeamId)  // mark the leaderboard_teams id as joined
+        setJoinedTeamId(permanentTeamId)  // track by permanent_team_id
       } else {
         setJoinError(json.error ?? 'Could not join team')
       }
@@ -277,7 +277,7 @@ function TeamBoard({
       {/* Banner when the night is open and user hasn't joined yet */}
       {canJoin && (
         <div className="bg-[#EDE9DC] border border-[#C8BCA4] rounded-xl px-4 py-3 text-sm text-[#7E613F]">
-          🍸 Tonight&apos;s event is open — tap a team below to join and earn points!
+          🍸 Tap a team below to join and earn points!
         </div>
       )}
 
@@ -298,18 +298,21 @@ function TeamBoard({
       ) : (
         sorted.map((team, i) => {
           const memberIds: string[] = (team.leaderboard_team_members ?? []).map((m: any) => m.user_id)
-          const isMyTeam    = (joinedTeamId === team.id) || (!joinedTeamId && !!currentUserId && memberIds.includes(currentUserId))
+          // Use permanent_team_id as the stable key (team.id may be null for unregistered teams)
+          const key         = team.permanent_team_id ?? team.id ?? i
+          const isMyTeam    = (joinedTeamId === team.permanent_team_id)
+                            || (!joinedTeamId && !!currentUserId && memberIds.includes(currentUserId))
           const isJoining   = joiningId === team.permanent_team_id
           const medal       = ['🥇', '🥈', '🥉'][i]
           const showJoinBtn = canJoin && !isMyTeam
 
           return (
-            <div key={team.id} className={cn(
+            <div key={key} className={cn(
               'bg-[#FFFFFF] border rounded-xl p-4 transition-all',
               isMyTeam ? 'border-[#87A67F]/40' : 'border-[#D4CFC3]',
               showJoinBtn ? 'hover:border-[#96321F]/40 cursor-pointer' : ''
             )}
-              onClick={showJoinBtn ? () => handleJoin(team.permanent_team_id, team.id) : undefined}
+              onClick={showJoinBtn ? () => handleJoin(team.permanent_team_id) : undefined}
             >
               <div className="flex items-center gap-3 mb-2">
                 <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm">{i + 1}</span>}</span>
@@ -318,10 +321,12 @@ function TeamBoard({
                   {isMyTeam && <span className="ml-2 text-xs text-[#87A67F]/60">your team</span>}
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
-                  <p className="text-[#242622] font-bold text-sm">{(team.score ?? 0).toLocaleString()} pts</p>
+                  {(team.score ?? 0) > 0 && (
+                    <p className="text-[#242622] font-bold text-sm">{(team.score ?? 0).toLocaleString()} pts</p>
+                  )}
                   {showJoinBtn && (
                     <span className="text-xs font-bold text-[#96321F]">
-                      {isJoining ? '…' : 'Join'}
+                      {isJoining ? '…' : 'Join →'}
                     </span>
                   )}
                 </div>

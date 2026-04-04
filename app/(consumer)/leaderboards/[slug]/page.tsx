@@ -151,15 +151,35 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     teams.length >= 0
   ) {
     openPeriodId = currentPeriod.id
-    const periodTeamIds = teams.map((t: any) => t.id)
+
+    // If no teams have signed up yet, load permanent teams so the join UI has options
+    if (teams.length === 0) {
+      const { data: permTeams } = await service
+        .from('permanent_teams')
+        .select('id, name')
+        .eq('event_type_id', eventType.id)
+        .order('name')
+
+      teams = (permTeams ?? []).map((pt: any) => ({
+        id:                       null,          // no period team row yet
+        permanent_team_id:        pt.id,
+        name:                     pt.name,
+        score:                    0,
+        placement:                0,
+        leaderboard_team_members: [],
+      }))
+    }
+
+    const periodTeamIds = teams.filter((t: any) => t.id).map((t: any) => t.id)
     if (periodTeamIds.length > 0) {
       const { data: membership } = await service
         .from('leaderboard_team_members')
-        .select('team_id')
+        .select('team_id, leaderboard_teams(permanent_team_id)')
         .eq('user_id', user.id)
         .in('team_id', periodTeamIds)
         .maybeSingle()
-      userCurrentTeamId = membership?.team_id ?? null
+      // Track by permanent_team_id so it matches team entries that may have id:null
+      userCurrentTeamId = (membership as any)?.leaderboard_teams?.permanent_team_id ?? null
     }
   }
 
