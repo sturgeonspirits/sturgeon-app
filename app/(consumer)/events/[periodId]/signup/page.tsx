@@ -17,7 +17,7 @@ export default async function EventSignupPage({ params }: Props) {
   // Fetch period + event type
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, label, starts_at, is_finalized, event_type_id, event_types(name, icon, slug, participant_type)')
+    .select('id, label, starts_at, is_finalized, event_type_id, event_id, event_types(name, icon, slug, participant_type)')
     .eq('id', periodId)
     .maybeSingle()
 
@@ -25,10 +25,33 @@ export default async function EventSignupPage({ params }: Props) {
 
   const et = (period as any).event_types
   const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
-  const periodDateChicago = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
-  // Block sign-up if past or finalized
-  if (period.is_finalized || periodDateChicago < todayChicago) {
+  // Use the label to get the actual event date — starts_at may reflect when the
+  // period was created (today), not the scheduled event date.
+  // Also check event_id linked event for a reliable date string.
+  let eventDateStr: string | null = null
+  if ((period as any).event_id) {
+    const { data: linkedEvent } = await service
+      .from('events')
+      .select('event_date')
+      .eq('id', (period as any).event_id)
+      .maybeSingle()
+    eventDateStr = linkedEvent?.event_date ?? null
+  }
+  // Fallback: parse from label (e.g. "Wednesday, April 15, 2026")
+  if (!eventDateStr) {
+    const parsed = new Date(period.label)
+    if (!isNaN(parsed.getTime())) {
+      eventDateStr = parsed.toLocaleDateString('en-CA')
+    }
+  }
+  // Final fallback: starts_at
+  if (!eventDateStr) {
+    eventDateStr = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+  }
+
+  // Block sign-up for past or finalized events
+  if (period.is_finalized || eventDateStr < todayChicago) {
     redirect(`/leaderboards/${et?.slug ?? ''}`)
   }
 
@@ -38,6 +61,26 @@ export default async function EventSignupPage({ params }: Props) {
     .select('id, name')
     .eq('event_type_id', period.event_type_id)
     .order('name')
+
+  // If permanent_teams is empty (teams pre-date the permanent_teams table),
+  // fall back to distinct team names from past leaderboard_teams for this event type.
+  let allKnownTeams: Array<{ id: string; name: string }> = permTeams ?? []
+  if (allKnownTeams.length === 0) {
+    const { data: pastTeams } = await service
+      .from('leaderboard_teams')
+      .select('permanent_team_id, name, leaderboard_periods!inner(event_type_id)')
+      .eq('leaderboard_periods.event_type_id', period.event_type_id)
+      .not('permanent_team_id', 'is', null)
+      .order('name')
+    // Deduplicate by permanent_team_id
+    const seen = new Map<string, { id: string; name: string }>()
+    for (const t of (pastTeams ?? [])) {
+      if (t.permanent_team_id && !seen.has(t.permanent_team_id)) {
+        seen.set(t.permanent_team_id, { id: t.permanent_team_id, name: t.name })
+      }
+    }
+    allKnownTeams = Array.from(seen.values())
+  }
 
   // Fetch any period-specific team rows that already exist (sign-ups so far)
   const { data: periodTeams } = await service
@@ -55,8 +98,8 @@ export default async function EventSignupPage({ params }: Props) {
     periodTeamMap.set((pt as any).permanent_team_id, { periodTeamId: pt.id, members })
   }
 
-  // Merge: show all permanent teams, overlaid with who signed up for this period
-  const teams = (permTeams ?? []).map((pt: any) => {
+  // Merge: all known teams overlaid with who has signed up for this period
+  const teams = allKnownTeams.map((pt) => {
     const periodInfo = periodTeamMap.get(pt.id)
     const members    = periodInfo?.members ?? []
     const isMine     = members.some(m => m.userId === user.id)
@@ -72,12 +115,10 @@ export default async function EventSignupPage({ params }: Props) {
 
   const myTeam = teams.find(t => t.isMine) ?? null
 
-  // Format display date
-  const eventDate = new Date(period.starts_at).toLocaleDateString('en-US', {
-    timeZone: 'America/Chicago',
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+  // Format display date from the reliable event date string
+  const [y, mo, d] = eventDateStr.split('-').map(Number)
+  const eventDate = new Date(y, mo - 1, d).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   })
 
   return (

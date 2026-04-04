@@ -344,10 +344,8 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
             </button>
           </div>
 
-          {/* Sign-ups — show for team events so staff can remove no-shows */}
-          {selectedET.participant_type === 'team' && (
-            <SignupsPanel periodId={selectedPeriod.id} />
-          )}
+          {/* Sign-ups — show for all events so staff can see and remove no-shows */}
+          <SignupsPanel periodId={selectedPeriod.id} />
 
           {/* QR join code — trivia team events only */}
           {selectedET.participant_type === 'team' && (selectedPeriod as any).join_token && (
@@ -360,7 +358,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
           {selectedET.scoring_method === 'points' && selectedET.participant_type === 'individual' && (
             <TriviaIndividualForm period={selectedPeriod} members={members} staffId={staffId} />
           )}
-          {selectedET.participant_type === 'team' && (
+          {selectedET.scoring_method === 'points' && selectedET.participant_type === 'team' && (
             <TriviaTeamForm period={selectedPeriod} members={members} staffId={staffId} eventTypeId={selectedET.id} />
           )}
         </div>

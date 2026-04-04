@@ -160,7 +160,7 @@ export default async function EventsPage() {
     fetchFbEvents(),
     service
       .from('event_types')
-      .select('id, name, slug, icon, day_of_week, typical_time, description, participant_type')
+      .select('id, name, slug, icon, day_of_week, typical_time, description')
       .eq('is_active', true)
       .order('sort_order'),
     service
@@ -181,12 +181,10 @@ export default async function EventsPage() {
       .limit(40),
   ])
 
-  // Build lookup maps for period matching
-  const periodByEventId      = new Map<string, string>() // event.id   -> period.id
+  // Build lookup maps for period matching — include all event types (cribbage, trivia, etc.)
+  const periodByEventId      = new Map<string, string>() // event.id     -> period.id
   const periodByTypeAndDate  = new Map<string, string>() // typeId::date -> period.id
   for (const p of (openPeriods ?? [])) {
-    const et = (p as any).event_types
-    if (et?.participant_type !== 'team') continue
     if ((p as any).event_id) {
       periodByEventId.set((p as any).event_id, p.id)
     }
