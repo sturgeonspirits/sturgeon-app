@@ -24,11 +24,10 @@ export default async function EventSignupPage({ params }: Props) {
   if (!period) redirect('/events')
 
   const et = (period as any).event_types
+  const participantType: 'team' | 'individual' = et?.participant_type ?? 'individual'
   const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
-  // Use the label to get the actual event date — starts_at may reflect when the
-  // period was created (today), not the scheduled event date.
-  // Also check event_id linked event for a reliable date string.
+  // Get reliable event date: prefer linked event record, then parse label, then starts_at
   let eventDateStr: string | null = null
   if ((period as any).event_id) {
     const { data: linkedEvent } = await service
@@ -38,14 +37,12 @@ export default async function EventSignupPage({ params }: Props) {
       .maybeSingle()
     eventDateStr = linkedEvent?.event_date ?? null
   }
-  // Fallback: parse from label (e.g. "Wednesday, April 15, 2026")
   if (!eventDateStr) {
     const parsed = new Date(period.label)
     if (!isNaN(parsed.getTime())) {
       eventDateStr = parsed.toLocaleDateString('en-CA')
     }
   }
-  // Final fallback: starts_at
   if (!eventDateStr) {
     eventDateStr = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
   }
@@ -55,76 +52,115 @@ export default async function EventSignupPage({ params }: Props) {
     redirect(`/leaderboards/${et?.slug ?? ''}`)
   }
 
-  // Fetch all permanent teams for this event type
-  const { data: permTeams } = await service
-    .from('permanent_teams')
-    .select('id, name')
-    .eq('event_type_id', period.event_type_id)
-    .order('name')
-
-  // If permanent_teams is empty (teams pre-date the permanent_teams table),
-  // fall back to distinct team names from past leaderboard_teams for this event type.
-  let allKnownTeams: Array<{ id: string; name: string }> = permTeams ?? []
-  if (allKnownTeams.length === 0) {
-    const { data: pastTeams } = await service
-      .from('leaderboard_teams')
-      .select('permanent_team_id, name, leaderboard_periods!inner(event_type_id)')
-      .eq('leaderboard_periods.event_type_id', period.event_type_id)
-      .not('permanent_team_id', 'is', null)
-      .order('name')
-    // Deduplicate by permanent_team_id
-    const seen = new Map<string, { id: string; name: string }>()
-    for (const t of (pastTeams ?? [])) {
-      if (t.permanent_team_id && !seen.has(t.permanent_team_id)) {
-        seen.set(t.permanent_team_id, { id: t.permanent_team_id, name: t.name })
-      }
-    }
-    allKnownTeams = Array.from(seen.values())
-  }
-
-  // Fetch any period-specific team rows that already exist (sign-ups so far)
-  const { data: periodTeams } = await service
-    .from('leaderboard_teams')
-    .select('id, permanent_team_id, leaderboard_team_members(user_id, profiles(display_name, full_name))')
-    .eq('period_id', periodId)
-
-  // Build a map from permanent_team_id -> period team info
-  const periodTeamMap = new Map<string, { periodTeamId: string; members: Array<{ userId: string; name: string }> }>()
-  for (const pt of (periodTeams ?? [])) {
-    const members = (pt.leaderboard_team_members ?? []).map((m: any) => ({
-      userId: m.user_id,
-      name: m.profiles?.display_name ?? m.profiles?.full_name ?? 'Member',
-    }))
-    periodTeamMap.set((pt as any).permanent_team_id, { periodTeamId: pt.id, members })
-  }
-
-  // Merge: all known teams overlaid with who has signed up for this period
-  const teams = allKnownTeams.map((pt) => {
-    const periodInfo = periodTeamMap.get(pt.id)
-    const members    = periodInfo?.members ?? []
-    const isMine     = members.some(m => m.userId === user.id)
-    return {
-      periodTeamId:    periodInfo?.periodTeamId ?? null,
-      permanentTeamId: pt.id,
-      name:            pt.name,
-      memberCount:     members.length,
-      members:         members.map(m => m.name),
-      isMine,
-    }
-  })
-
-  const myTeam = teams.find(t => t.isMine) ?? null
-
-  // Format display date from the reliable event date string
+  // Format display date
   const [y, mo, d] = eventDateStr.split('-').map(Number)
   const eventDate = new Date(y, mo - 1, d).toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   })
 
+  // ── Individual events (e.g. cribbage): just check if user is already registered ──
+  let isRegistered = false
+  if (participantType === 'individual') {
+    const { data: existing } = await service
+      .from('leaderboard_events')
+      .select('id')
+      .eq('period_id', periodId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    isRegistered = !!existing
+  }
+
+  // ── Team events (e.g. trivia): load teams ────────────────────────────────────
+  let teams: Array<{
+    periodTeamId: string | null
+    permanentTeamId: string
+    name: string
+    memberCount: number
+    members: string[]
+    isMine: boolean
+  }> = []
+  let myTeam = null
+
+  if (participantType === 'team') {
+    // Primary: permanent_teams for this event type
+    const { data: permTeams } = await service
+      .from('permanent_teams')
+      .select('id, name')
+      .eq('event_type_id', period.event_type_id)
+      .order('name')
+
+    let allKnownTeams: Array<{ id: string; name: string }> = permTeams ?? []
+
+    // Fallback: two-step fetch from leaderboard_teams if permanent_teams is empty
+    if (allKnownTeams.length === 0) {
+      const { data: allEventPeriods } = await service
+        .from('leaderboard_periods')
+        .select('id')
+        .eq('event_type_id', period.event_type_id)
+
+      const pastPeriodIds = (allEventPeriods ?? []).map((p: any) => p.id)
+      if (pastPeriodIds.length > 0) {
+        const { data: pastTeams } = await service
+          .from('leaderboard_teams')
+          .select('permanent_team_id, name')
+          .in('period_id', pastPeriodIds)
+          .order('name')
+
+        const seenPermIds = new Set<string>()
+        const seenNames   = new Set<string>()
+        for (const t of (pastTeams ?? [])) {
+          if (t.permanent_team_id) {
+            if (!seenPermIds.has(t.permanent_team_id)) {
+              seenPermIds.add(t.permanent_team_id)
+              seenNames.add(t.name.toLowerCase())
+              allKnownTeams.push({ id: t.permanent_team_id, name: t.name })
+            }
+          } else if (!seenNames.has(t.name.toLowerCase())) {
+            seenNames.add(t.name.toLowerCase())
+            // Use name-prefixed id; create-team-direct will upsert permanent_team on join
+            allKnownTeams.push({ id: `name::${t.name}`, name: t.name })
+          }
+        }
+      }
+    }
+
+    // Current period team rows (who's already signed up)
+    const { data: periodTeams } = await service
+      .from('leaderboard_teams')
+      .select('id, permanent_team_id, leaderboard_team_members(user_id, profiles(display_name, full_name))')
+      .eq('period_id', periodId)
+
+    const periodTeamMap = new Map<string, { periodTeamId: string; members: Array<{ userId: string; name: string }> }>()
+    for (const pt of (periodTeams ?? [])) {
+      const members = ((pt as any).leaderboard_team_members ?? []).map((m: any) => ({
+        userId: m.user_id,
+        name: m.profiles?.display_name ?? m.profiles?.full_name ?? 'Member',
+      }))
+      if ((pt as any).permanent_team_id) {
+        periodTeamMap.set((pt as any).permanent_team_id, { periodTeamId: pt.id, members })
+      }
+    }
+
+    teams = allKnownTeams.map((pt) => {
+      const periodInfo = periodTeamMap.get(pt.id)
+      const members    = periodInfo?.members ?? []
+      const isMine     = members.some(m => m.userId === user.id)
+      return {
+        periodTeamId:    periodInfo?.periodTeamId ?? null,
+        permanentTeamId: pt.id,
+        name:            pt.name,
+        memberCount:     members.length,
+        members:         members.map(m => m.name),
+        isMine,
+      }
+    })
+
+    myTeam = teams.find(t => t.isMine) ?? null
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F2EC]">
       <div className="max-w-lg mx-auto px-4 py-8 pb-28">
-        {/* Back link */}
         <Link
           href="/events"
           className="inline-flex items-center gap-1.5 text-sm text-[#7E613F] hover:text-[#96321F] transition-colors mb-6"
@@ -140,9 +176,10 @@ export default async function EventSignupPage({ params }: Props) {
           eventName={et?.name ?? 'Event'}
           eventIcon={et?.icon ?? '🎮'}
           eventDate={eventDate}
+          participantType={participantType}
           teams={teams}
           myTeam={myTeam}
-          participantType={et?.participant_type ?? 'team'}
+          isRegistered={isRegistered}
         />
       </div>
     </div>

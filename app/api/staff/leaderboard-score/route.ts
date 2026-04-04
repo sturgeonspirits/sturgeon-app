@@ -114,9 +114,19 @@ export async function POST(req: NextRequest) {
     for (const team of teams) {
       const { name, score, placement, memberIds } = team
 
+      // Always upsert into permanent_teams so teams are discoverable for sign-up
+      const { data: permTeam } = await supabase
+        .from('permanent_teams')
+        .upsert(
+          { event_type_id: period.event_type_id, name },
+          { onConflict: 'event_type_id,name', ignoreDuplicates: false }
+        )
+        .select('id')
+        .single()
+
       const { data: teamRow } = await supabase
         .from('leaderboard_teams')
-        .insert({ period_id: periodId, name, score, placement })
+        .insert({ period_id: periodId, name, score, placement, permanent_team_id: permTeam?.id ?? null })
         .select()
         .single()
 
