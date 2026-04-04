@@ -373,16 +373,18 @@ interface SignupMember { userId: string; name: string }
 interface SignupTeam   { teamId: string; name: string; members: SignupMember[] }
 
 function SignupsPanel({ periodId }: { periodId: string }) {
-  const [teams,   setTeams]   = useState<SignupTeam[]>([])
-  const [loading, setLoading] = useState(true)
-  const [removing, setRemoving] = useState<string | null>(null)
-  const [error,   setError]   = useState('')
+  const [teams,       setTeams]       = useState<SignupTeam[]>([])
+  const [individuals, setIndividuals] = useState<SignupMember[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [removing,    setRemoving]    = useState<string | null>(null)
+  const [error,       setError]       = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch(`/api/staff/period-signups?periodId=${periodId}`)
+    const res  = await fetch(`/api/staff/period-signups?periodId=${periodId}`)
     const json = await res.json()
     setTeams(json.teams ?? [])
+    setIndividuals(json.individuals ?? [])
     setLoading(false)
   }, [periodId])
 
@@ -401,23 +403,25 @@ function SignupsPanel({ periodId }: { periodId: string }) {
     await load()
   }
 
-  const totalMembers = teams.reduce((n, t) => n + t.members.length, 0)
+  const totalCount = teams.reduce((n, t) => n + t.members.length, 0) + individuals.length
+  const hasSignups = teams.length > 0 || individuals.length > 0
 
   return (
     <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold text-[#7E613F] uppercase tracking-widest">
-          Sign-ups {totalMembers > 0 ? `· ${totalMembers}` : ''}
+          Sign-ups {totalCount > 0 ? `· ${totalCount}` : ''}
         </p>
         <button onClick={load} className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors">↻ Refresh</button>
       </div>
 
       {loading && <p className="text-xs text-[#9E8F7E]">Loading…</p>}
 
-      {!loading && teams.length === 0 && (
+      {!loading && !hasSignups && (
         <p className="text-xs text-[#9E8F7E]">No sign-ups yet.</p>
       )}
 
+      {/* Team sign-ups */}
       {!loading && teams.map(team => (
         <div key={team.teamId} className="space-y-1">
           <p className="text-xs font-semibold text-[#242622]">{team.name}</p>
@@ -435,6 +439,25 @@ function SignupsPanel({ periodId }: { periodId: string }) {
           ))}
         </div>
       ))}
+
+      {/* Individual sign-ups */}
+      {!loading && individuals.length > 0 && (
+        <div className="space-y-1">
+          {teams.length > 0 && <p className="text-xs font-semibold text-[#242622]">Individual</p>}
+          {individuals.map(m => (
+            <div key={m.userId} className="flex items-center justify-between bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
+              <span className="text-sm text-[#242622]">{m.name}</span>
+              <button
+                onClick={() => handleRemove(m.userId)}
+                disabled={removing === m.userId}
+                className="text-xs text-[#96321F] hover:text-[#ae3a24] font-medium disabled:opacity-40 transition-colors"
+              >
+                {removing === m.userId ? '…' : 'Remove'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
