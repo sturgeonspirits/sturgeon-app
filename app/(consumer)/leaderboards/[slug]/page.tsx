@@ -135,17 +135,20 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   let openPeriodId:      string | null = null
   let userCurrentTeamId: string | null = null
 
-  // Only offer in-app joining for events that started within the last 24 hours.
-  // Past events that were never formally finalized should NOT show join UI.
-  const periodAgeHours = currentPeriod?.starts_at
-    ? (Date.now() - new Date(currentPeriod.starts_at).getTime()) / (1000 * 60 * 60)
-    : 999
+  // Only offer in-app joining on the same calendar day as the event or in the
+  // future. Once the date has passed (America/Chicago), no join UI appears —
+  // even if the period was never formally finalized.
+  const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }) // YYYY-MM-DD
+  const periodDateChicago = currentPeriod?.starts_at
+    ? new Date(currentPeriod.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+    : null
+  const periodIsCurrentOrFuture = !!periodDateChicago && periodDateChicago >= todayChicago
 
   if (
     user &&
     currentPeriod &&
     !currentPeriod.is_finalized &&
-    periodAgeHours < 24 &&
+    periodIsCurrentOrFuture &&
     eventType.participant_type === 'team' &&
     teams.length >= 0
   ) {
