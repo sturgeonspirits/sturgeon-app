@@ -50,6 +50,9 @@ function isPast(dateStr: string) {
 export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staffId, scheduledEvents }: Props) {
   const [selectedEventTypeId, setSelectedEventTypeId] = useState<string | null>(null)
   const [selectedPeriodId,    setSelectedPeriodId]    = useState<string | null>(null)
+  // The scheduled event ID (events table) for the selected date — used so
+  // SignupsPanel can look up registrations across ALL periods for that event.
+  const [selectedEventId,     setSelectedEventId]     = useState<string | null>(null)
   const [periodError,         setPeriodError]         = useState('')
   const [showDateForm,        setShowDateForm]        = useState(false)
   const [quickDate,           setQuickDate]           = useState('')
@@ -138,9 +141,11 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
     if (selectedEventTypeId === id) {
       setSelectedEventTypeId(null)
       setSelectedPeriodId(null)
+      setSelectedEventId(null)
     } else {
       setSelectedEventTypeId(id)
       setSelectedPeriodId(null)
+      setSelectedEventId(null)
     }
   }
 
@@ -222,7 +227,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
                         </div>
                         {period ? (
                           <button
-                            onClick={() => setSelectedPeriodId(period.id)}
+                            onClick={() => { setSelectedPeriodId(period.id); setSelectedEventId(event.id) }}
                             className="text-xs font-bold text-[#87A67F] bg-[#87A67F]/10 px-3 py-1.5 rounded-lg hover:bg-[#87A67F]/20 transition-colors"
                           >
                             Enter scores →
@@ -240,17 +245,17 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
                   )
                 }
 
-                // Orphan period (no linked event — generic weekly etc.)
+                // Orphan period (no linked event — created before auto-linking was added)
                 const { period } = entry
                 return (
                   <div key={period.id} className="border border-[#D4CFC3] bg-[#FAFAF7] rounded-xl px-4 py-3 flex items-center gap-3">
                     <span className="text-[#7E613F]">📋</span>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-[#242622]">{period.label}</p>
-                      <p className="text-xs text-[#9E8F7E]">Generic period</p>
+                      <p className="text-xs text-[#9E8F7E]">Unlinked period</p>
                     </div>
                     <button
-                      onClick={() => setSelectedPeriodId(period.id)}
+                      onClick={() => { setSelectedPeriodId(period.id); setSelectedEventId((period as any).event_id ?? null) }}
                       className="text-xs font-bold text-[#87A67F] bg-[#87A67F]/10 px-3 py-1.5 rounded-lg hover:bg-[#87A67F]/20 transition-colors"
                     >
                       Enter scores →
@@ -316,15 +321,15 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
               <p className="text-xs text-[#7E613F] mt-0.5">📅 {selectedPeriod.label}</p>
             </div>
             <button
-              onClick={() => setSelectedPeriodId(null)}
+              onClick={() => { setSelectedPeriodId(null); setSelectedEventId(null) }}
               className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors px-2 py-1 rounded-lg hover:bg-[#F1F1E7]"
             >
               ← All dates
             </button>
           </div>
 
-          {/* Sign-ups — show for all events so staff can see and remove no-shows */}
-          <SignupsPanel periodId={selectedPeriod.id} />
+          {/* Sign-ups — pass eventId so panel catches registrations on any linked period */}
+          <SignupsPanel periodId={selectedPeriod.id} eventId={selectedEventId ?? undefined} />
 
           {/* QR join code — trivia team events only */}
           {selectedET.participant_type === 'team' && (selectedPeriod as any).join_token && (
@@ -351,7 +356,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
 interface SignupMember { userId: string; name: string }
 interface SignupTeam   { teamId: string; name: string; members: SignupMember[] }
 
-function SignupsPanel({ periodId }: { periodId: string }) {
+function SignupsPanel({ periodId, eventId }: { periodId: string; eventId?: string }) {
   const [teams,       setTeams]       = useState<SignupTeam[]>([])
   const [individuals, setIndividuals] = useState<SignupMember[]>([])
   const [loading,     setLoading]     = useState(true)
@@ -360,12 +365,16 @@ function SignupsPanel({ periodId }: { periodId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res  = await fetch(`/api/staff/period-signups?periodId=${periodId}`)
+    // Always include periodId; also include eventId when available so the API
+    // can aggregate sign-ups across ALL periods linked to this event.
+    const params = new URLSearchParams({ periodId })
+    if (eventId) params.set('eventId', eventId)
+    const res  = await fetch(`/api/staff/period-signups?${params}`)
     const json = await res.json()
     setTeams(json.teams ?? [])
     setIndividuals(json.individuals ?? [])
     setLoading(false)
-  }, [periodId])
+  }, [periodId, eventId])
 
   useEffect(() => { load() }, [load])
 

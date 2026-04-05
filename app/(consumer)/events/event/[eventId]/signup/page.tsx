@@ -45,12 +45,18 @@ export default async function EventSignupPage({ params }: Props) {
   // 2. Find existing period for this event, or create one on the fly.
   //    The period should already exist (auto-created by /api/staff/event), but we
   //    create it here as a safety net so sign-ups never silently fail.
-  let { data: period } = await service
+  // Use limit(1) + order by created_at so we always get the OLDEST period
+  // for this event (the one staff created first) rather than crashing when
+  // multiple periods happen to share the same event_id.
+  const { data: periods } = await service
     .from('leaderboard_periods')
     .select('id, is_finalized')
     .eq('event_id', eventId)
     .eq('is_finalized', false)
-    .maybeSingle()
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  let period: { id: string; is_finalized: boolean } | null = (periods ?? [])[0] ?? null
 
   if (!period) {
     // Auto-create the period so the sign-up can proceed
