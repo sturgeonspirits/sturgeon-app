@@ -3,13 +3,23 @@ import PushSubscriber from '@/components/PushSubscriber'
 
 export default function ConsumerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col bg-[#F1F1E7]" style={{ height: '100dvh' }}>
+    <div className="bg-[#F1F1E7]">
       <PushSubscriber />
-      {/* Main content — fixed height, scrollable, padded clear of tab bar */}
-      <main className="flex-1 overflow-y-auto overscroll-y-contain pb-4">
+      {/*
+        Tab bar is fixed so it's always anchored to the viewport bottom —
+        avoids the 100dvh miscalculation on foldable displays (Pixel Fold etc.)
+        Main content gets bottom padding so nothing is hidden behind the bar.
+        64px = h-16 tab bar; safe-area-inset-bottom covers gesture / notch area.
+      */}
+      <main
+        className="overflow-y-auto overscroll-y-contain"
+        style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+      >
         {children}
       </main>
-      <TabBar />
+      <div className="fixed bottom-0 inset-x-0 z-50">
+        <TabBar />
+      </div>
     </div>
   )
 }
