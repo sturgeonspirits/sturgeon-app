@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import RedemptionActions from './RedemptionActions'
 
@@ -7,11 +7,29 @@ export default async function RedemptionsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/staff/login')
 
-  const { data: redemptions } = await supabase
+  // Service client bypasses RLS — staff must see all users' redemptions
+  const service = createServiceClient()
+
+  // Step 1: fetch redemptions + rewards join (rewards FK exists, join is safe)
+  const { data: rawRedemptions } = await service
     .from('reward_redemptions')
-    .select('*, profiles(display_name, email), rewards(name, icon, reward_value, redemption_method)')
+    .select('*, rewards(name, icon, reward_value, redemption_method)')
     .order('created_at', { ascending: false })
     .limit(100)
+
+  // Step 2: fetch profiles separately — reward_redemptions.user_id has no PostgREST FK
+  // to profiles, so embedded join silently returns null for the entire query
+  const userIds = [...new Set((rawRedemptions ?? []).map((r: any) => r.user_id))]
+  const { data: profileRows } = userIds.length
+    ? await service.from('profiles').select('id, display_name, full_name, email').in('id', userIds)
+    : { data: [] }
+
+  const profileMap = Object.fromEntries((profileRows ?? []).map((p: any) => [p.id, p]))
+
+  const redemptions = (rawRedemptions ?? []).map((r: any) => ({
+    ...r,
+    profiles: profileMap[r.user_id] ?? null,
+  }))
 
   const pending  = (redemptions ?? []).filter(r => r.status === 'pending')
   const resolved = (redemptions ?? []).filter(r => r.status !== 'pending')
