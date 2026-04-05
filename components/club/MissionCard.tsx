@@ -9,10 +9,37 @@ interface Props {
   mission: Mission
   completed: boolean
   userId: string
+  pendingRequest?: boolean   // already has a pending request in the queue
 }
 
-export default function MissionCard({ mission, completed, userId }: Props) {
-  const [showScanner, setShowScanner] = useState(false)
+type RequestState = 'idle' | 'loading' | 'requested' | 'error'
+
+export default function MissionCard({ mission, completed, userId, pendingRequest = false }: Props) {
+  const [showScanner,   setShowScanner]   = useState(false)
+  const [requestState,  setRequestState]  = useState<RequestState>(pendingRequest ? 'requested' : 'idle')
+  const [requestError,  setRequestError]  = useState('')
+
+  async function handleRequest() {
+    setRequestState('loading')
+    setRequestError('')
+    try {
+      const res = await fetch('/api/missions/request-completion', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ missionId: mission.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRequestError(data.error ?? 'Something went wrong')
+        setRequestState('error')
+      } else {
+        setRequestState('requested')
+      }
+    } catch {
+      setRequestError('Network error — please try again')
+      setRequestState('error')
+    }
+  }
 
   const triggerLabel: Record<string, string> = {
     qr_scan:              'Scan QR code at the bar',
@@ -66,6 +93,36 @@ export default function MissionCard({ mission, completed, userId }: Props) {
           >
             📷 Scan QR Code
           </button>
+        )}
+
+        {/* Request button for manual_staff missions */}
+        {!completed && mission.completion_trigger === 'manual_staff' && (
+          <div className="mt-3">
+            {requestState === 'requested' ? (
+              <div className="flex items-center gap-2 bg-[#87A67F]/15 border border-[#87A67F]/30 text-[#4a7a43] text-xs font-semibold py-2 px-3 rounded-lg">
+                <span>✓</span>
+                <span>Request sent — staff will approve shortly</span>
+              </div>
+            ) : requestState === 'error' ? (
+              <div>
+                <p className="text-xs text-red-600 mb-1">{requestError}</p>
+                <button
+                  onClick={() => setRequestState('idle')}
+                  className="text-xs text-[#7E613F] underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleRequest}
+                disabled={requestState === 'loading'}
+                className="w-full bg-[#96321F]/10 border border-[#96321F]/20 text-[#96321F] text-xs font-semibold py-2 rounded-lg hover:bg-[#96321F]/20 disabled:opacity-50 transition-colors"
+              >
+                {requestState === 'loading' ? 'Sending…' : '✋ I did this! — Request approval'}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

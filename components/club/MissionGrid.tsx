@@ -6,10 +6,11 @@ import MissionCard from './MissionCard'
 interface Props {
   missions: Mission[]
   completedIds: Set<string>
+  pendingRequestIds?: Set<string>
   userId: string
 }
 
-export default function MissionGrid({ missions, completedIds, userId }: Props) {
+export default function MissionGrid({ missions, completedIds, pendingRequestIds = new Set(), userId }: Props) {
   // Split: in-progress first, then completed
   const active    = missions.filter(m => !completedIds.has(m.id) || m.is_repeatable)
   const completed = missions.filter(m => completedIds.has(m.id) && !m.is_repeatable)
@@ -21,6 +22,7 @@ export default function MissionGrid({ missions, completedIds, userId }: Props) {
           key={m.id}
           mission={m}
           completed={completedIds.has(m.id)}
+          pendingRequest={pendingRequestIds.has(m.id)}
           userId={userId}
         />
       ))}

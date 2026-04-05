@@ -17,12 +17,13 @@ export default async function ClubPage() {
     redirect('/onboarding')
   }
 
-  const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes] = await Promise.all([
+  const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes, pendingRequestsRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('points_ledger').select('*').eq('user_id', user.id).maybeSingle(),
     supabase.from('missions').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('mission_completions').select('mission_id, completed_at').eq('user_id', user.id),
     supabase.from('challenges').select('*, challenge_missions(mission_id)').eq('is_active', true).order('sort_order'),
+    supabase.from('mission_completion_requests').select('mission_id').eq('user_id', user.id).eq('status', 'pending'),
   ])
 
   const profile     = profileRes.data
@@ -30,7 +31,8 @@ export default async function ClubPage() {
   const missions    = missionsRes.data ?? []
   const completions = completionsRes.data ?? []
   const challenges  = challengesRes.data ?? []
-  const completedIds = new Set(completions.map(c => c.mission_id))
+  const completedIds   = new Set(completions.map(c => c.mission_id))
+  const pendingRequestIds = new Set((pendingRequestsRes.data ?? []).map((r: any) => r.mission_id))
   const { data: tiers } = await supabase.from('tier_thresholds').select('*').order('min_lifetime')
 
   const firstName = profile?.display_name?.split(' ')[0] ?? null
@@ -199,7 +201,7 @@ export default async function ClubPage() {
         {/* Missions */}
         <section>
           <SectionHeader label="Missions" />
-          <MissionGrid missions={missions} completedIds={completedIds} userId={user.id} />
+          <MissionGrid missions={missions} completedIds={completedIds} pendingRequestIds={pendingRequestIds} userId={user.id} />
         </section>
       </div>
     </div>

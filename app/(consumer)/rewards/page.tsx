@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import RedeemButton from '@/components/rewards/RedeemButton'
 
 export default async function RewardsPage() {
   const supabase = await createClient()
@@ -139,7 +140,6 @@ export default async function RewardsPage() {
                           rewardId={reward.id}
                           pointsCost={reward.points_cost}
                           canAfford={!!canAfford}
-                          userId={user.id}
                         />
                       )}
                     </div>
@@ -154,20 +154,3 @@ export default async function RewardsPage() {
   )
 }
 
-function RedeemButton({ rewardId, pointsCost, canAfford, userId }: {
-  rewardId: string; pointsCost: number; canAfford: boolean; userId: string
-}) {
-  return (
-    <form action="/api/rewards/redeem" method="POST">
-      <input type="hidden" name="rewardId" value={rewardId} />
-      <input type="hidden" name="userId"   value={userId} />
-      <button
-        type="submit"
-        disabled={!canAfford}
-        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#96321F] text-[#FFFFFF] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#ae3a24] transition-colors"
-      >
-        {pointsCost.toLocaleString()} pts
-      </button>
-    </form>
-  )
-}

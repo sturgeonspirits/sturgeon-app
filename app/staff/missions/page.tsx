@@ -16,10 +16,15 @@ export default async function StaffMissionsPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: missions }, { data: members }, { data: allMissions }] = await Promise.all([
+  const [{ data: missions }, { data: members }, { data: allMissions }, { data: pendingRequests }] = await Promise.all([
     supabase.from('missions').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('profiles').select('id, display_name, full_name, phone, email').order('full_name'),
     serviceSupabase.from('missions').select('*').order('sort_order'),
+    serviceSupabase
+      .from('mission_completion_requests')
+      .select('id, created_at, user_id, mission_id, missions(title, icon, points), profiles(display_name, full_name, email)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true }),
   ])
 
   return (
@@ -52,7 +57,7 @@ export default async function StaffMissionsPage({
       </div>
 
       {activeTab === 'complete' ? (
-        <StaffMissionPanel missions={missions ?? []} members={members ?? []} staffId={user!.id} />
+        <StaffMissionPanel missions={missions ?? []} members={members ?? []} staffId={user!.id} pendingRequests={pendingRequests ?? []} />
       ) : (
         <MissionManagePanel missions={allMissions ?? []} />
       )}
