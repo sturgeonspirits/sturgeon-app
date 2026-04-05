@@ -115,23 +115,6 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
     }
   }
 
-  async function createGenericPeriod(eventTypeId: string) {
-    setPeriodError('')
-    const now   = new Date()
-    const label = `Week of ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-    const res   = await fetch('/api/staff/period', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventTypeId, label, periodType: 'weekly', startsAt: now.toISOString() }),
-    })
-    if (res.ok) {
-      window.location.reload()
-    } else {
-      const json = await res.json().catch(() => ({}))
-      setPeriodError(json.error ?? `Server error ${res.status}`)
-    }
-  }
-
   async function scheduleAndStart(eventTypeId: string) {
     if (!quickDate) return
     setQuickSaving(true)
@@ -316,12 +299,8 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
                 </button>
               </div>
             )}
-            <button
-              onClick={() => createGenericPeriod(selectedET.id)}
-              className="block text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors"
-            >
-              + Start generic period (not tied to a specific date)
-            </button>
+            {/* Generic periods are intentionally removed — all periods must be tied to a
+                specific event date. Schedule the event first via this panel or the Events page. */}
           </div>
 
           {periodError && <p className="text-xs text-red-500 mt-1">⚠️ {periodError}</p>}

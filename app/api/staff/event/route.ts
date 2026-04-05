@@ -51,16 +51,29 @@ export async function POST(req: NextRequest) {
                     - new Date(chicagoNoon.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
   const startsAt    = new Date(chicagoNoon.getTime() - offsetMs).toISOString()
 
-  await service.from('leaderboard_periods').insert({
-    event_type_id: eventTypeId,
-    event_id:      data.id,
-    label,
-    period_type:   'single_night',
-    starts_at:     startsAt,
-    is_finalized:  false,
-  })
+  // Upsert so duplicate calls (or existing periods) don't silently fail.
+  // Conflict on event_id keeps the existing period untouched.
+  const { data: periodData, error: periodError } = await service
+    .from('leaderboard_periods')
+    .upsert(
+      {
+        event_type_id: eventTypeId,
+        event_id:      data.id,
+        label,
+        period_type:   'single_night',
+        starts_at:     startsAt,
+        is_finalized:  false,
+      },
+      { onConflict: 'event_id', ignoreDuplicates: true }
+    )
+    .select('id')
+    .maybeSingle()
 
-  return NextResponse.json({ event: data })
+  if (periodError) {
+    console.error('[staff/event] Period upsert failed:', periodError.message)
+  }
+
+  return NextResponse.json({ event: data, periodId: periodData?.id ?? null })
 }
 
 // DELETE /api/staff/event?id=xxx — cancel/remove a specific event date

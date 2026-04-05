@@ -28,9 +28,10 @@ export default async function StaffScoresPage() {
     .select('id, display_name, full_name, phone, email')
     .order('full_name')
 
-  // Scheduled event dates — look back 30 days so staff can enter scores for past events
+  // Scheduled event dates — look back 30 days so staff can enter past scores;
+  // look ahead 60 days so upcoming events don't appear as orphan "generic periods"
   const weekAgo     = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
-  const twoWeeksOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
+  const twoWeeksOut = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA')
   const { data: scheduledEvents } = await service
     .from('events')
     .select('id, event_type_id, event_date, start_time, notes')

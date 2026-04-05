@@ -160,7 +160,7 @@ export default async function EventsPage() {
     fetchFbEvents(),
     service
       .from('event_types')
-      .select('id, name, slug, icon, day_of_week, typical_time, description')
+      .select('id, name, slug, icon, day_of_week, typical_time, description, participant_type')
       .eq('is_active', true)
       .order('sort_order'),
     service
@@ -195,9 +195,9 @@ export default async function EventsPage() {
   }
 
   // Join event_types in code so we're not reliant on PostgREST FK cache
-  const etById = Object.fromEntries((eventTypes ?? []).map(et => [et.id, et]))
+  const etById = Object.fromEntries((eventTypes ?? []).map((et: any) => [et.id, et]))
   const dbEvents = (scheduledEventsRaw ?? [])
-    .map(ev => {
+    .map((ev: any) => {
       const et = etById[ev.event_type_id] ?? null
       // Prefer event_id match, fall back to type+date
       const periodId = periodByEventId.get(ev.id)
@@ -205,7 +205,7 @@ export default async function EventsPage() {
         ?? null
       return { ...ev, event_type: et, period: periodId ? { id: periodId } : null }
     })
-    .filter(ev => ev.event_type !== null)
+    .filter((ev: any) => ev.event_type !== null)
 
   const featured = fbEvents[0] ?? null
   const rest     = fbEvents.slice(1)
@@ -226,7 +226,7 @@ export default async function EventsPage() {
         <section className="mb-8">
           <SectionHeader label="Upcoming" />
           <div className="space-y-2">
-            {dbEvents.map(ev => {
+            {dbEvents.map((ev: any) => {
               const et = ev.event_type as any
               if (!et) return null
               return (
@@ -248,15 +248,28 @@ export default async function EventsPage() {
                       )}
                     </div>
                   </div>
-                  {/* Sign-up button if a leaderboard period exists for this event */}
-                  {ev.period && (
+                  {/*
+                    Sign-up button logic:
+                    - Individual events (cribbage): show for any upcoming event. Route by
+                      eventId so the sign-up page can find/create the period automatically.
+                    - Team events (trivia): only show when a period already exists, because
+                      teams form within that period. Route by periodId.
+                  */}
+                  {et.participant_type === 'individual' ? (
+                    <Link
+                      href={`/events/event/${ev.id}/signup`}
+                      className="mt-3 w-full flex items-center justify-center gap-2 bg-[#96321F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all"
+                    >
+                      Sign Up for This Night
+                    </Link>
+                  ) : ev.period ? (
                     <Link
                       href={`/events/${ev.period.id}/signup`}
                       className="mt-3 w-full flex items-center justify-center gap-2 bg-[#96321F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all"
                     >
                       Sign Up for This Night
                     </Link>
-                  )}
+                  ) : null}
                 </div>
               )
             })}
@@ -296,10 +309,10 @@ export default async function EventsPage() {
         <section className="mb-8">
           <SectionHeader label="Every Week" />
           <div className="space-y-2">
-            {(eventTypes ?? []).map(et => (
+            {(eventTypes ?? []).map((et: any) => (
               <Link
                 key={et.id}
-                href={`/leaderboards/${(et as any).slug ?? '#'}`}
+                href={`/leaderboards/${et.slug ?? '#'}`}
                 className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 hover:border-[#C8BCA4] transition-colors active:scale-[0.99]"
               >
                 <div className="w-12 h-12 rounded-xl bg-[#96321F]/10 border border-[#96321F]/20 flex items-center justify-center text-2xl shrink-0">
