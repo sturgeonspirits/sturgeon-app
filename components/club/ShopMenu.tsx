@@ -42,18 +42,18 @@ export default function ShopMenu() {
 
       {/* Bottom sheet */}
       {open && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end">
           {/* Scrim */}
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setOpen(false)}
           />
 
-          {/* Sheet — max-h prevents overflow on small screens */}
+          {/* Sheet — z-[60] sits above fixed tab bar (z-50); max-h + scroll prevents cutoff */}
           <div
             className="relative bg-[#F1F1E7] rounded-t-2xl px-4 pt-4 space-y-3 overflow-y-auto"
             style={{
-              maxHeight: '80dvh',
+              maxHeight: '75dvh',
               paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
             }}
           >
