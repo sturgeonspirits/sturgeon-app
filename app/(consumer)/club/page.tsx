@@ -146,19 +146,18 @@ export default async function ClubPage() {
             {/* Shop — opens bottom sheet with multiple destinations */}
             <ShopMenu />
 
-            {/* Book a Private Event — spans both columns */}
+            {/* Book a Private Event — single column */}
             <a
               href="https://sturgeonspirits.com/private-events"
               target="_blank"
               rel="noopener noreferrer"
-              className="col-span-2 flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl px-4 py-3 hover:border-[#C8BCA4] active:scale-[0.99] transition-all"
+              className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 flex flex-col gap-2 hover:border-[#C8BCA4] active:scale-[0.98] transition-all"
             >
               <span className="text-2xl">🥂</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-[#242622]">Book a Private Event</p>
-                <p className="text-xs text-[#7E613F] mt-0.5">Reserve the space for tastings, parties & more</p>
+              <div>
+                <p className="text-sm font-semibold text-[#242622]">Book an Event</p>
+                <p className="text-xs text-[#7E613F] mt-0.5">Private tastings & parties</p>
               </div>
-              <span className="text-[#C8BCA4] text-lg">→</span>
             </a>
           </div>
         </section>
