@@ -7,13 +7,13 @@ const SHOP_LINKS = [
     href:  'https://order.toasttab.com/online/sturgeon-spirits-craft-distillery',
     icon:  '🍸',
     label: 'Order Online',
-    desc:  'Cocktails & food via Toast',
+    desc:  'Order bottles, boxes, merch, and more for pickup',
   },
   {
     href:  'https://www.sturgeonspirits.com/pre-orders',
     icon:  '🥃',
     label: 'Pre-Orders',
-    desc:  'Reserve bottles before release',
+    desc:  'Pre-order upcoming releases',
   },
   {
     href:  null,          // link TBD — rendered as coming-soon
