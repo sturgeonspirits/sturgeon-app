@@ -49,9 +49,14 @@ export default function ShopMenu() {
             onClick={() => setOpen(false)}
           />
 
-          {/* Sheet */}
-          <div className="relative bg-[#F1F1E7] rounded-t-2xl px-4 pt-4 pb-8 space-y-3"
-               style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
+          {/* Sheet — max-h prevents overflow on small screens */}
+          <div
+            className="relative bg-[#F1F1E7] rounded-t-2xl px-4 pt-4 space-y-3 overflow-y-auto"
+            style={{
+              maxHeight: '80dvh',
+              paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
             <div className="flex items-center justify-between mb-2">
               <p className="font-display text-base font-bold text-[#242622]">Shop</p>
               <button
