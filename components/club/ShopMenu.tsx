@@ -16,7 +16,7 @@ const SHOP_LINKS = [
     desc:  'Pre-order upcoming releases',
   },
   {
-    href:  null,          // link TBD — rendered as coming-soon
+    href:  'https://sturgeonspirits.myshopify.com/',
     icon:  '📦',
     label: 'Direct to Consumer',
     desc:  'Ship bottles to your door',
