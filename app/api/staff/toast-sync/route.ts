@@ -172,11 +172,15 @@ export async function POST(req: NextRequest) {
       last_trans_at:    parseToastDate(r['Last Trans. Date'] ?? ''),
       birthday,
       profile_id:       profile?.id ?? null,
-      points_imported:  false,
+      // points_imported intentionally omitted — never reset it on upsert
     })
   }
 
   // ── Batch upsert (200 at a time) ───────────────────────────────────────────
+  // NOTE: points_imported is intentionally NOT included in the upsert payload.
+  // Including it would reset the flag to false on every CSV upload, causing
+  // all accounts to re-import points on the next sync. Let the DB keep its
+  // existing value (true/false); we use delta logic below to decide what to import.
   const BATCH = 200
   for (let i = 0; i < toUpsert.length; i += BATCH) {
     const batch = toUpsert.slice(i, i + BATCH)
@@ -189,30 +193,57 @@ export async function POST(req: NextRequest) {
     counters.upserted += batch.length
   }
 
-  // ── Seed points for newly-matched accounts ─────────────────────────────────
-  const { data: pendingAccounts } = await service
+  // ── Delta-based point import ───────────────────────────────────────────────
+  // Fetch ALL matched accounts (profile_id is set, toast_points > 0)
+  const { data: matchedAccounts } = await service
     .from('toast_loyalty_accounts')
-    .select('id, toast_account_id, profile_id, toast_points, birthday, points_imported')
+    .select('id, toast_account_id, profile_id, toast_points, birthday')
     .not('profile_id', 'is', null)
-    .eq('points_imported', false)
+    .gt('toast_points', 0)
     .limit(10000)
 
-  for (const acct of pendingAccounts ?? []) {
-    const profileId = acct.profile_id
-    const appPts    = (acct.toast_points ?? 0) * 10
+  const accountIds = (matchedAccounts ?? []).map((a: any) => a.id)
 
-    // Create earn_event
-    if (appPts > 0) {
-      const { error: eeErr } = await service.from('earn_events').insert({
-        user_id:      profileId,
-        event_type:   'purchase_recorded',
-        points_delta: appPts,
-        context_type: 'toast_import',
-        context_id:   acct.id,
-        notes:        `Toast loyalty import: ${acct.toast_points} Toast pts → ${appPts} app pts`,
-      })
-      if (!eeErr) counters.pointsImported++
-      else counters.errors++
+  // Sum what has already been imported for each account from earn_events.
+  // This is the source of truth — not the points_imported boolean.
+  // Ratio is 1:1 (1 app point per 1 Toast point).
+  const { data: importedEvents } = accountIds.length
+    ? await service
+        .from('earn_events')
+        .select('context_id, points_delta')
+        .eq('context_type', 'toast_import')
+        .in('context_id', accountIds)
+    : { data: [] }
+
+  const importedByAccount: Record<string, number> = {}
+  for (const ev of importedEvents ?? []) {
+    if (ev.context_id) {
+      importedByAccount[ev.context_id] = (importedByAccount[ev.context_id] ?? 0) + (ev.points_delta ?? 0)
+    }
+  }
+
+  for (const acct of matchedAccounts ?? []) {
+    const profileId       = acct.profile_id
+    const totalToastPts   = acct.toast_points ?? 0
+    const alreadyImported = importedByAccount[acct.id] ?? 0
+    // 1 app point per 1 Toast point; only import the delta since last sync
+    const deltaAppPts     = totalToastPts - alreadyImported
+
+    if (deltaAppPts <= 0) continue  // Nothing new to import
+
+    // Create earn_event for the delta only
+    const { error: eeErr } = await service.from('earn_events').insert({
+      user_id:      profileId,
+      event_type:   'purchase_recorded',
+      points_delta: deltaAppPts,
+      context_type: 'toast_import',
+      context_id:   acct.id,
+      notes:        `Toast import: ${totalToastPts} Toast pts total (${alreadyImported} prev imported, +${deltaAppPts} new)`,
+    })
+    if (!eeErr) counters.pointsImported++
+    else {
+      console.error('[toast-sync] earn_events insert failed:', eeErr?.message)
+      counters.errors++
     }
 
     // Update pos_customer_id
@@ -223,7 +254,7 @@ export async function POST(req: NextRequest) {
 
     // Backfill birthday if profile has none
     if (acct.birthday) {
-      const profile = (profilesRaw ?? []).find(p => p.id === profileId)
+      const profile = (profilesRaw ?? []).find((p: any) => p.id === profileId)
       if (profile && !profile.birthday) {
         await service
           .from('profiles')
@@ -233,7 +264,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Mark imported
+    // Mark imported (still tracked for visibility in the DB)
     await service
       .from('toast_loyalty_accounts')
       .update({ points_imported: true })
