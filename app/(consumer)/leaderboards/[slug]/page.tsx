@@ -57,12 +57,27 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     return Array.from(seen.values())
   })()
 
-  // Display order: earliest date on the LEFT (ascending by starts_at).
-  const allPeriods = [...dedupedPeriods].sort((a, b) => {
-    const ad = a.starts_at ?? ''
-    const bd = b.starts_at ?? ''
-    return ad.localeCompare(bd)
-  })
+  // Display order: earliest EVENT date on the LEFT.
+  // IMPORTANT: sort by the date parsed from period.label (e.g. "Wednesday,
+  // April 9, 2026") — NOT starts_at, which is the period *creation* timestamp
+  // and doesn't reflect the actual event date.
+  function periodEventTime(p: (typeof dedupedPeriods)[0]): number {
+    // 1. Prefer parsing the label — this is what shortLabel() uses for display
+    if (p.label) {
+      const d = new Date(p.label)
+      if (!isNaN(d.getTime())) return d.getTime()
+    }
+    // 2. Fallback: starts_at (least reliable — may be creation time)
+    if (p.starts_at) {
+      const d = new Date(p.starts_at)
+      if (!isNaN(d.getTime())) return d.getTime()
+    }
+    return 0
+  }
+
+  const allPeriods = [...dedupedPeriods].sort(
+    (a, b) => periodEventTime(a) - periodEventTime(b)
+  )
 
   // Which period to display: URL param → most recent (last in ascending list).
   const currentPeriod = (periodParam
