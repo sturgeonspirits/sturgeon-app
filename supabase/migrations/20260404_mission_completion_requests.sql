@@ -3,6 +3,8 @@
 --
 -- Purpose: allows customers to request mission completion in-app so staff
 -- can approve from a queue without needing to look up names.
+--
+-- This migration is idempotent — safe to re-run.
 
 CREATE TABLE IF NOT EXISTS mission_completion_requests (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,6 +26,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS mission_completion_requests_pending_unique
 -- RLS
 ALTER TABLE mission_completion_requests ENABLE ROW LEVEL SECURITY;
 
+-- Drop & recreate policies so this migration is safely re-runnable
+DROP POLICY IF EXISTS "Users insert own requests" ON mission_completion_requests;
+DROP POLICY IF EXISTS "Users read own requests"   ON mission_completion_requests;
+
 -- Customers can create their own requests
 CREATE POLICY "Users insert own requests"
   ON mission_completion_requests FOR INSERT
@@ -35,3 +41,13 @@ CREATE POLICY "Users read own requests"
   USING (auth.uid() = user_id);
 
 -- Staff reads all via service client (bypasses RLS automatically)
+
+-- Grant table access to Supabase roles. Without these, even the service_role
+-- key gets "permission denied for table" because the table was created
+-- outside the default Supabase grant path.
+GRANT ALL        ON TABLE mission_completion_requests TO service_role;
+GRANT SELECT, INSERT ON TABLE mission_completion_requests TO authenticated;
+GRANT USAGE, SELECT  ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+
+-- Force PostgREST to reload its schema cache so the REST API picks up the table
+NOTIFY pgrst, 'reload schema';
