@@ -33,23 +33,32 @@ export async function POST(req: NextRequest) {
   const fromStr = fromDate.toISOString().split('T')[0]
   const toStr   = toDate.toISOString().split('T')[0]
 
-  const { data: upcomingEvents } = await service
-    .from('events')
-    .select('id, event_type_id, event_date, start_time, event_types(name, slug, icon)')
-    .gte('event_date', fromStr)
-    .lte('event_date', toStr)
-    .order('event_date')
+  // Fetch events and event_types separately to avoid PostgREST FK cache issues
+  const [{ data: upcomingEvents }, { data: allEventTypes }] = await Promise.all([
+    service
+      .from('events')
+      .select('id, event_type_id, event_date, start_time')
+      .gte('event_date', fromStr)
+      .lte('event_date', toStr)
+      .order('event_date'),
+    service
+      .from('event_types')
+      .select('id, name, slug, icon')
+      .eq('is_active', true),
+  ])
 
   if (!upcomingEvents?.length) {
     return NextResponse.json({ ok: true, message: 'No upcoming events', sent: 0 })
   }
+
+  const etById = Object.fromEntries((allEventTypes ?? []).map((et: any) => [et.id, et]))
 
   let totalSent    = 0
   let totalFailed  = 0
   const log: any[] = []
 
   for (const event of upcomingEvents) {
-    const et = (event as any).event_types
+    const et = etById[event.event_type_id]
     if (!et) continue
 
     // Find the most recent leaderboard_period for this event type (excluding today's)

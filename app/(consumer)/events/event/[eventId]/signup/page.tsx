@@ -23,18 +23,21 @@ export default async function EventSignupPage({ params }: Props) {
 
   const service = createServiceClient()
 
-  // 1. Fetch the scheduled event + its event type
+  // 1. Fetch the scheduled event + its event type (separate queries to avoid
+  //    relying on PostgREST FK schema cache, which can go stale after DDL changes)
   const { data: event } = await service
     .from('events')
-    .select('id, event_date, start_time, notes, is_cancelled, event_type_id, event_types(name, icon, slug, participant_type)')
+    .select('id, event_date, start_time, notes, is_cancelled, event_type_id')
     .eq('id', eventId)
     .maybeSingle()
 
   if (!event || event.is_cancelled) redirect('/events')
 
-  const et = (event as any).event_types as {
-    name: string; icon: string; slug: string; participant_type: string
-  } | null
+  const { data: et } = await service
+    .from('event_types')
+    .select('name, icon, slug, participant_type')
+    .eq('id', event.event_type_id)
+    .maybeSingle()
 
   // This route is only for individual events. Team events use period-based routing.
   if (!et || et.participant_type !== 'individual') redirect('/events')

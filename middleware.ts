@@ -50,9 +50,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // ── Unauthenticated: redirect to login ───────────────────
+  // ── Unauthenticated: redirect to login, preserving the original URL ──
   if (!user) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    const loginUrl = new URL('/auth/login', request.url)
+    // Preserve the full path + query so we can bounce back after login
+    const returnTo = request.nextUrl.pathname + request.nextUrl.search
+    if (returnTo && returnTo !== '/') {
+      loginUrl.searchParams.set('redirect', returnTo)
+    }
+    return NextResponse.redirect(loginUrl)
   }
 
   return supabaseResponse

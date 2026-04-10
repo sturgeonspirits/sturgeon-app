@@ -10,18 +10,23 @@ export async function GET(req: NextRequest) {
 
   const service = createServiceClient()
 
-  // Find period by join_token, including the linked scheduled event for its date
+  // Find period by join_token; then fetch event_type and event separately to
+  // avoid relying on PostgREST FK schema cache (which can go stale after DDL)
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, label, event_type_id, event_id, is_finalized, event_types(name, slug, icon), events(event_date, start_time)')
+    .select('id, label, event_type_id, event_id, is_finalized')
     .eq('join_token', token)
     .maybeSingle()
 
   if (!period) return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
   if (period.is_finalized) return NextResponse.json({ error: 'This event has ended' }, { status: 410 })
 
-  const et = (period as any).event_types
-  const ev = (period as any).events
+  const [{ data: et }, { data: ev }] = await Promise.all([
+    service.from('event_types').select('name, slug, icon').eq('id', period.event_type_id).maybeSingle(),
+    (period as any).event_id
+      ? service.from('events').select('event_date, start_time').eq('id', (period as any).event_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
 
   // ── Load ALL permanent teams for this event type (persists across weeks) ──
   const { data: permanentTeams } = await service

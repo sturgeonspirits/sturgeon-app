@@ -26,6 +26,13 @@ function AuthCallbackInner() {
           return
         }
         const role = profile.role ?? 'customer'
+        // Check for a redirect URL stored during login (e.g. /checkin?t=TOKEN)
+        const savedRedirect = sessionStorage.getItem('auth_redirect')
+        sessionStorage.removeItem('auth_redirect')
+        if (savedRedirect && !['staff', 'admin'].includes(role)) {
+          router.replace(savedRedirect)
+          return
+        }
         router.replace(['staff', 'admin'].includes(role) ? '/staff' : '/club')
       }
 

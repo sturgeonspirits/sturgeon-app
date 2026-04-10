@@ -19,14 +19,19 @@ export async function POST(req: NextRequest) {
   // Validate period
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, is_finalized, event_type_id, event_types(participant_type)')
+    .select('id, is_finalized, event_type_id')
     .eq('join_token', token)
     .maybeSingle()
 
   if (!period) return NextResponse.json({ error: 'Invalid QR code' }, { status: 404 })
   if (period.is_finalized) return NextResponse.json({ error: 'This event has ended' }, { status: 410 })
 
-  const et = (period as any).event_types
+  // Separate query for event type — avoids reliance on PostgREST FK cache
+  const { data: et } = await service
+    .from('event_types')
+    .select('participant_type')
+    .eq('id', period.event_type_id)
+    .maybeSingle()
   if (et?.participant_type !== 'team') {
     return NextResponse.json({ error: 'This event does not use teams' }, { status: 400 })
   }

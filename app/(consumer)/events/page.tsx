@@ -172,9 +172,10 @@ export default async function EventsPage() {
       .limit(20),
     // Fetch upcoming open leaderboard periods — match by event_id (most reliable)
     // Also fall back to event_type_id+date for older periods without event_id
+    // Note: no embedded join to event_types — we already fetched event_types above
     service
       .from('leaderboard_periods')
-      .select('id, event_id, event_type_id, starts_at, event_types(participant_type)')
+      .select('id, event_id, event_type_id, starts_at')
       .eq('is_finalized', false)
       .eq('period_type', 'single_night')
       .order('starts_at')

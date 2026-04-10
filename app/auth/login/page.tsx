@@ -23,6 +23,11 @@ function LoginPageInner() {
     if (searchParams.get('error') === 'callback_failed') {
       setNotice('Your link has expired. Enter your email below to get a fresh code.')
     }
+    // Persist the redirect destination so the verify page can use it after OTP
+    const redirect = searchParams.get('redirect')
+    if (redirect) {
+      sessionStorage.setItem('auth_redirect', redirect)
+    }
   }, [searchParams])
 
   useEffect(() => {

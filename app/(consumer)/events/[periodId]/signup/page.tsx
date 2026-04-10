@@ -14,16 +14,21 @@ export default async function EventSignupPage({ params }: Props) {
 
   const service = createServiceClient()
 
-  // Fetch period + event type
+  // Fetch period + event type (separate queries to avoid relying on PostgREST
+  // FK schema cache, which can go stale after DDL changes like enabling RLS)
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, label, starts_at, is_finalized, event_type_id, event_id, event_types(name, icon, slug, participant_type)')
+    .select('id, label, starts_at, is_finalized, event_type_id, event_id')
     .eq('id', periodId)
     .maybeSingle()
 
   if (!period) redirect('/events')
 
-  const et = (period as any).event_types
+  const { data: et } = await service
+    .from('event_types')
+    .select('name, icon, slug, participant_type')
+    .eq('id', period.event_type_id)
+    .maybeSingle()
   const participantType: 'team' | 'individual' = et?.participant_type ?? 'individual'
   const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 

@@ -18,15 +18,22 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient()
 
-    // Fetch period + event_type config
+    // Fetch period + event_type config (separate queries to avoid PostgREST FK cache issues)
     const { data: period } = await supabase
       .from('leaderboard_periods')
-      .select('*, event_types(*)')
+      .select('*')
       .eq('id', periodId)
       .single()
 
     if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 })
-    const eventType = (period as any).event_types
+
+    const { data: eventType } = await supabase
+      .from('event_types')
+      .select('*')
+      .eq('id', period.event_type_id)
+      .single()
+
+    if (!eventType) return NextResponse.json({ error: 'Event type not found' }, { status: 404 })
     const placementPoints = eventType.placement_points as Record<string, number>
 
     const results: any[] = []
