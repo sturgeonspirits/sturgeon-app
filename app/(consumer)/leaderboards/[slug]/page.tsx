@@ -25,7 +25,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   if (!eventType) notFound()
 
   // Only single_night periods — weekly/monthly/season periods are not used.
-  // Sort newest first; for ties on starts_at use created_at ASC (original beats duplicate).
+  // Fetch newest 20 first, then re-sort ascending (earliest-leftmost) for display.
   const { data: periods } = await service
     .from('leaderboard_periods')
     .select('*')
@@ -39,7 +39,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
   // Deduplicate same-date periods (accidental duplicates).
   // Priority: finalized > has join_token (staff set it up properly) > first created.
-  const allPeriods: typeof rawPeriods = (() => {
+  const dedupedPeriods: typeof rawPeriods = (() => {
     const seen = new Map<string, (typeof rawPeriods)[0]>()
     for (const p of rawPeriods) {
       const dateKey = p.starts_at
@@ -57,10 +57,17 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     return Array.from(seen.values())
   })()
 
-  // Which period to display: URL param → most recent
+  // Display order: earliest date on the LEFT (ascending by starts_at).
+  const allPeriods = [...dedupedPeriods].sort((a, b) => {
+    const ad = a.starts_at ?? ''
+    const bd = b.starts_at ?? ''
+    return ad.localeCompare(bd)
+  })
+
+  // Which period to display: URL param → most recent (last in ascending list).
   const currentPeriod = (periodParam
     ? allPeriods.find((p: any) => p.id === periodParam)
-    : null) ?? allPeriods[0] ?? null
+    : null) ?? allPeriods[allPeriods.length - 1] ?? null
 
   // Fetch scores for the selected period
   let entries: any[] = []
@@ -109,20 +116,25 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
           { ascending: false }
         )
 
-      if (entryData && entryData.length > 0) {
-        const userIds = entryData.map((e: any) => e.user_id)
+      // Hide pure sign-ups (no scores entered yet): wins=0 AND losses=0 AND score=0
+      const scoredRows = (entryData ?? []).filter((e: any) =>
+        (e.wins ?? 0) > 0 || (e.losses ?? 0) > 0 || (e.score ?? 0) !== 0
+      )
+
+      if (scoredRows.length > 0) {
+        const userIds = scoredRows.map((e: any) => e.user_id)
         const { data: profileData } = await service
           .from('profiles')
           .select('id, display_name, avatar_url, tier')
           .in('id', userIds)
 
         const profileMap = Object.fromEntries((profileData ?? []).map((p: any) => [p.id, p]))
-        entries = entryData.map((e: any) => ({
+        entries = scoredRows.map((e: any) => ({
           ...e,
           profiles: profileMap[e.user_id] ?? null,
         }))
       } else {
-        entries = entryData ?? []
+        entries = []
       }
     }
   }
@@ -183,24 +195,96 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     }
   }
 
-  // All-time cache — two-step fetch, sort by the right metric for this event type
-  const allTimeSortCol = eventType.scoring_method === 'wins_losses' ? 'total_wins' : 'total_score'
-  const { data: allTimeRaw } = await service
-    .from('leaderboard_cache')
-    .select('*')
-    .eq('event_type_id', eventType.id)
-    .order(allTimeSortCol, { ascending: false })
-    .limit(20)
-
+  // All-time standings — computed on the fly from every leaderboard_events row
+  // tied to any period for this event type. Aggregates wins, losses, spread /
+  // total score, and counts distinct periods actually participated in (scored).
   let allTime: any[] = []
-  if (allTimeRaw && allTimeRaw.length > 0) {
-    const atUserIds = allTimeRaw.map((r: any) => r.user_id)
-    const { data: atProfiles } = await service
-      .from('profiles')
-      .select('id, display_name, avatar_url')
-      .in('id', atUserIds)
-    const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
-    allTime = allTimeRaw.map((r: any) => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
+  {
+    // 1. every period for this event type
+    const { data: allPeriodRows } = await service
+      .from('leaderboard_periods')
+      .select('id')
+      .eq('event_type_id', eventType.id)
+
+    const allPeriodIds = (allPeriodRows ?? []).map((p: any) => p.id)
+
+    if (allPeriodIds.length > 0) {
+      // 2. every scored row across all those periods
+      const { data: allEvents } = await service
+        .from('leaderboard_events')
+        .select('user_id, period_id, score, wins, losses')
+        .in('period_id', allPeriodIds)
+
+      type Agg = {
+        user_id: string
+        total_wins: number
+        total_losses: number
+        total_score: number   // spread for wins_losses, points for points-based
+        events_attended: number
+        periods: Set<string>
+      }
+      const byUser = new Map<string, Agg>()
+
+      for (const e of (allEvents ?? [])) {
+        const wins   = (e as any).wins   ?? 0
+        const losses = (e as any).losses ?? 0
+        const score  = (e as any).score  ?? 0
+        // Skip pure sign-ups (no scores entered) — don't count as participation
+        if (wins === 0 && losses === 0 && score === 0) continue
+
+        const uid = (e as any).user_id as string
+        let agg = byUser.get(uid)
+        if (!agg) {
+          agg = {
+            user_id: uid,
+            total_wins: 0,
+            total_losses: 0,
+            total_score: 0,
+            events_attended: 0,
+            periods: new Set(),
+          }
+          byUser.set(uid, agg)
+        }
+        agg.total_wins   += wins
+        agg.total_losses += losses
+        agg.total_score  += score
+        agg.periods.add((e as any).period_id)
+      }
+
+      const rows = Array.from(byUser.values()).map(a => ({
+        user_id:         a.user_id,
+        event_type_id:   eventType.id,
+        total_wins:      a.total_wins,
+        total_losses:    a.total_losses,
+        total_score:     a.total_score,
+        events_attended: a.periods.size,
+      }))
+
+      const sortCol: 'total_wins' | 'total_score' =
+        eventType.scoring_method === 'wins_losses' ? 'total_wins' : 'total_score'
+
+      rows.sort((a, b) => {
+        const primary = (b[sortCol] as number) - (a[sortCol] as number)
+        if (primary !== 0) return primary
+        // Tie-breakers: more events attended, then higher spread/score
+        if (b.events_attended !== a.events_attended) {
+          return b.events_attended - a.events_attended
+        }
+        return b.total_score - a.total_score
+      })
+
+      const topRows = rows.slice(0, 20)
+
+      if (topRows.length > 0) {
+        const atUserIds = topRows.map(r => r.user_id)
+        const { data: atProfiles } = await service
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', atUserIds)
+        const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
+        allTime = topRows.map(r => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
+      }
+    }
   }
 
   return (

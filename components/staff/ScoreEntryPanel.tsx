@@ -329,7 +329,13 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
           </div>
 
           {/* Sign-ups — pass eventId so panel catches registrations on any linked period */}
-          <SignupsPanel periodId={selectedPeriod.id} eventId={selectedEventId ?? undefined} />
+          <SignupsPanel
+            periodId={selectedPeriod.id}
+            eventId={selectedEventId ?? undefined}
+            scoringMethod={selectedET.scoring_method}
+            participantType={selectedET.participant_type}
+            staffId={staffId}
+          />
 
           {/* QR join code — trivia team events only */}
           {selectedET.participant_type === 'team' && (selectedPeriod as any).join_token && (
@@ -355,10 +361,28 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
 
 interface SignupMember { userId: string; name: string }
 interface SignupTeam   { teamId: string; name: string; members: SignupMember[] }
+interface SignupIndividual {
+  userId: string
+  name: string
+  wins: number
+  losses: number
+  spread: number
+  score: number
+  hasScores: boolean
+  enteredAt: string | null
+}
 
-function SignupsPanel({ periodId, eventId }: { periodId: string; eventId?: string }) {
+function SignupsPanel({
+  periodId, eventId, scoringMethod, participantType, staffId,
+}: {
+  periodId: string
+  eventId?: string
+  scoringMethod: string
+  participantType: string
+  staffId: string
+}) {
   const [teams,       setTeams]       = useState<SignupTeam[]>([])
-  const [individuals, setIndividuals] = useState<SignupMember[]>([])
+  const [individuals, setIndividuals] = useState<SignupIndividual[]>([])
   const [loading,     setLoading]     = useState(true)
   const [removing,    setRemoving]    = useState<string | null>(null)
   const [error,       setError]       = useState('')
@@ -393,12 +417,19 @@ function SignupsPanel({ periodId, eventId }: { periodId: string; eventId?: strin
 
   const totalCount = teams.reduce((n, t) => n + t.members.length, 0) + individuals.length
   const hasSignups = teams.length > 0 || individuals.length > 0
+  const scoredCount = individuals.filter(i => i.hasScores).length
+  const isCribbage = scoringMethod === 'wins_losses' && participantType === 'individual'
 
   return (
     <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold text-[#7E613F] uppercase tracking-widest">
           Sign-ups {totalCount > 0 ? `· ${totalCount}` : ''}
+          {isCribbage && individuals.length > 0 && (
+            <span className="ml-2 text-[#87A67F] normal-case tracking-normal">
+              ({scoredCount}/{individuals.length} scored)
+            </span>
+          )}
         </p>
         <button onClick={load} className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors">↻ Refresh</button>
       </div>
@@ -433,21 +464,171 @@ function SignupsPanel({ periodId, eventId }: { periodId: string; eventId?: strin
         <div className="space-y-1">
           {teams.length > 0 && <p className="text-xs font-semibold text-[#242622]">Individual</p>}
           {individuals.map(m => (
-            <div key={m.userId} className="flex items-center justify-between bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
-              <span className="text-sm text-[#242622]">{m.name}</span>
-              <button
-                onClick={() => handleRemove(m.userId)}
-                disabled={removing === m.userId}
-                className="text-xs text-[#96321F] hover:text-[#ae3a24] font-medium disabled:opacity-40 transition-colors"
-              >
-                {removing === m.userId ? '…' : 'Remove'}
-              </button>
-            </div>
+            isCribbage ? (
+              <CribbageInlineRow
+                key={m.userId}
+                row={m}
+                periodId={periodId}
+                staffId={staffId}
+                onSaved={load}
+                onRemove={() => handleRemove(m.userId)}
+                removing={removing === m.userId}
+              />
+            ) : (
+              <div key={m.userId} className="flex items-center justify-between bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
+                <span className="text-sm text-[#242622]">{m.name}</span>
+                <button
+                  onClick={() => handleRemove(m.userId)}
+                  disabled={removing === m.userId}
+                  className="text-xs text-[#96321F] hover:text-[#ae3a24] font-medium disabled:opacity-40 transition-colors"
+                >
+                  {removing === m.userId ? '…' : 'Remove'}
+                </button>
+              </div>
+            )
           ))}
         </div>
       )}
 
       {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}
+
+// Inline score entry row for cribbage sign-ups.
+// Staff can enter wins/spread directly, see current score state, and edit.
+// Uses replaceMode so re-submits don't double points.
+function CribbageInlineRow({
+  row, periodId, staffId, onSaved, onRemove, removing,
+}: {
+  row: SignupIndividual
+  periodId: string
+  staffId: string
+  onSaved: () => void
+  onRemove: () => void
+  removing: boolean
+}) {
+  const [editing, setEditing] = useState(!row.hasScores)
+  const [wins,    setWins]    = useState<string>(row.hasScores ? String(row.wins) : '')
+  const [spread,  setSpread]  = useState<string>(row.hasScores ? String(row.spread) : '')
+  const [saving,  setSaving]  = useState(false)
+  const [err,     setErr]     = useState('')
+
+  async function save() {
+    if (wins === '') return
+    setSaving(true)
+    setErr('')
+    const winsN   = Math.max(0, Math.min(3, parseInt(wins) || 0))
+    const spreadN = parseInt(spread) || 0
+    const res = await fetch('/api/staff/leaderboard-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        periodId,
+        scoringMethod: 'wins_losses',
+        staffId,
+        replaceMode: true,
+        entries: [{ userId: row.userId, wins: winsN, losses: 3 - winsN, spread: spreadN }],
+      }),
+    })
+    setSaving(false)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setErr(j.error ?? 'Save failed')
+      return
+    }
+    setEditing(false)
+    onSaved()
+  }
+
+  // Read-only display for already-scored rows
+  if (!editing) {
+    const spreadCol = row.spread >= 0 ? 'text-[#87A67F]' : 'text-red-500'
+    return (
+      <div className="bg-white border border-[#87A67F]/30 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs">✓</span>
+          <span className="text-sm text-[#242622] flex-1 truncate">{row.name}</span>
+          <span className="text-sm font-bold text-[#242622]">{row.wins}W – {row.losses}L</span>
+          <span className={`text-xs font-mono ${spreadCol}`}>
+            {row.spread >= 0 ? '+' : ''}{row.spread}
+          </span>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-xs text-[#96321F] hover:underline ml-1"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Edit / first-entry form
+  return (
+    <div className="bg-white border border-[#E8E4DB] rounded-lg px-3 py-2 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-[#242622] flex-1 truncate">{row.name}</span>
+        <button
+          onClick={onRemove}
+          disabled={removing || saving}
+          className="text-xs text-[#9E8F7E] hover:text-red-500 font-medium disabled:opacity-40 transition-colors"
+        >
+          {removing ? '…' : 'Remove'}
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        {/* Wins 0-3 buttons */}
+        <div className="flex gap-1 flex-1">
+          {[0, 1, 2, 3].map(n => (
+            <button
+              key={n}
+              onClick={() => setWins(String(n))}
+              disabled={saving}
+              className={`flex-1 min-h-[38px] rounded-lg text-sm font-bold border transition-all active:scale-95 ${
+                wins === String(n)
+                  ? 'bg-[#96321F] text-white border-[#96321F]'
+                  : 'bg-white text-[#7E613F] border-[#D4CFC3] hover:border-[#96321F]/50'
+              }`}
+            >
+              {n}W
+            </button>
+          ))}
+        </div>
+        {/* Spread */}
+        <input
+          type="number"
+          value={spread}
+          onChange={e => setSpread(e.target.value)}
+          placeholder="±0"
+          disabled={saving}
+          className="w-20 border border-[#C8BCA4] rounded-lg px-2 min-h-[38px] text-[#242622] text-sm focus:outline-none focus:border-[#96321F] text-center"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={save}
+          disabled={saving || wins === ''}
+          className="flex-1 bg-[#96321F] text-white text-xs font-semibold min-h-[36px] rounded-lg disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
+        >
+          {saving ? 'Saving…' : (row.hasScores ? 'Update' : 'Save scores')}
+        </button>
+        {row.hasScores && (
+          <button
+            onClick={() => {
+              setEditing(false)
+              setWins(String(row.wins))
+              setSpread(String(row.spread))
+              setErr('')
+            }}
+            disabled={saving}
+            className="text-xs text-[#9E8F7E] hover:text-[#7E613F] px-3 min-h-[36px]"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+      {err && <p className="text-xs text-red-500">{err}</p>}
     </div>
   )
 }

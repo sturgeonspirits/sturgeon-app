@@ -14,7 +14,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { periodId, scoringMethod, staffId, entries = [], teams = [] } = body
+    // replaceMode: when true, wins/losses/spread REPLACE the existing row
+    // (used by the inline sign-up score block so staff can click Edit → Save
+    // without doubling). Default false = accumulate across matches.
+    const { periodId, scoringMethod, staffId, entries = [], teams = [], replaceMode = false } = body
 
     const supabase = createServiceClient()
 
@@ -52,12 +55,12 @@ export async function POST(req: NextRequest) {
           .eq('user_id', userId)
           .maybeSingle()
 
-        const newWins   = (existing?.wins   ?? 0) + wins
-        const newLosses = (existing?.losses ?? 0) + losses
-        // For wins_losses: score field stores cumulative point spread
+        const newWins   = replaceMode ? wins   : (existing?.wins   ?? 0) + wins
+        const newLosses = replaceMode ? losses : (existing?.losses ?? 0) + losses
+        // For wins_losses: score field stores cumulative point spread (unless replaceMode)
         // For points: score field stores the raw score (replace, not add)
         const newScore  = scoringMethod === 'wins_losses'
-          ? (existing?.score ?? 0) + spread
+          ? (replaceMode ? spread : (existing?.score ?? 0) + spread)
           : score
 
         // Upsert leaderboard_events row
@@ -76,8 +79,16 @@ export async function POST(req: NextRequest) {
         if (upsertErr) throw new Error(`Score save failed for user ${userId}: ${upsertErr.message}`)
 
         // Award points
+        // In replaceMode (inline edits), only award points when scores are
+        // being entered for the first time (existing row was all zeros).
+        // This prevents double-awarding when staff edits an existing entry.
+        const existingHadScores = (existing?.wins ?? 0) > 0
+                                || (existing?.losses ?? 0) > 0
+                                || (existing?.score ?? 0) !== 0
         let pts = 0
-        if (scoringMethod === 'wins_losses') {
+        if (replaceMode && existingHadScores) {
+          pts = 0   // already awarded on the original submission
+        } else if (scoringMethod === 'wins_losses') {
           pts = wins > 0
             ? (placementPoints['win'] ?? 10)   // cribbage win = 10 pts
             : (placementPoints['loss'] ?? 5)   // cribbage loss = 5 pts (still participated)

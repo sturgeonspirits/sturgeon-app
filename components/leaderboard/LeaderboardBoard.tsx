@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { EventType, LeaderboardPeriod } from '@/lib/supabase/types'
 import { ordinal, privateName } from '@/lib/utils'
@@ -27,6 +27,21 @@ export default function LeaderboardBoard({
 }: Props) {
   const [view, setView] = useState<View>('current')
   const router = useRouter()
+  const chipsRef = useRef<HTMLDivElement>(null)
+  const selectedChipRef = useRef<HTMLButtonElement>(null)
+
+  // Earliest date is leftmost, most-recent is rightmost and selected by default.
+  // Scroll the selected chip into view on mount so users see where they are.
+  useEffect(() => {
+    if (view !== 'current') return
+    if (selectedChipRef.current && chipsRef.current) {
+      selectedChipRef.current.scrollIntoView({
+        behavior: 'auto',
+        block:    'nearest',
+        inline:   'end',
+      })
+    }
+  }, [view, currentPeriod?.id])
 
   function selectPeriod(periodId: string) {
     router.push(`/leaderboards/${slug}?period=${periodId}`)
@@ -77,14 +92,16 @@ export default function LeaderboardBoard({
         </button>
       </div>
 
-      {/* Date picker — shown in 'current' view when multiple periods exist */}
+      {/* Date picker — shown in 'current' view when multiple periods exist.
+          Periods arrive sorted earliest→latest, so earliest date is leftmost. */}
       {view === 'current' && periods.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+        <div ref={chipsRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
           {periods.map(p => {
             const isSelected = p.id === currentPeriod?.id
             return (
               <button
                 key={p.id}
+                ref={isSelected ? selectedChipRef : undefined}
                 onClick={() => selectPeriod(p.id)}
                 className={cn(
                   'shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap',
@@ -351,25 +368,39 @@ function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventTy
   return (
     <div className="space-y-2">
       {rows.map((row, i) => {
-        const isMe  = row.user_id === currentUserId
-        const medal = ['🥇', '🥈', '🥉'][i]
+        const isMe        = row.user_id === currentUserId
+        const medal       = ['🥇', '🥈', '🥉'][i]
+        const totalWins   = row.total_wins ?? 0
+        const totalLosses = row.total_losses ?? 0
+        const totalScore  = row.total_score ?? 0
+        const attended    = row.events_attended ?? 0
+        const spreadCol   = totalScore >= 0 ? 'text-[#87A67F]' : 'text-red-500'
         return (
           <div key={`${row.event_type_id}-${row.user_id}`} className={cn(
             'bg-[#FFFFFF] border rounded-xl px-4 py-3 flex items-center gap-3',
             isMe ? 'border-[#96321F]/40' : 'border-[#D4CFC3]'
           )}>
             <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm font-mono">{ordinal(i + 1)}</span>}</span>
-            <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
-              {privateName(row.profiles?.display_name)}
-              {isMe && <span className="ml-2 text-xs opacity-60">you</span>}
-            </p>
-            <div className="text-right">
+            <div className="flex-1 min-w-0">
+              <p className={cn('font-semibold text-sm truncate', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
+                {privateName(row.profiles?.display_name)}
+                {isMe && <span className="ml-2 text-xs opacity-60">you</span>}
+              </p>
+              <p className="text-xs text-[#7E613F]">
+                {attended} {attended === 1 ? 'night' : 'nights'} played
+              </p>
+            </div>
+            <div className="text-right shrink-0">
               {isWinsLosses ? (
-                <p className="text-[#242622] font-bold text-sm">{row.total_wins}W</p>
+                <>
+                  <p className="text-[#242622] font-bold text-sm">{totalWins}W – {totalLosses}L</p>
+                  <p className={cn('text-xs font-mono mt-0.5', spreadCol)}>
+                    {totalScore >= 0 ? '+' : ''}{totalScore} spread
+                  </p>
+                </>
               ) : (
-                <p className="text-[#242622] font-bold text-sm">{(row.total_score ?? 0).toLocaleString()} pts</p>
+                <p className="text-[#242622] font-bold text-sm">{totalScore.toLocaleString()} pts</p>
               )}
-              <p className="text-xs text-[#7E613F]">{row.events_attended} events</p>
             </div>
           </div>
         )
