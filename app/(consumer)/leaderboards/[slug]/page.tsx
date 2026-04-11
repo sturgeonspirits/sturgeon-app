@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { unstable_cache } from 'next/cache'
 import LeaderboardBoard from '@/components/leaderboard/LeaderboardBoard'
 
 interface Props {
@@ -79,10 +80,30 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     (a, b) => periodEventTime(a) - periodEventTime(b)
   )
 
-  // Which period to display: URL param → most recent (last in ascending list).
-  const currentPeriod = (periodParam
-    ? allPeriods.find((p: any) => p.id === periodParam)
-    : null) ?? allPeriods[allPeriods.length - 1] ?? null
+  // Default-period selection: prefer the most-recent PAST-or-TODAY event.
+  // Future scheduled events should not auto-open as the starting screen —
+  // e.g. cribbage should stay on Apr 9 until Apr 16 actually happens.
+  // Compares event-date in the America/Chicago calendar day so an event
+  // happening "today" still counts even partway through the day.
+  const todayMidnightChicago = (() => {
+    const d = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }) // YYYY-MM-DD
+    return new Date(`${d}T23:59:59`).getTime()
+  })()
+
+  const pastOrTodayPeriods = allPeriods.filter(
+    (p: any) => periodEventTime(p) <= todayMidnightChicago
+  )
+
+  // Which period to display:
+  //   1. URL param, if it matches something in the full list
+  //   2. Most recent PAST-or-TODAY period (last in the filtered ascending list)
+  //   3. Fallback to the earliest future period if nothing is in the past yet
+  //   4. Null if no periods at all
+  const currentPeriod =
+    (periodParam ? allPeriods.find((p: any) => p.id === periodParam) : null) ??
+    pastOrTodayPeriods[pastOrTodayPeriods.length - 1] ??
+    allPeriods[0] ??
+    null
 
   // Fetch scores for the selected period
   let entries: any[] = []
@@ -213,19 +234,25 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   // All-time standings — computed on the fly from every leaderboard_events row
   // tied to any period for this event type. Aggregates wins, losses, spread /
   // total score, and counts distinct periods actually participated in (scored).
-  let allTime: any[] = []
-  {
-    // 1. every period for this event type
-    const { data: allPeriodRows } = await service
-      .from('leaderboard_periods')
-      .select('id')
-      .eq('event_type_id', eventType.id)
+  //
+  // Wrapped in unstable_cache with a 60s revalidate + per-event-type tag so
+  // repeat visits (and every user hitting the same page) reuse the result.
+  // The tag `leaderboard-${eventType.id}` is busted by the staff score-entry
+  // API via revalidateTag() the moment new scores are saved, so the cache
+  // is effectively "stale within 60s, fresh on any score update".
+  const getAllTime = unstable_cache(
+    async (eventTypeId: string, scoringMethod: string) => {
+      const svc = createServiceClient()
 
-    const allPeriodIds = (allPeriodRows ?? []).map((p: any) => p.id)
+      const { data: allPeriodRows } = await svc
+        .from('leaderboard_periods')
+        .select('id')
+        .eq('event_type_id', eventTypeId)
 
-    if (allPeriodIds.length > 0) {
-      // 2. every scored row across all those periods
-      const { data: allEvents } = await service
+      const allPeriodIds = (allPeriodRows ?? []).map((p: any) => p.id)
+      if (allPeriodIds.length === 0) return []
+
+      const { data: allEvents } = await svc
         .from('leaderboard_events')
         .select('user_id, period_id, score, wins, losses')
         .in('period_id', allPeriodIds)
@@ -234,7 +261,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
         user_id: string
         total_wins: number
         total_losses: number
-        total_score: number   // spread for wins_losses, points for points-based
+        total_score: number
         events_attended: number
         periods: Set<string>
       }
@@ -244,7 +271,6 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
         const wins   = (e as any).wins   ?? 0
         const losses = (e as any).losses ?? 0
         const score  = (e as any).score  ?? 0
-        // Skip pure sign-ups (no scores entered) — don't count as participation
         if (wins === 0 && losses === 0 && score === 0) continue
 
         const uid = (e as any).user_id as string
@@ -268,7 +294,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
       const rows = Array.from(byUser.values()).map(a => ({
         user_id:         a.user_id,
-        event_type_id:   eventType.id,
+        event_type_id:   eventTypeId,
         total_wins:      a.total_wins,
         total_losses:    a.total_losses,
         total_score:     a.total_score,
@@ -276,12 +302,11 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
       }))
 
       const sortCol: 'total_wins' | 'total_score' =
-        eventType.scoring_method === 'wins_losses' ? 'total_wins' : 'total_score'
+        scoringMethod === 'wins_losses' ? 'total_wins' : 'total_score'
 
       rows.sort((a, b) => {
         const primary = (b[sortCol] as number) - (a[sortCol] as number)
         if (primary !== 0) return primary
-        // Tie-breakers: more events attended, then higher spread/score
         if (b.events_attended !== a.events_attended) {
           return b.events_attended - a.events_attended
         }
@@ -289,18 +314,21 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
       })
 
       const topRows = rows.slice(0, 20)
+      if (topRows.length === 0) return []
 
-      if (topRows.length > 0) {
-        const atUserIds = topRows.map(r => r.user_id)
-        const { data: atProfiles } = await service
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .in('id', atUserIds)
-        const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
-        allTime = topRows.map(r => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
-      }
-    }
-  }
+      const atUserIds = topRows.map(r => r.user_id)
+      const { data: atProfiles } = await svc
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', atUserIds)
+      const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
+      return topRows.map(r => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
+    },
+    ['leaderboard-alltime'],
+    { revalidate: 60, tags: [`leaderboard-${eventType.id}`] }
+  )
+
+  const allTime = await getAllTime(eventType.id, eventType.scoring_method)
 
   return (
     <div className="p-4 max-w-lg mx-auto space-y-4">

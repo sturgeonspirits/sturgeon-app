@@ -4,6 +4,7 @@
  * After saving, runs the reward check pass automatically.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEarnEvent, completeMission } from '@/lib/earn-events'
 import { requireStaff } from '@/lib/staff-auth'
@@ -205,6 +206,14 @@ export async function POST(req: NextRequest) {
 
     // ── Reward check pass ────────────────────────────────
     await runRewardCheckPass({ periodId, eventType, entries, teams, supabase })
+
+    // Bust the consumer standings cache so the newly-entered scores show up
+    // immediately on the next page view instead of after the 60s revalidate.
+    try {
+      revalidateTag(`leaderboard-${period.event_type_id}`)
+    } catch (e) {
+      console.warn('revalidateTag failed:', (e as Error).message)
+    }
 
     return NextResponse.json({ success: true, results })
   } catch (err: any) {
