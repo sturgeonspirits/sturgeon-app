@@ -66,6 +66,7 @@ export default async function StaffDashboard() {
   const qrImageUrl   = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkinUrl)}&format=png`
 
   const cards = [
+    { href: '/staff/dashboard',    icon: '📊', label: 'Dashboard',       desc: 'Members, points, top lists' },
     { href: '/staff/scores',       icon: '🥃', label: 'Enter Scores',   desc: 'Cribbage & Trivia'     },
     { href: '/staff/customers',    icon: '👤', label: 'Customers',       desc: 'Add & search members'  },
     { href: '/staff/redemptions',  icon: '🎟️', label: 'Redemptions',     desc: 'Approve member requests', badge: pendingCount ?? 0 },
