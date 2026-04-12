@@ -12,27 +12,9 @@ export default async function CheckInPage({
 }) {
   const { t: token } = await searchParams
 
-  // No token → show how-to instructions
+  // No token → redirect straight to the in-app scanner
   if (!token) {
-    return (
-      <Shell>
-        <div className="w-full max-w-sm text-center space-y-5">
-          <p className="text-5xl">📍</p>
-          <div>
-            <h1 className="text-xl font-bold text-[#242622]">Check In at the Bar</h1>
-            <p className="text-sm text-[#7E613F] mt-1">Earn 15 points every time you visit.</p>
-          </div>
-          <div className="bg-white border border-[#D4CFC3] rounded-2xl p-4 text-left space-y-3">
-            <Step n={1} text="Ask your bartender to show you the check-in QR code." />
-            <Step n={2} text="Scan it with your phone camera." />
-            <Step n={3} text={'Tap "Check In" and collect your points!'} />
-          </div>
-          <a href="/club" className="block text-sm text-[#9E8F7E] hover:text-[#7E613F] py-2 transition-colors">
-            ← Back to my profile
-          </a>
-        </div>
-      </Shell>
-    )
+    redirect('/checkin/scan')
   }
 
   // Invalid / expired token
