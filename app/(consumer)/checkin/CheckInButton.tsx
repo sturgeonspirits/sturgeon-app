@@ -5,9 +5,10 @@ import { useState } from 'react'
 const POINTS = 15
 
 export default function CheckInButton({ token }: { token: string }) {
-  const [state,   setState]   = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [message, setMessage] = useState('')
-  const [points,  setPoints]  = useState(POINTS)
+  const [state,    setState]    = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [message,  setMessage]  = useState('')
+  const [points,   setPoints]   = useState(POINTS)
+  const [birthday, setBirthday] = useState(false)
 
   async function handleCheckIn() {
     if (state === 'loading' || state === 'success') return
@@ -26,6 +27,7 @@ export default function CheckInButton({ token }: { token: string }) {
       const json = await res.json()
       if (res.ok) {
         setPoints(json.pointsEarned ?? POINTS)
+        setBirthday(!!json.birthdayCocktail)
         setState('success')
       } else {
         setMessage(json.error ?? 'Something went wrong — please try again.')
@@ -38,6 +40,31 @@ export default function CheckInButton({ token }: { token: string }) {
   }
 
   if (state === 'success') {
+    if (birthday) {
+      return (
+        <div className="space-y-4 text-center">
+          <p className="text-6xl animate-bounce">🎂</p>
+          <div>
+            <p className="text-2xl font-bold text-[#96321F]">Happy Birthday!</p>
+            <p className="text-sm text-[#7E613F] mt-1">
+              You've got a <strong>free cocktail</strong> waiting — show this screen to your bartender.
+            </p>
+          </div>
+          <div className="bg-[#96321F]/5 border border-[#96321F]/20 rounded-2xl p-4">
+            <p className="text-3xl font-bold text-[#96321F]">🍹 Birthday Cocktail</p>
+            <p className="text-xs text-[#7E613F] mt-1">Redeemable tonight · Valid 30 days</p>
+          </div>
+          <p className="text-xs text-[#9E8F7E]">+{points} check-in points also added</p>
+          <a
+            href="/club"
+            className="block w-full bg-[#96321F] text-white font-semibold py-3.5 rounded-2xl text-center hover:bg-[#ae3a24] transition-colors"
+          >
+            View my profile →
+          </a>
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-4 text-center">
         <p className="text-6xl">🎉</p>

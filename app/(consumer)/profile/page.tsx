@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { tierLabel, tierColor, formatPoints, relativeTime } from '@/lib/utils'
+import BirthdayEditor from '@/components/profile/BirthdayEditor'
 
 // Brand-aligned tier colors (override lib/utils generic colors at display level)
 const TIER_COLORS: Record<string, string> = {
@@ -70,6 +71,14 @@ export default async function ProfilePage() {
           ))}
         </div>
       </div>
+
+      {/* Birthday */}
+      <section>
+        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Account</h2>
+        <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl px-4 py-1">
+          <BirthdayEditor current={(profile as any)?.birthday ?? null} />
+        </div>
+      </section>
 
       {/* Points history */}
       <section>
