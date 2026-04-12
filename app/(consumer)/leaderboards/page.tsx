@@ -1,18 +1,49 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { dayOfWeekLabel } from '@/lib/utils'
+
+// Format a YYYY-MM-DD date string as "Wed, Apr 16"
+function fmtEventDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  })
+}
 
 export default async function LeaderboardsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: eventTypes } = await supabase
-    .from('event_types')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order')
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+
+  const [{ data: eventTypes }, { data: upcoming }, { data: recent }] = await Promise.all([
+    supabase.from('event_types').select('*').eq('is_active', true).order('sort_order'),
+    // Next scheduled event per type
+    supabase.from('events')
+      .select('event_type_id, event_date, start_time')
+      .gte('event_date', today)
+      .eq('is_cancelled', false)
+      .order('event_date', { ascending: true }),
+    // Most recent past event per type (fallback)
+    supabase.from('events')
+      .select('event_type_id, event_date, start_time')
+      .lt('event_date', today)
+      .eq('is_cancelled', false)
+      .order('event_date', { ascending: false }),
+  ])
+
+  // Build next/last maps: event_type_id → first match
+  const nextMap = new Map<string, { date: string; time: string | null }>()
+  for (const ev of (upcoming ?? [])) {
+    if (!nextMap.has((ev as any).event_type_id))
+      nextMap.set((ev as any).event_type_id, { date: (ev as any).event_date, time: (ev as any).start_time ?? null })
+  }
+  const lastMap = new Map<string, { date: string; time: string | null }>()
+  for (const ev of (recent ?? [])) {
+    if (!lastMap.has((ev as any).event_type_id))
+      lastMap.set((ev as any).event_type_id, { date: (ev as any).event_date, time: (ev as any).start_time ?? null })
+  }
 
   const events = eventTypes ?? []
 
@@ -49,11 +80,14 @@ export default async function LeaderboardsPage() {
                 <div className="flex-1">
                   <p className="font-semibold text-[#242622]">{et.name}</p>
                   <p className="text-xs text-[#7E613F] mt-0.5">
-                    {et.schedule_label
-                      ? et.schedule_label
-                      : et.day_of_week != null ? `${dayOfWeekLabel(et.day_of_week)}s` : ''}
-                    {et.typical_time ? ` · ${et.typical_time}` : ''}
-                    {et.participant_type ? ` · ${et.participant_type}` : ''}
+                    {(() => {
+                      const next = nextMap.get(et.id)
+                      const last = lastMap.get(et.id)
+                      if (next) return `Next: ${fmtEventDate(next.date)}`
+                      if (last) return `Last: ${fmtEventDate(last.date)}`
+                      return et.schedule_label ?? ''
+                    })()}
+                    {et.participant_type === 'team' ? ' · teams' : et.participant_type === 'individual' ? ' · individual' : ''}
                   </p>
                   {et.description && (
                     <p className="text-xs text-[#9E8F7E] mt-0.5">{et.description}</p>
