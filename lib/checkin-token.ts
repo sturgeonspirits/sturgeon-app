@@ -10,7 +10,13 @@
 import { createHmac } from 'crypto'
 
 const TZ     = 'America/Chicago'
-const SECRET = () => process.env.CHECKIN_SECRET ?? 'dev-checkin-secret-change-me'
+// Accept either name so a single VAPID-style secret covers both token systems.
+// QR_HMAC_SECRET is the canonical name set in .env.local / Netlify; CHECKIN_SECRET
+// is a legacy alias kept for backwards compatibility.
+const SECRET = () =>
+  process.env.QR_HMAC_SECRET ??
+  process.env.CHECKIN_SECRET ??
+  'dev-checkin-secret-change-me'
 
 /** Returns date string YYYY-MM-DD in America/Chicago time */
 export function localDate(offsetDays = 0): string {
