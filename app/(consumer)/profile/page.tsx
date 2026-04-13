@@ -118,6 +118,13 @@ export default async function ProfilePage() {
           Sign out
         </button>
       </form>
+
+      {/* Legal */}
+      <div className="flex justify-center gap-4 pb-4">
+        <a href="/privacy" className="text-xs text-[#9E8F7E] hover:text-[#7E613F] transition-colors">
+          Privacy Policy
+        </a>
+      </div>
     </div>
   )
 }

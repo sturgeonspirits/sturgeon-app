@@ -7,10 +7,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { validateDailyToken, localDate } from '@/lib/checkin-token'
 import { emitEarnEvent } from '@/lib/earn-events'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const CHECKIN_POINTS = 15
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 10 check-in attempts per IP per 60 seconds
+  const { ok, retryAfter } = rateLimit(getClientIp(req), 'checkin', 10, 60)
+  if (!ok) {
+    return NextResponse.json(
+      { error: 'Too many requests — please wait a moment.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    )
+  }
+
   try {
     const body = await req.json().catch(() => ({}))
     const { token } = body as { token?: string }

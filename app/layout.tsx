@@ -1,29 +1,18 @@
 import type { Metadata, Viewport } from 'next'
-import { Vollkorn, Inter, Barlow_Condensed } from 'next/font/google'
 import './globals.css'
-
-// Barlow Condensed: closest Google Fonts match to Prohibition / Trade Gothic Condensed
-const barlowCondensed = Barlow_Condensed({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-  weight: ['600', '700', '800'],
-})
-
-// Vollkorn: brand body/paragraph font per brand guide
-const vollkorn = Vollkorn({
-  subsets: ['latin'],
-  variable: '--font-body',
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
-})
-
-// Inter: clean UI font for labels, numbers, small text
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-})
+// Self-hosted via @fontsource — zero network fetch at build time.
+// Font face rules are emitted into the CSS bundle; CSS variables are
+// declared in globals.css so Tailwind's font-family utilities resolve them.
+import '@fontsource/barlow-condensed/600.css'
+import '@fontsource/barlow-condensed/700.css'
+import '@fontsource/barlow-condensed/800.css'
+import '@fontsource/vollkorn/400.css'
+import '@fontsource/vollkorn/500.css'
+import '@fontsource/vollkorn/600.css'
+import '@fontsource/vollkorn/700.css'
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
 
 export const metadata: Metadata = {
   title: 'Sturgeon Spirits',
@@ -47,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${barlowCondensed.variable} ${vollkorn.variable} ${inter.variable}`}>
+    <html lang="en">
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
