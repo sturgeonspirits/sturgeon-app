@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import JournalEditForm from '@/components/journal/JournalEditForm'
 
@@ -9,8 +8,7 @@ interface Props {
 
 export default async function EditJournalEntryPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   const service = createServiceClient()

@@ -1,10 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import RedeemButton from '@/components/rewards/RedeemButton'
 
 export default async function RewardsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   const [{ data: rewards }, { data: ledger }, { data: myRedemptions }, { data: toastAccount }, { data: toastEarnEvents }] = await Promise.all([

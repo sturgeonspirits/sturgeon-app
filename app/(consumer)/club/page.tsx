@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import TierProgress from '@/components/club/TierProgress'
@@ -6,8 +6,7 @@ import MissionGrid from '@/components/club/MissionGrid'
 import ShopMenu from '@/components/club/ShopMenu'
 
 export default async function ClubPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   // Redirect to onboarding if profile hasn't been completed yet
@@ -18,13 +17,14 @@ export default async function ClubPage() {
     redirect('/onboarding')
   }
 
-  const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes, pendingRequestsRes] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('points_ledger').select('*').eq('user_id', user.id).maybeSingle(),
-    supabase.from('missions').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('mission_completions').select('mission_id, completed_at').eq('user_id', user.id),
-    supabase.from('challenges').select('*, challenge_missions(mission_id)').eq('is_active', true).order('sort_order'),
+  const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes, pendingRequestsRes, { data: tiers }] = await Promise.all([
+    supabase.from('profiles').select('display_name, tier, full_name').eq('id', user.id).single(),
+    supabase.from('points_ledger').select('balance, lifetime_earned, lifetime_spent').eq('user_id', user.id).maybeSingle(),
+    supabase.from('missions').select('id, title, description, icon, points, slug, sort_order, completion_trigger, redemption_method, is_active, cooldown_hours').eq('is_active', true).order('sort_order'),
+    supabase.from('mission_completions').select('mission_id').eq('user_id', user.id),
+    supabase.from('challenges').select('id, title, description, icon, bonus_points, sort_order, challenge_missions(mission_id)').eq('is_active', true).order('sort_order'),
     supabase.from('mission_completion_requests').select('mission_id').eq('user_id', user.id).eq('status', 'pending'),
+    supabase.from('tier_thresholds').select('*').order('min_lifetime'),
   ])
 
   const profile     = profileRes.data
@@ -34,7 +34,6 @@ export default async function ClubPage() {
   const challenges  = challengesRes.data ?? []
   const completedIds   = new Set(completions.map(c => c.mission_id))
   const pendingRequestIds = new Set((pendingRequestsRes.data ?? []).map((r: any) => r.mission_id))
-  const { data: tiers } = await supabase.from('tier_thresholds').select('*').order('min_lifetime')
 
   const firstName = profile?.display_name?.split(' ')[0] ?? null
   const balance   = ledger?.balance ?? 0

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import EventSignupForm from '@/components/events/EventSignupForm'
 import Link from 'next/link'
 
@@ -8,8 +8,7 @@ interface Props { params: Promise<{ periodId: string }> }
 export default async function EventSignupPage({ params }: Props) {
   const { periodId } = await params
 
-  const authClient = await createClient()
-  const { data: { user } } = await authClient.auth.getUser()
+  const { user } = await getAuthUser()
   if (!user) redirect('/login')
 
   const service = createServiceClient()

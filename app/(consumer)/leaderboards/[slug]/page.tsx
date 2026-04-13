@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { unstable_cache } from 'next/cache'
 import LeaderboardBoard from '@/components/leaderboard/LeaderboardBoard'
@@ -12,7 +11,7 @@ interface Props {
 export default async function LeaderboardDetailPage({ params, searchParams }: Props) {
   const { slug }     = await params
   const { period: periodParam } = await searchParams
-  const supabase     = await createClient()
+  const { supabase, user } = await getAuthUser()
   const service      = createServiceClient()
 
   // Fetch event type config — drives all board behaviour
@@ -175,7 +174,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     }
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // user already resolved via getAuthUser() above
 
   // ── Check if user is already on a team for the current open period ─────────
   let openPeriodId:      string | null = null

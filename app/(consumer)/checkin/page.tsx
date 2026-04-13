@@ -1,5 +1,5 @@
 import { validateDailyToken } from '@/lib/checkin-token'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CheckInButton from './CheckInButton'
 
@@ -36,8 +36,7 @@ export default async function CheckInPage({
   }
 
   // Must be signed in
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) {
     redirect(`/auth/login?redirect=/checkin%3Ft=${token}`)
   }

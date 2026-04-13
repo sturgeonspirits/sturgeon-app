@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -11,26 +11,27 @@ function fmtEventDate(dateStr: string): string {
 }
 
 export default async function LeaderboardsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
   const [{ data: eventTypes }, { data: upcoming }, { data: recent }] = await Promise.all([
-    supabase.from('event_types').select('*').eq('is_active', true).order('sort_order'),
-    // Next scheduled event per type
+    supabase.from('event_types').select('id, name, slug, icon, schedule_label, description, participant_type, day_of_week, typical_time').eq('is_active', true).order('sort_order'),
+    // Next scheduled event per type — limit to 10 (2 types × 5 weeks ahead is plenty)
     supabase.from('events')
-      .select('event_type_id, event_date, start_time')
+      .select('event_type_id, event_date')
       .gte('event_date', today)
       .eq('is_cancelled', false)
-      .order('event_date', { ascending: true }),
-    // Most recent past event per type (fallback)
+      .order('event_date', { ascending: true })
+      .limit(10),
+    // Most recent past event per type — limit to 10
     supabase.from('events')
-      .select('event_type_id, event_date, start_time')
+      .select('event_type_id, event_date')
       .lt('event_date', today)
       .eq('is_cancelled', false)
-      .order('event_date', { ascending: false }),
+      .order('event_date', { ascending: false })
+      .limit(10),
   ])
 
   // Build next/last maps: event_type_id → first match

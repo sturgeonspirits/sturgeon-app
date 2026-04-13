@@ -16,7 +16,7 @@ export default function PrivacyPage() {
 
       <Section title="Who we are">
         <P>
-          Sturgeon Spirits LLC ("we", "us", "our") operates the Spearers Club
+          Sturgeon Spirits Inc. ("we", "us", "our") operates the Spearers Club
           loyalty program and the website at club.sturgeonspirits.com. This
           policy explains what personal information we collect, why we collect
           it, and how we protect it.

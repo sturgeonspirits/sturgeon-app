@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -149,8 +148,7 @@ function fmtDbDate(dateStr: string, timeStr?: string | null) {
 // ── Page ──────────────────────────────────────────────────
 
 export default async function EventsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   const service = createServiceClient()

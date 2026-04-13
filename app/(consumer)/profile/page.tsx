@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { tierLabel, tierColor, formatPoints, relativeTime } from '@/lib/utils'
 import BirthdayEditor from '@/components/profile/BirthdayEditor'
@@ -13,8 +13,7 @@ const TIER_COLORS: Record<string, string> = {
 }
 
 export default async function ProfilePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   const [{ data: profile }, { data: ledger }, { data: recentEvents }] = await Promise.all([

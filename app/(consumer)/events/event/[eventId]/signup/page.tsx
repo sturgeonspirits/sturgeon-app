@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import IndividualSignupForm from '@/components/events/IndividualSignupForm'
 
@@ -17,8 +17,7 @@ function chicagoNoonISO(eventDate: string): string {
 export default async function EventSignupPage({ params }: Props) {
   const { eventId } = await params
 
-  const authClient = await createClient()
-  const { data: { user } } = await authClient.auth.getUser()
+  const { user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
   const service = createServiceClient()

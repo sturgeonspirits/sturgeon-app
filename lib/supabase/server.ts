@@ -23,6 +23,24 @@ export async function createClient() {
   )
 }
 
+/**
+ * Fast auth check for page components.
+ *
+ * The middleware already calls getUser() (network roundtrip to GoTrue) on
+ * every request to refresh the session. Calling getUser() again inside each
+ * page component doubles the latency for no benefit.
+ *
+ * getSession() reads the JWT from the cookie locally — zero network calls.
+ * It's safe here because the middleware already validated & refreshed it.
+ *
+ * Returns { supabase, user } or redirects to /auth/login.
+ */
+export async function getAuthUser() {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  return { supabase, user: session?.user ?? null }
+}
+
 // Service-role client for privileged server operations (Netlify functions, Edge Functions)
 // Never expose this to the browser.
 export function createServiceClient() {
