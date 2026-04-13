@@ -60,10 +60,14 @@ export async function POST(req: NextRequest) {
         payload
       )
       sent++
-      // Update last_used_at
-      await service.from('push_subscriptions')
+      // Fire-and-forget: update last_used_at — non-fatal if it fails, and
+      // deliberately outside the send try/catch so a DB error never inflates
+      // the failed count or marks a live endpoint as expired.
+      service.from('push_subscriptions')
         .update({ last_used_at: new Date().toISOString() })
         .eq('endpoint', sub.endpoint)
+        .then(() => {})
+        .catch(() => {})
     } catch (e: any) {
       failed++
       // 410 Gone = subscription expired, clean it up
