@@ -72,6 +72,10 @@ export default async function DisplayPage() {
           <p className="text-[#9E8F7E] text-sm tracking-wide">
             Open Spearers Club on your phone and scan with the camera
           </p>
+          <p className="text-[#C8BCA4] text-sm pt-1">
+            New member? Sign up at{' '}
+            <span className="text-white font-semibold">club.sturgeonspirits.com</span>
+          </p>
         </div>
 
         {/* Date footer */}
