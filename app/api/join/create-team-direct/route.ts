@@ -18,16 +18,34 @@ export async function POST(req: NextRequest) {
   // Validate period exists, is not finalized, and is current/future (America/Chicago)
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, is_finalized, starts_at, event_type_id')
+    .select('id, is_finalized, starts_at, event_id, event_type_id')
     .eq('id', periodId)
     .maybeSingle()
 
   if (!period) return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   if (period.is_finalized) return NextResponse.json({ error: 'This event has already ended' }, { status: 410 })
 
+  // Determine the event date for the "not in the past" guard.
+  // Prefer events.event_date (plain YYYY-MM-DD, no timezone issues) over
+  // converting starts_at from UTC — midnight UTC on event day falls the
+  // previous evening in Chicago, causing tonight's events to be rejected.
   const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
-  const periodDateChicago = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
-  if (periodDateChicago < todayChicago) {
+  let eventDateStr: string | null = null
+
+  if ((period as any).event_id) {
+    const { data: linkedEvent } = await service
+      .from('events')
+      .select('event_date')
+      .eq('id', (period as any).event_id)
+      .maybeSingle()
+    eventDateStr = linkedEvent?.event_date ?? null
+  }
+  // Fallback: convert starts_at to Chicago date (may be off by a day if stored as midnight UTC)
+  if (!eventDateStr) {
+    eventDateStr = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+  }
+
+  if (eventDateStr < todayChicago) {
     return NextResponse.json({ error: 'Sign-up is only available for current or upcoming events' }, { status: 410 })
   }
 
