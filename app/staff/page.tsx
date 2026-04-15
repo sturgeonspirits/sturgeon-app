@@ -73,6 +73,7 @@ export default async function StaffDashboard() {
     { href: '/staff/rewards',      icon: '🎁', label: 'Rewards',         desc: 'Add & edit catalog'    },
     { href: '/staff/missions',     icon: '📋', label: 'Missions',        desc: 'Add & mark completions'},
     { href: '/staff/events',       icon: '📅', label: 'Events',          desc: 'Manage weekly events'  },
+    { href: '/staff/teams',        icon: '🎮', label: 'Teams',            desc: 'Rename & delete teams' },
     { href: '/staff/menu',         icon: '🍹', label: 'Menu',            desc: 'View & sync recipes'   },
     { href: '/staff/toast-sync',   icon: '🔄', label: 'Toast Sync',      desc: 'Import loyalty points' },
   ]

@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/staff/rewards',     label: 'Rewards'      },
   { href: '/staff/missions',    label: 'Missions'     },
   { href: '/staff/events',      label: 'Events'       },
+  { href: '/staff/teams',       label: 'Teams'        },
   { href: '/staff/menu',        label: 'Menu'         },
   { href: '/staff/toast-sync',  label: 'Toast Sync'   },
   { href: '/leaderboards',      label: 'Leaderboards' },
