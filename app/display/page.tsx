@@ -36,53 +36,65 @@ export default async function DisplayPage() {
     <>
       <MidnightRefresh />
 
-      <div className="min-h-screen bg-[#242622] flex flex-col items-center justify-center px-6 py-10 select-none">
-
+      {/*
+        h-dvh + overflow-hidden = exactly one screen, no scroll, no overflow.
+        gap-based spacing instead of margins so the flex container distributes
+        space evenly and nothing ever pushes outside the viewport.
+        Works in both portrait and landscape on any tablet size.
+      */}
+      <div
+        className="bg-[#242622] flex flex-col items-center justify-center select-none overflow-hidden"
+        style={{ height: '100dvh', padding: 'clamp(12px, 3vh, 32px) clamp(16px, 4vw, 48px)', gap: 'clamp(8px, 2vh, 24px)' }}
+      >
         {/* Brand header */}
-        <div className="text-center mb-10">
-          <p className="text-[10px] font-bold text-[#9E8F7E] uppercase tracking-[0.3em] mb-1">
+        <div className="text-center shrink-0">
+          <p className="font-bold text-[#9E8F7E] uppercase tracking-[0.3em]"
+            style={{ fontSize: 'clamp(9px, 1.2vh, 13px)' }}>
             Sturgeon Spirits
           </p>
-          <p
-            className="text-white font-bold tracking-wide"
-            style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontFamily: 'var(--font-display, sans-serif)' }}
-          >
+          <p className="text-white font-bold tracking-wide leading-tight"
+            style={{ fontSize: 'clamp(1.1rem, 3.5vh, 2.2rem)', fontFamily: 'var(--font-display, sans-serif)' }}>
             Spearers Club
           </p>
         </div>
 
-        {/* QR code card */}
-        <div className="bg-[#F1F1E7] rounded-3xl p-6 shadow-2xl">
-          {/* Render QR as inline SVG — crisp at any resolution */}
+        {/* QR code card — sized to the smaller of 52vh or 52vw so it always fits */}
+        <div
+          className="bg-[#F1F1E7] rounded-2xl shadow-2xl shrink-0 flex items-center justify-center"
+          style={{ padding: 'clamp(10px, 2vh, 20px)' }}
+        >
           <div
-            className="block"
-            style={{ width: 'clamp(220px, 40vw, 360px)', height: 'clamp(220px, 40vw, 360px)' }}
+            style={{
+              width:  'min(52vh, 52vw, 420px)',
+              height: 'min(52vh, 52vw, 420px)',
+              display: 'block',
+            }}
             dangerouslySetInnerHTML={{ __html: qrSvg }}
           />
         </div>
 
-        {/* Instruction */}
-        <div className="text-center mt-10 space-y-2">
-          <p
-            className="font-bold text-white"
-            style={{ fontSize: 'clamp(1.25rem, 3vw, 2rem)' }}
-          >
+        {/* Instructions */}
+        <div className="text-center shrink-0" style={{ gap: 'clamp(4px, 1vh, 10px)', display: 'flex', flexDirection: 'column' }}>
+          <p className="font-bold text-white leading-tight"
+            style={{ fontSize: 'clamp(1rem, 3vh, 1.75rem)' }}>
             Scan to Check In
           </p>
-          <p className="text-[#9E8F7E] text-sm tracking-wide">
+          <p className="text-[#9E8F7E] leading-snug"
+            style={{ fontSize: 'clamp(0.7rem, 1.6vh, 1rem)' }}>
             Open Spearers Club on your phone and scan with the camera
           </p>
-          <p className="text-[#C8BCA4] text-sm pt-1">
+          <p className="text-[#C8BCA4] leading-snug"
+            style={{ fontSize: 'clamp(0.7rem, 1.6vh, 1rem)' }}>
             New member? Sign up at{' '}
             <span className="text-white font-semibold">club.sturgeonspirits.com</span>
           </p>
         </div>
 
-        {/* Date footer */}
-        <p className="absolute bottom-6 text-[#9E8F7E] text-xs tracking-widest uppercase">
+        {/* Date — in flow, not absolute */}
+        <p className="text-[#9E8F7E] uppercase tracking-widest shrink-0"
+          style={{ fontSize: 'clamp(9px, 1.2vh, 12px)' }}>
           {today}
         </p>
-
       </div>
     </>
   )
