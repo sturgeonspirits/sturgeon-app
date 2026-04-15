@@ -93,12 +93,14 @@ export default async function StaffDashboard() {
             <p className="text-sm font-semibold text-[#242622]">Today's Check-In QR</p>
             <p className="text-xs text-[#7E613F] mt-0.5">Show this to customers — rotates at midnight</p>
           </div>
-          <Link
-            href="/staff/checkin"
+          <a
+            href="/display"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-xs font-semibold text-[#96321F] border border-[#96321F]/30 px-3 py-1.5 rounded-xl hover:bg-[#96321F]/5 transition-colors"
           >
-            Fullscreen ↗
-          </Link>
+            Tablet view ↗
+          </a>
         </div>
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}

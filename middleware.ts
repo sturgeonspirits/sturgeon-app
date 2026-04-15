@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
     '/auth/verify',
     '/auth/callback',
     '/dev-login',
+    '/display',      // public tablet check-in QR display
   ]
   if (publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
     return supabaseResponse
