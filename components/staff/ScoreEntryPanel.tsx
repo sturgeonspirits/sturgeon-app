@@ -349,7 +349,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
             <TriviaIndividualForm period={selectedPeriod} members={members} staffId={staffId} />
           )}
           {selectedET.scoring_method === 'points' && selectedET.participant_type === 'team' && (
-            <TriviaTeamForm period={selectedPeriod} members={members} staffId={staffId} eventTypeId={selectedET.id} />
+            <TriviaTeamForm period={selectedPeriod} members={members} staffId={staffId} eventTypeId={selectedET.id} eventId={selectedEventId} />
           )}
         </div>
       )}

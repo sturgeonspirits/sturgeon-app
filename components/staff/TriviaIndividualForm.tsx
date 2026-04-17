@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import type { LeaderboardPeriod } from '@/lib/supabase/types'
 
 type MemberOption = { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }
@@ -46,7 +46,7 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
     })
 
     let json: any = {}
-    try { json = await res.json() } catch { /* non-JSON response (e.g. gateway error) */ }
+    try { json = await res.json() } catch {}
     if (res.ok) {
       setMessage(`${valid.length} score${valid.length > 1 ? 's' : ''} saved!`)
       setRows([{ userId: '', score: '' }])
@@ -59,25 +59,28 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
 
   const usedIds = rows.map(r => r.userId).filter(Boolean)
 
+  const memberMap = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const mb of members) m[mb.id] = memberLabel(mb)
+    return m
+  }, [members])
+
   return (
     <div className="space-y-3">
       <p className="text-xs text-[#7E613F]">Enter each player's total score for the night</p>
 
       {rows.map((row, i) => (
         <div key={i} className="flex gap-2 items-center">
-          <select
-            value={row.userId}
-            onChange={e => updateRow(i, 'userId', e.target.value)}
-            className="flex-1 bg-[#FFFFFF] border border-[#C8BCA4] rounded-lg px-3 min-h-[44px] text-[#242622] text-base focus:outline-none focus:border-[#96321F]"
-          >
-            <option value="">Select player</option>
-            {members.map(m => (
-              <option key={m.id} value={m.id}
-                disabled={usedIds.includes(m.id) && m.id !== row.userId}>
-                {memberLabel(m)}
-              </option>
-            ))}
-          </select>
+          <div className="flex-1">
+            <PlayerSearch
+              members={members}
+              memberMap={memberMap}
+              excludeIds={usedIds.filter(id => id !== row.userId)}
+              selectedId={row.userId}
+              onSelect={id => updateRow(i, 'userId', id)}
+              onClear={() => updateRow(i, 'userId', '')}
+            />
+          </div>
           <input
             type="number"
             min={0}
@@ -108,6 +111,84 @@ export default function TriviaIndividualForm({ period, members, staffId }: Props
         <p className={`text-sm ${message.includes('!') ? 'text-[#5dbb5d]' : 'text-red-500'}`}>
           {message}
         </p>
+      )}
+    </div>
+  )
+}
+
+// ── Reusable player search dropdown ─────────────────────────
+
+function PlayerSearch({
+  members, memberMap, excludeIds, selectedId, onSelect, onClear,
+}: {
+  members: MemberOption[]
+  memberMap: Record<string, string>
+  excludeIds: string[]
+  selectedId: string
+  onSelect: (id: string) => void
+  onClear: () => void
+}) {
+  const [search, setSearch]             = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const suggestions = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return members.filter(m => !excludeIds.includes(m.id)).slice(0, 10)
+    return members
+      .filter(m => !excludeIds.includes(m.id) && memberLabel(m).toLowerCase().includes(q))
+      .slice(0, 10)
+  }, [search, members, excludeIds])
+
+  function pick(id: string) {
+    onSelect(id)
+    setSearch('')
+    setShowDropdown(false)
+  }
+
+  if (selectedId) {
+    return (
+      <div className="flex items-center gap-1.5 bg-[#FFFFFF] border border-[#C8BCA4] rounded-lg px-3 min-h-[44px]">
+        <span className="flex-1 text-sm text-[#242622] truncate">{memberMap[selectedId] ?? selectedId}</span>
+        <button
+          onClick={() => { onClear(); setTimeout(() => inputRef.current?.focus(), 50) }}
+          className="text-[#9E8F7E] hover:text-red-500 text-lg leading-none shrink-0"
+        >
+          ×
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={search}
+        onChange={e => { setSearch(e.target.value); setShowDropdown(true) }}
+        onFocus={() => setShowDropdown(true)}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+        placeholder="Search player…"
+        className="w-full bg-[#FFFFFF] border border-[#C8BCA4] rounded-lg px-3 min-h-[44px] text-[#242622] text-base focus:outline-none focus:border-[#96321F]"
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          {suggestions.map(m => (
+            <button
+              key={m.id}
+              onMouseDown={() => pick(m.id)}
+              className="w-full text-left px-3 py-2.5 text-sm text-[#242622] hover:bg-[#F1F1E7] transition-colors"
+            >
+              {memberLabel(m)}
+            </button>
+          ))}
+        </div>
+      )}
+      {showDropdown && search.trim() && suggestions.length === 0 && (
+        <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl shadow-sm px-3 py-2.5">
+          <p className="text-xs text-[#9E8F7E]">No players found</p>
+        </div>
       )}
     </div>
   )

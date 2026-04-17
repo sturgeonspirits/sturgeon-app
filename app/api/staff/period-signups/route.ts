@@ -53,14 +53,17 @@ export async function GET(req: NextRequest) {
   // ── Team sign-ups ────────────────────────────────────────────────────────
   const { data: periodTeams } = await service
     .from('leaderboard_teams')
-    .select('id, name, leaderboard_team_members(user_id, profiles(display_name, full_name))')
+    .select('id, name, permanent_team_id, score, placement, leaderboard_team_members(user_id, profiles(display_name, full_name))')
     .in('period_id', periodIds)
     .order('name')
 
   const teams = (periodTeams ?? [])
     .map((t: any) => ({
-      teamId:  t.id,
-      name:    t.name,
+      teamId:           t.id,
+      permanentTeamId:  t.permanent_team_id ?? null,
+      name:             t.name,
+      score:            t.score ?? null,
+      placement:        t.placement ?? null,
       members: (t.leaderboard_team_members ?? []).map((m: any) => ({
         userId: m.user_id,
         name:   m.profiles?.display_name ?? m.profiles?.full_name ?? 'Member',

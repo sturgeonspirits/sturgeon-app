@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
 
     // ── Team scoring (placement) ─────────────────────────
     for (const team of teams) {
-      const { name, score, placement, memberIds } = team
+      const { name, score, placement, memberIds, existingTeamId } = team
 
       // Always upsert into permanent_teams so teams are discoverable for sign-up
       const { data: permTeam } = await supabase
@@ -143,17 +143,47 @@ export async function POST(req: NextRequest) {
         .select('id')
         .single()
 
-      const { data: teamRow } = await supabase
-        .from('leaderboard_teams')
-        .insert({ period_id: periodId, name, score, placement, permanent_team_id: permTeam?.id ?? null })
-        .select()
-        .single()
+      let teamRow: any = null
 
-      // Insert team members
+      if (existingTeamId) {
+        // Update existing leaderboard_teams row (customer-created team)
+        const { data } = await supabase
+          .from('leaderboard_teams')
+          .update({ name, score, placement })
+          .eq('id', existingTeamId)
+          .select()
+          .single()
+        teamRow = data
+      } else {
+        // Insert new leaderboard_teams row
+        const { data } = await supabase
+          .from('leaderboard_teams')
+          .insert({ period_id: periodId, name, score, placement, permanent_team_id: permTeam?.id ?? null })
+          .select()
+          .single()
+        teamRow = data
+      }
+
+      // Insert team members (skip if existing team already has members)
       if (teamRow && memberIds?.length) {
-        await supabase.from('leaderboard_team_members').insert(
-          memberIds.map((uid: string) => ({ team_id: teamRow.id, user_id: uid }))
-        )
+        if (existingTeamId) {
+          // For existing teams, members are already there — only add missing ones
+          const { data: existingMembers } = await supabase
+            .from('leaderboard_team_members')
+            .select('user_id')
+            .eq('team_id', existingTeamId)
+          const existingUserIds = new Set((existingMembers ?? []).map((m: any) => m.user_id))
+          const newMembers = memberIds.filter((uid: string) => !existingUserIds.has(uid))
+          if (newMembers.length > 0) {
+            await supabase.from('leaderboard_team_members').insert(
+              newMembers.map((uid: string) => ({ team_id: teamRow.id, user_id: uid }))
+            )
+          }
+        } else {
+          await supabase.from('leaderboard_team_members').insert(
+            memberIds.map((uid: string) => ({ team_id: teamRow.id, user_id: uid }))
+          )
+        }
 
         // Also write individual leaderboard_events rows for each member so the
         // individual standings page auto-populates — no separate data entry needed.

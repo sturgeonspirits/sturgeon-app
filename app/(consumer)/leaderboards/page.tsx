@@ -1,4 +1,4 @@
-import { getAuthUser } from '@/lib/supabase/server'
+import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -10,22 +10,36 @@ function fmtEventDate(dateStr: string): string {
   })
 }
 
+// Parse a period label like "Wednesday, April 9, 2026" → "Apr 9"
+function shortDateFromLabel(label: string): string | null {
+  const d = new Date(label)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+interface LatestWinner {
+  eventTypeId: string
+  periodLabel: string
+  winnerName:  string
+  detail:      string        // e.g. "3W–0L" or "1st place"
+  isTeam:      boolean
+}
+
 export default async function LeaderboardsPage() {
   const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
+  const service = createServiceClient()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
   const [{ data: eventTypes }, { data: upcoming }, { data: recent }] = await Promise.all([
-    supabase.from('event_types').select('id, name, slug, icon, schedule_label, description, participant_type, day_of_week, typical_time').eq('is_active', true).order('sort_order'),
-    // Next scheduled event per type — limit to 10 (2 types × 5 weeks ahead is plenty)
+    supabase.from('event_types').select('id, name, slug, icon, schedule_label, description, participant_type, scoring_method, day_of_week, typical_time').eq('is_active', true).order('sort_order'),
     supabase.from('events')
       .select('event_type_id, event_date')
       .gte('event_date', today)
       .eq('is_cancelled', false)
       .order('event_date', { ascending: true })
       .limit(10),
-    // Most recent past event per type — limit to 10
     supabase.from('events')
       .select('event_type_id, event_date')
       .lt('event_date', today)
@@ -34,7 +48,7 @@ export default async function LeaderboardsPage() {
       .limit(10),
   ])
 
-  // Build next/last maps: event_type_id → first match
+  // Build next/last maps
   const nextMap = new Map<string, { date: string; time: string | null }>()
   for (const ev of (upcoming ?? [])) {
     if (!nextMap.has((ev as any).event_type_id))
@@ -48,12 +62,130 @@ export default async function LeaderboardsPage() {
 
   const events = eventTypes ?? []
 
+  // ── Fetch latest winners for each event type ──────────────────────────────
+  const winnerMap = new Map<string, LatestWinner>()
+
+  if (events.length > 0) {
+    const etIds = events.map(e => e.id)
+
+    // Get the most recent finalized period per event type
+    const { data: finalizedPeriods } = await service
+      .from('leaderboard_periods')
+      .select('id, event_type_id, label, is_finalized')
+      .in('event_type_id', etIds)
+      .eq('is_finalized', true)
+      .order('starts_at', { ascending: false })
+      .limit(20)
+
+    // Pick the newest finalized period per event type
+    const latestByType = new Map<string, { id: string; label: string }>()
+    for (const p of (finalizedPeriods ?? [])) {
+      if (!latestByType.has(p.event_type_id)) {
+        latestByType.set(p.event_type_id, { id: p.id, label: p.label })
+      }
+    }
+
+    // For each event type with a finalized period, find the winner
+    for (const et of events) {
+      const periodInfo = latestByType.get(et.id)
+      if (!periodInfo) continue
+
+      if (et.participant_type === 'team') {
+        // Team event: winner is team with placement = 1
+        const { data: winningTeam } = await service
+          .from('leaderboard_teams')
+          .select('name, score, placement')
+          .eq('period_id', periodInfo.id)
+          .eq('placement', 1)
+          .maybeSingle()
+
+        if (winningTeam) {
+          winnerMap.set(et.id, {
+            eventTypeId: et.id,
+            periodLabel: periodInfo.label,
+            winnerName:  winningTeam.name,
+            detail:      winningTeam.score != null ? `${winningTeam.score} pts` : '1st place',
+            isTeam:      true,
+          })
+        }
+      } else {
+        // Individual event: winner is the top scorer/most wins
+        const orderCol = et.scoring_method === 'wins_losses' ? 'wins' : 'score'
+        const { data: topEntry } = await service
+          .from('leaderboard_events')
+          .select('user_id, score, wins, losses')
+          .eq('period_id', periodInfo.id)
+          .order(orderCol, { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (topEntry && ((topEntry.wins ?? 0) > 0 || (topEntry.score ?? 0) > 0)) {
+          // Fetch the winner's profile
+          const { data: profile } = await service
+            .from('profiles')
+            .select('display_name, full_name')
+            .eq('id', topEntry.user_id)
+            .maybeSingle()
+
+          const name = profile?.display_name ?? profile?.full_name ?? 'Unknown'
+          const detail = et.scoring_method === 'wins_losses'
+            ? `${topEntry.wins}W–${topEntry.losses}L`
+            : `${topEntry.score} pts`
+
+          winnerMap.set(et.id, {
+            eventTypeId: et.id,
+            periodLabel: periodInfo.label,
+            winnerName:  name,
+            detail,
+            isTeam:      false,
+          })
+        }
+      }
+    }
+  }
+
+  const hasWinners = winnerMap.size > 0
+
   return (
     <div className="p-4 space-y-4 max-w-lg mx-auto">
       <div className="pt-4">
         <h1 className="font-display text-xl font-bold text-[#242622]">Standings</h1>
         <p className="text-sm text-[#7E613F] mt-1">Weekly leaderboards & all-time records</p>
       </div>
+
+      {/* Latest winners */}
+      {hasWinners && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-[#7E613F] uppercase tracking-widest">Latest Winners</p>
+          <div className="grid gap-2" style={{ gridTemplateColumns: winnerMap.size > 1 ? '1fr 1fr' : '1fr' }}>
+            {events.map(et => {
+              const winner = winnerMap.get(et.id)
+              if (!winner) return null
+              const dateLabel = shortDateFromLabel(winner.periodLabel)
+              return (
+                <Link
+                  key={et.id}
+                  href={`/leaderboards/${et.slug}`}
+                  className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 hover:border-[#C8BCA4] transition-colors active:scale-[0.99]"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{et.icon}</span>
+                    <span className="text-xs text-[#7E613F] font-medium">{et.name}</span>
+                  </div>
+                  <p className="text-lg">🏆</p>
+                  <p className="font-bold text-[#242622] mt-1 truncate">
+                    {winner.winnerName}
+                  </p>
+                  <p className="text-xs text-[#87A67F] font-semibold">{winner.detail}</p>
+                  {dateLabel && (
+                    <p className="text-xs text-[#9E8F7E] mt-1">{dateLabel}</p>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {events.length === 0 ? (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   // Validate period is open and current/future
   const { data: period } = await service
     .from('leaderboard_periods')
-    .select('id, is_finalized, starts_at')
+    .select('id, is_finalized, starts_at, event_id')
     .eq('id', periodId)
     .maybeSingle()
 
@@ -26,8 +26,24 @@ export async function POST(req: NextRequest) {
   if (period.is_finalized) return NextResponse.json({ error: 'This event has already ended' }, { status: 410 })
 
   const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
-  const periodDateChicago = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
-  if (periodDateChicago < todayChicago) {
+
+  // Use the linked event's event_date (plain YYYY-MM-DD) to avoid UTC→Chicago
+  // timezone issues where midnight UTC becomes the previous evening in Chicago.
+  let eventDateStr: string | null = null
+  if (period.event_id) {
+    const { data: linkedEvent } = await service
+      .from('events')
+      .select('event_date')
+      .eq('id', period.event_id)
+      .maybeSingle()
+    eventDateStr = linkedEvent?.event_date ?? null
+  }
+  if (!eventDateStr) {
+    // Fallback: convert starts_at to Chicago date (original behavior)
+    eventDateStr = new Date(period.starts_at).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
+  }
+
+  if (eventDateStr < todayChicago) {
     return NextResponse.json({ error: 'Sign-up is only available for current or upcoming events' }, { status: 410 })
   }
 

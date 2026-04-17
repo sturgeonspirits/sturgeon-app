@@ -1,4 +1,4 @@
-import { getAuthUser } from '@/lib/supabase/server'
+import { getAuthUser, createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { tierLabel, tierColor, formatPoints, relativeTime } from '@/lib/utils'
 import BirthdayEditor from '@/components/profile/BirthdayEditor'
