@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import ScoreEntryPanel from '@/components/staff/ScoreEntryPanel'
+import SeasonManager from '@/components/staff/SeasonManager'
 
 export default async function StaffScoresPage() {
   const supabase = await createClient()
@@ -52,6 +53,10 @@ export default async function StaffScoresPage() {
         members={members ?? []}
         staffId={user!.id}
         scheduledEvents={scheduledEvents ?? []}
+      />
+
+      <SeasonManager
+        eventTypes={(eventTypes ?? []).map(et => ({ id: et.id, name: et.name, icon: et.icon }))}
       />
     </div>
   )

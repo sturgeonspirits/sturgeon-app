@@ -243,10 +243,29 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     async (eventTypeId: string, scoringMethod: string) => {
       const svc = createServiceClient()
 
-      const { data: allPeriodRows } = await svc
+      // Find the current season — the most recent 'season' period for this
+      // event type. Only single_night periods that started on or after the
+      // season's starts_at are included in the standings.
+      const { data: seasonRow } = await svc
+        .from('leaderboard_periods')
+        .select('starts_at, label')
+        .eq('event_type_id', eventTypeId)
+        .eq('period_type', 'season')
+        .order('starts_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      let periodQuery = svc
         .from('leaderboard_periods')
         .select('id')
         .eq('event_type_id', eventTypeId)
+        .eq('period_type', 'single_night')
+
+      if (seasonRow?.starts_at) {
+        periodQuery = periodQuery.gte('starts_at', seasonRow.starts_at)
+      }
+
+      const { data: allPeriodRows } = await periodQuery
 
       const allPeriodIds = (allPeriodRows ?? []).map((p: any) => p.id)
       if (allPeriodIds.length === 0) return []
@@ -329,6 +348,17 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
   const allTime = await getAllTime(eventType.id, eventType.scoring_method)
 
+  // Fetch current season label for the tab title (outside cache — lightweight query)
+  const { data: currentSeason } = await service
+    .from('leaderboard_periods')
+    .select('label')
+    .eq('event_type_id', eventType.id)
+    .eq('period_type', 'season')
+    .order('starts_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const seasonLabel = currentSeason?.label ?? null
+
   return (
     <div className="p-4 max-w-lg mx-auto space-y-4">
       {/* Header */}
@@ -361,6 +391,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
         slug={slug}
         openPeriodId={openPeriodId}
         userCurrentTeamId={userCurrentTeamId}
+        seasonLabel={seasonLabel}
       />
     </div>
   )

@@ -17,13 +17,14 @@ interface Props {
   slug:               string
   openPeriodId?:      string | null
   userCurrentTeamId?: string | null
+  seasonLabel?:       string | null
 }
 
 type View = 'current' | 'alltime'
 
 export default function LeaderboardBoard({
   eventType, currentPeriod, periods, entries, teams, allTime, currentUserId, slug,
-  openPeriodId, userCurrentTeamId,
+  openPeriodId, userCurrentTeamId, seasonLabel,
 }: Props) {
   const [view, setView] = useState<View>('current')
   const router = useRouter()
@@ -88,7 +89,7 @@ export default function LeaderboardBoard({
               : 'text-[#7E613F] hover:text-[#242622]'
           )}
         >
-          All Time
+          {seasonLabel ?? 'All Time'}
         </button>
       </div>
 
