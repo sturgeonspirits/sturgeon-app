@@ -79,22 +79,20 @@ export async function POST(req: NextRequest) {
 
         if (upsertErr) throw new Error(`Score save failed for user ${userId}: ${upsertErr.message}`)
 
-        // Award points
-        // In replaceMode (inline edits), only award points when scores are
-        // being entered for the first time (existing row was all zeros).
-        // This prevents double-awarding when staff edits an existing entry.
+        // ── Points: attendance only on score entry ──────────────────
+        // Award attendance points once per player per period.
+        // Placement bonuses (1st/2nd) are handled separately via the
+        // "finalize" flow after all scores are entered.
         const existingHadScores = (existing?.wins ?? 0) > 0
                                 || (existing?.losses ?? 0) > 0
                                 || (existing?.score ?? 0) !== 0
+        const participated = (newWins + newLosses > 0) || newScore !== 0
         let pts = 0
         if (replaceMode && existingHadScores) {
-          pts = 0   // already awarded on the original submission
-        } else if (scoringMethod === 'wins_losses') {
-          pts = wins > 0
-            ? (placementPoints['win'] ?? 10)   // cribbage win = 10 pts
-            : (placementPoints['loss'] ?? 5)   // cribbage loss = 5 pts (still participated)
-        } else {
-          pts = placementPoints['participant'] ?? 15  // trivia/other participation = 15 pts
+          pts = 0   // already awarded attendance on the original submission
+        } else if (participated && !existingHadScores) {
+          // First time this player has scores → award attendance
+          pts = placementPoints['attend'] ?? placementPoints['participant'] ?? 15
         }
 
         if (pts > 0) {
@@ -104,7 +102,7 @@ export async function POST(req: NextRequest) {
             pointsDelta: pts,
             contextType: 'leaderboard_period',
             contextId: periodId,
-            notes: `${eventType.name}: ${scoringMethod === 'wins_losses' ? (wins > 0 ? 'Win' : 'Loss') : `${score} pts`}`,
+            notes: `${eventType.name}: Attended`,
             supabase,
           })
           results.push({ userId, pts, earnEventId: earnEvent.id })
@@ -118,14 +116,7 @@ export async function POST(req: NextRequest) {
             console.warn('participation mission skip:', (e as Error).message)
           }
         }
-        // Mission: win (non-fatal)
-        if (wins > 0 && eventType.win_mission_slug) {
-          try {
-            await completeMission({ userId, missionSlug: eventType.win_mission_slug, supabase })
-          } catch (e) {
-            console.warn('win mission skip:', (e as Error).message)
-          }
-        }
+        // Mission: win — deferred to finalize when placement is known
       }
     }
 
@@ -199,19 +190,25 @@ export async function POST(req: NextRequest) {
           if (teamUpsertErr) throw new Error(`Team score save failed: ${teamUpsertErr.message}`)
         }
 
-        // Award points to each team member
-        // placement_points JSON: { "1": 65, "2": 40, "participant": 15 }
-        // 1st = 50 bonus + 15 participation = 65, 2nd = 25 + 15 = 40, others = 15
-        const pts = placementPoints[String(placement)] ?? placementPoints['participant'] ?? 15
+        // Award points to each team member:
+        // - Attendance (participate): always awarded
+        // - Placement bonus: 1st = +50, 2nd = +30
+        const attendPts = placementPoints['attend'] ?? placementPoints['participant'] ?? 15
+        const bonusPts  = placement === 1 ? (placementPoints['1st_bonus'] ?? 50)
+                        : placement === 2 ? (placementPoints['2nd_bonus'] ?? 30)
+                        : 0
+        const totalPts  = attendPts + bonusPts
+        const placeLabel = placement === 1 ? '1st' : placement === 2 ? '2nd' : placement === 3 ? '3rd' : `${placement}th`
+
         for (const userId of memberIds) {
-          if (pts > 0) {
+          if (totalPts > 0) {
             await emitEarnEvent({
               userId,
               eventType: 'leaderboard_awarded',
-              pointsDelta: pts,
+              pointsDelta: totalPts,
               contextType: 'leaderboard_period',
               contextId: periodId,
-              notes: `${eventType.name}: Team "${name}" — ${placement === 1 ? '1st' : placement === 2 ? '2nd' : placement === 3 ? '3rd' : `${placement}th`} place`,
+              notes: `${eventType.name}: Team "${name}" — ${placeLabel} place${bonusPts > 0 ? ` (+${bonusPts} bonus)` : ''}`,
               supabase,
             })
           }
@@ -222,14 +219,14 @@ export async function POST(req: NextRequest) {
               console.warn('participation mission skip (team):', (e as Error).message)
             }
           }
-          if (placement === 1 && eventType.win_mission_slug) {
+          if ((placement === 1 || placement === 2) && eventType.win_mission_slug) {
             try {
               await completeMission({ userId, missionSlug: eventType.win_mission_slug, supabase })
             } catch (e) {
               console.warn('win mission skip (team):', (e as Error).message)
             }
           }
-          results.push({ userId, pts })
+          results.push({ userId, pts: totalPts })
         }
       }
     }

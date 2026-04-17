@@ -351,6 +351,11 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
           {selectedET.scoring_method === 'points' && selectedET.participant_type === 'team' && (
             <TriviaTeamForm period={selectedPeriod} members={members} staffId={staffId} eventTypeId={selectedET.id} eventId={selectedEventId} />
           )}
+
+          {/* Finalize night — awards placement bonuses for individual events */}
+          {selectedET.participant_type === 'individual' && (
+            <FinalizeNightButton periodId={selectedPeriod.id} isFinalized={selectedPeriod.is_finalized} />
+          )}
         </div>
       )}
     </div>
@@ -629,6 +634,72 @@ function CribbageInlineRow({
         )}
       </div>
       {err && <p className="text-xs text-red-500">{err}</p>}
+    </div>
+  )
+}
+
+function FinalizeNightButton({ periodId, isFinalized }: { periodId: string; isFinalized: boolean }) {
+  const [saving,  setSaving]  = useState(false)
+  const [result,  setResult]  = useState<{ name: string; place: number; bonus: number }[] | null>(null)
+  const [error,   setError]   = useState('')
+  const [done,    setDone]    = useState(isFinalized)
+
+  async function finalize() {
+    if (!confirm('Award placement bonuses for this night? This ranks all players and gives +50 to 1st, +30 to 2nd.')) return
+    setSaving(true)
+    setError('')
+    const res = await fetch('/api/staff/finalize-night', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodId }),
+    })
+    const json = await res.json()
+    setSaving(false)
+    if (res.ok) {
+      setResult(json.placements ?? [])
+      setDone(true)
+    } else {
+      setError(json.error ?? 'Failed to finalize')
+    }
+  }
+
+  if (done && !result) {
+    return (
+      <div className="bg-[#87A67F]/10 border border-[#87A67F]/30 rounded-xl p-4 text-center">
+        <p className="text-sm text-[#87A67F] font-semibold">✓ Night finalized — placement bonuses awarded</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-[#F7F5EF] border border-[#D4CFC3] rounded-xl p-4 space-y-3">
+      <p className="text-xs font-bold text-[#7E613F] uppercase tracking-widest">Finalize Night</p>
+      <p className="text-xs text-[#9E8F7E]">
+        After all scores are entered, finalize to award placement bonuses: 1st gets +50 pts, 2nd gets +30 pts.
+      </p>
+
+      {result ? (
+        <div className="space-y-1">
+          {result.map(r => (
+            <div key={r.userId} className="flex items-center gap-2 bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
+              <span className="text-lg">{r.place === 1 ? '🥇' : '🥈'}</span>
+              <span className="text-sm font-semibold text-[#242622] flex-1">{r.name}</span>
+              <span className="text-sm font-bold text-[#87A67F]">+{r.bonus} pts</span>
+            </div>
+          ))}
+          <p className="text-xs text-[#87A67F] font-medium mt-2">✓ Bonuses awarded</p>
+        </div>
+      ) : (
+        <button
+          onClick={finalize}
+          disabled={saving}
+          className="w-full bg-[#87A67F] text-white font-semibold py-3 rounded-xl disabled:opacity-40 hover:bg-[#769968] active:scale-[0.98] transition-all text-sm"
+        >
+          {saving ? 'Finalizing…' : '🏆 Finalize & Award Bonuses'}
+        </button>
+      )}
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   )
 }
