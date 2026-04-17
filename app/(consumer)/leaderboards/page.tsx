@@ -63,31 +63,60 @@ export default async function LeaderboardsPage() {
   const events = eventTypes ?? []
 
   // ── Fetch latest winners for each event type ──────────────────────────────
+  // Shows the winner from the most recent period that has scores entered,
+  // regardless of whether the period was formally "finalized."
   const winnerMap = new Map<string, LatestWinner>()
 
   if (events.length > 0) {
     const etIds = events.map(e => e.id)
 
-    // Get the most recent finalized period per event type
-    const { data: finalizedPeriods } = await service
+    // Get recent periods per event type (newest first)
+    const { data: recentPeriods } = await service
       .from('leaderboard_periods')
-      .select('id, event_type_id, label, is_finalized')
+      .select('id, event_type_id, label')
       .in('event_type_id', etIds)
-      .eq('is_finalized', true)
       .order('starts_at', { ascending: false })
-      .limit(20)
+      .limit(30)
 
-    // Pick the newest finalized period per event type
-    const latestByType = new Map<string, { id: string; label: string }>()
-    for (const p of (finalizedPeriods ?? [])) {
-      if (!latestByType.has(p.event_type_id)) {
-        latestByType.set(p.event_type_id, { id: p.id, label: p.label })
+    // Pick the newest periods per event type (up to 3 each, in case the
+    // newest has no scores yet — e.g. tonight's event just started)
+    const candidatesByType = new Map<string, { id: string; label: string }[]>()
+    for (const p of (recentPeriods ?? [])) {
+      const list = candidatesByType.get(p.event_type_id) ?? []
+      if (list.length < 3) {
+        list.push({ id: p.id, label: p.label })
+        candidatesByType.set(p.event_type_id, list)
       }
     }
 
-    // For each event type with a finalized period, find the winner
+    // For each event type, check candidate periods until we find one with scores
     for (const et of events) {
-      const periodInfo = latestByType.get(et.id)
+      const candidates = candidatesByType.get(et.id)
+      if (!candidates || candidates.length === 0) continue
+
+      let periodInfo: { id: string; label: string } | null = null
+
+      for (const candidate of candidates) {
+        // Check if this period has any actual scores
+        if (et.participant_type === 'team') {
+          const { data: hasTeams } = await service
+            .from('leaderboard_teams')
+            .select('id')
+            .eq('period_id', candidate.id)
+            .gt('score', 0)
+            .limit(1)
+          if (hasTeams && hasTeams.length > 0) { periodInfo = candidate; break }
+        } else {
+          const { data: hasScores } = await service
+            .from('leaderboard_events')
+            .select('id, wins, score')
+            .eq('period_id', candidate.id)
+            .or('wins.gt.0,score.gt.0')
+            .limit(1)
+          if (hasScores && hasScores.length > 0) { periodInfo = candidate; break }
+        }
+      }
+
       if (!periodInfo) continue
 
       if (et.participant_type === 'team') {
