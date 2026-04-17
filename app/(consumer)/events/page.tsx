@@ -13,6 +13,8 @@ interface FbEvent {
   description?:          string
   cover?:                string
   is_recurring_instance?: boolean
+  is_canceled?:          boolean
+  is_cancelled?:         boolean
 }
 
 const TZ = 'America/Chicago'
@@ -206,8 +208,20 @@ export default async function EventsPage() {
     })
     .filter((ev: any) => ev.event_type !== null)
 
-  const featured = fbEvents[0] ?? null
-  const rest     = fbEvents.slice(1)
+  // Filter out cancelled and past FB events
+  const nowMs = Date.now()
+  const activeFbEvents = fbEvents.filter(ev => {
+    if (ev.is_canceled || ev.is_cancelled) return false
+    // Also filter by name — Facebook sometimes marks cancellations in the title
+    if (ev.name?.toLowerCase().includes('cancelled') || ev.name?.toLowerCase().includes('canceled')) return false
+    // Filter out past events (use end_time if available, otherwise start_time)
+    const eventEnd = ev.end_time ? new Date(ev.end_time).getTime() : new Date(ev.start_time).getTime()
+    if (eventEnd < nowMs) return false
+    return true
+  })
+
+  const featured = activeFbEvents[0] ?? null
+  const rest     = activeFbEvents.slice(1)
 
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -277,7 +291,7 @@ export default async function EventsPage() {
       )}
 
       {/* ── Facebook events ───────────────────────────────── */}
-      {fbEvents.length > 0 && (
+      {activeFbEvents.length > 0 && (
         <>
           {/* ── Next up (featured) ───────────────────────── */}
           <section className="mb-8">
@@ -295,7 +309,7 @@ export default async function EventsPage() {
       )}
 
       {/* ── No events fallback ───────────────────────────── */}
-      {dbEvents.length === 0 && fbEvents.length === 0 && (
+      {dbEvents.length === 0 && activeFbEvents.length === 0 && (
         <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-6 text-center mb-8">
           <p className="text-3xl mb-2">📅</p>
           <p className="text-sm font-semibold text-[#242622]">No upcoming events right now</p>

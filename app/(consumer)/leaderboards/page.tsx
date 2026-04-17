@@ -103,7 +103,7 @@ export default async function LeaderboardsPage() {
             .from('leaderboard_teams')
             .select('id')
             .eq('period_id', candidate.id)
-            .gt('score', 0)
+            .or('score.gt.0,placement.gt.0')
             .limit(1)
           if (hasTeams && hasTeams.length > 0) { periodInfo = candidate; break }
         } else {
@@ -120,12 +120,14 @@ export default async function LeaderboardsPage() {
       if (!periodInfo) continue
 
       if (et.participant_type === 'team') {
-        // Team event: winner is team with placement = 1
+        // Team event: winner is team with best placement (lowest number)
         const { data: winningTeam } = await service
           .from('leaderboard_teams')
           .select('name, score, placement')
           .eq('period_id', periodInfo.id)
-          .eq('placement', 1)
+          .gt('placement', 0)
+          .order('placement', { ascending: true })
+          .limit(1)
           .maybeSingle()
 
         if (winningTeam) {
@@ -133,18 +135,21 @@ export default async function LeaderboardsPage() {
             eventTypeId: et.id,
             periodLabel: periodInfo.label,
             winnerName:  winningTeam.name,
-            detail:      winningTeam.score != null ? `${winningTeam.score} pts` : '1st place',
+            detail:      winningTeam.score ? `${winningTeam.score} pts` : '1st place',
             isTeam:      true,
           })
         }
       } else {
         // Individual event: winner is the top scorer/most wins
-        const orderCol = et.scoring_method === 'wins_losses' ? 'wins' : 'score'
+        // For wins_losses: sort by wins DESC, then spread (score) DESC as tiebreaker
+        // For points: sort by score DESC
         const { data: topEntry } = await service
           .from('leaderboard_events')
           .select('user_id, score, wins, losses')
           .eq('period_id', periodInfo.id)
-          .order(orderCol, { ascending: false })
+          .or('wins.gt.0,score.gt.0')
+          .order(et.scoring_method === 'wins_losses' ? 'wins' : 'score', { ascending: false })
+          .order('score', { ascending: false })
           .limit(1)
           .maybeSingle()
 
