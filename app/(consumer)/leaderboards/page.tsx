@@ -1,4 +1,4 @@
-import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -29,7 +29,6 @@ export default async function LeaderboardsPage() {
   const { supabase, user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
-  const service = createServiceClient()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
   const [{ data: eventTypes }, { data: upcoming }, { data: recent }] = await Promise.all([
@@ -63,18 +62,20 @@ export default async function LeaderboardsPage() {
   const events = eventTypes ?? []
 
   // ── Fetch latest winners for each event type ──────────────────────────────
-  // Shows the winner from the most recent period that has scores entered,
-  // regardless of whether the period was formally "finalized."
+  // Uses the user's authenticated client — all leaderboard tables have
+  // public-read RLS policies so this works without the service-role key.
   const winnerMap = new Map<string, LatestWinner>()
 
   if (events.length > 0) {
     const etIds = events.map(e => e.id)
 
     // Get recent periods per event type (newest first)
-    const { data: recentPeriods } = await service
+    // Exclude season/all_time periods — only single_night periods have scores
+    const { data: recentPeriods } = await supabase
       .from('leaderboard_periods')
       .select('id, event_type_id, label')
       .in('event_type_id', etIds)
+      .eq('period_type', 'single_night')
       .order('starts_at', { ascending: false })
       .limit(30)
 
@@ -99,7 +100,7 @@ export default async function LeaderboardsPage() {
       for (const candidate of candidates) {
         // Check if this period has any actual scores
         if (et.participant_type === 'team') {
-          const { data: hasTeams } = await service
+          const { data: hasTeams } = await supabase
             .from('leaderboard_teams')
             .select('id')
             .eq('period_id', candidate.id)
@@ -107,7 +108,7 @@ export default async function LeaderboardsPage() {
             .limit(1)
           if (hasTeams && hasTeams.length > 0) { periodInfo = candidate; break }
         } else {
-          const { data: hasScores } = await service
+          const { data: hasScores } = await supabase
             .from('leaderboard_events')
             .select('id, wins, score')
             .eq('period_id', candidate.id)
@@ -121,7 +122,7 @@ export default async function LeaderboardsPage() {
 
       if (et.participant_type === 'team') {
         // Team event: winner is team with best placement (lowest number)
-        const { data: winningTeam } = await service
+        const { data: winningTeam } = await supabase
           .from('leaderboard_teams')
           .select('name, score, placement')
           .eq('period_id', periodInfo.id)
@@ -141,9 +142,7 @@ export default async function LeaderboardsPage() {
         }
       } else {
         // Individual event: winner is the top scorer/most wins
-        // For wins_losses: sort by wins DESC, then spread (score) DESC as tiebreaker
-        // For points: sort by score DESC
-        const { data: topEntry } = await service
+        const { data: topEntry } = await supabase
           .from('leaderboard_events')
           .select('user_id, score, wins, losses')
           .eq('period_id', periodInfo.id)
@@ -155,7 +154,7 @@ export default async function LeaderboardsPage() {
 
         if (topEntry && ((topEntry.wins ?? 0) > 0 || (topEntry.score ?? 0) > 0)) {
           // Fetch the winner's profile
-          const { data: profile } = await service
+          const { data: profile } = await supabase
             .from('profiles')
             .select('display_name, full_name')
             .eq('id', topEntry.user_id)
