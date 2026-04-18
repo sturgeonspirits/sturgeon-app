@@ -64,58 +64,65 @@ export default async function LeaderboardsPage() {
   // ── Fetch latest winners for each event type ──────────────────────────────
   // Uses the user's authenticated client — all leaderboard tables have
   // public-read RLS policies so this works without the service-role key.
+  //
+  // Strategy: use the events table (event_date) to find the most recent events
+  // per type, then look up the linked leaderboard_period via event_id. This is
+  // more reliable than sorting periods by starts_at, which can be wrong if a
+  // period was created via the old manual route.
   const winnerMap = new Map<string, LatestWinner>()
 
   if (events.length > 0) {
-    const etIds = events.map(e => e.id)
-
-    // Get recent periods per event type (newest first)
-    // Exclude season/all_time periods — they don't have scores directly
-    const { data: recentPeriods } = await supabase
-      .from('leaderboard_periods')
-      .select('id, event_type_id, label, period_type')
-      .in('event_type_id', etIds)
-      .neq('period_type', 'season')
-      .neq('period_type', 'all_time')
-      .order('starts_at', { ascending: false })
-      .limit(30)
-
-    // Pick the newest periods per event type (up to 3 each, in case the
-    // newest has no scores yet — e.g. tonight's event just started)
-    const candidatesByType = new Map<string, { id: string; label: string }[]>()
-    for (const p of (recentPeriods ?? [])) {
-      const list = candidatesByType.get(p.event_type_id) ?? []
-      if (list.length < 3) {
-        list.push({ id: p.id, label: p.label })
-        candidatesByType.set(p.event_type_id, list)
-      }
-    }
-
-    // For each event type, check candidate periods until we find one with scores
+    // For each event type, walk backwards through recent events until we find
+    // one with a leaderboard period that has actual scores.
     for (const et of events) {
-      const candidates = candidatesByType.get(et.id)
-      if (!candidates || candidates.length === 0) continue
+      // Get the 5 most recent past events for this event type
+      const { data: recentEvents } = await supabase
+        .from('events')
+        .select('id, event_date')
+        .eq('event_type_id', et.id)
+        .eq('is_cancelled', false)
+        .lte('event_date', today)
+        .order('event_date', { ascending: false })
+        .limit(5)
+
+      if (!recentEvents || recentEvents.length === 0) continue
 
       let periodInfo: { id: string; label: string } | null = null
 
-      for (const candidate of candidates) {
+      for (const ev of recentEvents) {
+        // Find the period linked to this event
+        const { data: period } = await supabase
+          .from('leaderboard_periods')
+          .select('id, label')
+          .eq('event_id', ev.id)
+          .limit(1)
+          .maybeSingle()
+
+        if (!period) continue
+
         // Check if this period has any actual scores
         if (et.participant_type === 'team') {
           const { data: hasTeams } = await supabase
             .from('leaderboard_teams')
             .select('id')
-            .eq('period_id', candidate.id)
+            .eq('period_id', period.id)
             .or('score.gt.0,placement.gt.0')
             .limit(1)
-          if (hasTeams && hasTeams.length > 0) { periodInfo = candidate; break }
+          if (hasTeams && hasTeams.length > 0) {
+            periodInfo = { id: period.id, label: period.label }
+            break
+          }
         } else {
           const { data: hasScores } = await supabase
             .from('leaderboard_events')
             .select('id, wins, score')
-            .eq('period_id', candidate.id)
+            .eq('period_id', period.id)
             .or('wins.gt.0,score.gt.0')
             .limit(1)
-          if (hasScores && hasScores.length > 0) { periodInfo = candidate; break }
+          if (hasScores && hasScores.length > 0) {
+            periodInfo = { id: period.id, label: period.label }
+            break
+          }
         }
       }
 
