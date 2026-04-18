@@ -70,12 +70,13 @@ export default async function LeaderboardsPage() {
     const etIds = events.map(e => e.id)
 
     // Get recent periods per event type (newest first)
-    // Exclude season/all_time periods — only single_night periods have scores
+    // Exclude season/all_time periods — they don't have scores directly
     const { data: recentPeriods } = await supabase
       .from('leaderboard_periods')
-      .select('id, event_type_id, label')
+      .select('id, event_type_id, label, period_type')
       .in('event_type_id', etIds)
-      .eq('period_type', 'single_night')
+      .neq('period_type', 'season')
+      .neq('period_type', 'all_time')
       .order('starts_at', { ascending: false })
       .limit(30)
 
