@@ -38,7 +38,7 @@ export default function PrivacyPage() {
       <Section title="What we do NOT collect">
         <List items={[
           'We do not collect payment or credit card information through the app.',
-          'We do not collect precise geolocation. Check-in requires scanning a QR code physically present at the bar.',
+          'We do not collect precise geolocation. Check-in requires scanning a QR code physically present at the distillery.',
           'We do not collect your birth year or full date of birth.',
           'We do not sell, rent, or share your personal information with third parties for marketing purposes.',
         ]} />

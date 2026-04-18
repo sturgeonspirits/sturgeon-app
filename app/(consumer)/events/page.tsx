@@ -356,7 +356,7 @@ export default async function EventsPage() {
         <div className="space-y-2">
           {[
             { icon: '🎟️', label: 'RSVP & Tickets', desc: 'Reserve your spot at ticketed events' },
-            { icon: '📍', label: 'QR Check-In',     desc: 'Scan at the bar to earn points'       },
+            { icon: '📍', label: 'QR Check-In',     desc: 'Scan at the distillery to earn points'       },
           ].map(item => (
             <div
               key={item.label}

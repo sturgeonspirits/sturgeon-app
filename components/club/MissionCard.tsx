@@ -42,11 +42,11 @@ export default function MissionCard({ mission, completed, userId, pendingRequest
   }
 
   const triggerLabel: Record<string, string> = {
-    qr_scan:              'Scan QR code at the bar',
+    qr_scan:              'Scan QR code at the distillery',
     journal_entry:        'Log a tasting entry',
     event_attendance:     'Awarded at events',
     manual_staff:         'Staff-awarded',
-    toast_purchase:       'Purchase at the bar',
+    toast_purchase:       'Purchase at the distillery',
     challenge_completion: 'Complete challenge',
   }
 
