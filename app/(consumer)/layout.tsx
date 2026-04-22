@@ -1,5 +1,6 @@
 import TabBar from '@/components/nav/TabBar'
 import PushSubscriber from '@/components/PushSubscriber'
+import AppFooter from '@/components/ui/AppFooter'
 
 export default function ConsumerLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export default function ConsumerLayout({ children }: { children: React.ReactNode
         style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
       >
         {children}
+        <AppFooter />
       </main>
       <div className="fixed bottom-0 inset-x-0 z-50">
         <TabBar />

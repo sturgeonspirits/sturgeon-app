@@ -67,10 +67,18 @@ async function fetchSectionOrder(): Promise<Map<string, number>> {
 }
 
 export async function POST(request: Request) {
-  // Verify this is coming from staff (require service auth header)
-  const authHeader = request.headers.get('x-sync-secret')
+  // Verify caller is authorized. Two accepted credentials:
+  //   - x-sync-secret: SYNC_SECRET  — used by the staff "Sync Menu" button
+  //   - x-cron-secret: CRON_SECRET  — used by the Netlify scheduled function
+  const syncHeader = request.headers.get('x-sync-secret')
+  const cronHeader = request.headers.get('x-cron-secret')
   const syncSecret = process.env.SYNC_SECRET
-  if (!syncSecret || authHeader !== syncSecret) {
+  const cronSecret = process.env.CRON_SECRET
+
+  const syncOk = Boolean(syncSecret) && syncHeader === syncSecret
+  const cronOk = Boolean(cronSecret) && cronHeader === cronSecret
+
+  if (!syncOk && !cronOk) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

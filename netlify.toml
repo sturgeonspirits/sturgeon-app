@@ -1,0 +1,15 @@
+# Netlify configuration for sturgeon-spirits-app.
+#
+# The @netlify/plugin-nextjs plugin handles the Next.js build and
+# server-rendered routes. Scheduled Functions live under netlify/functions/
+# and declare their own cron expression; the schedule here mirrors that
+# declaration for clarity and is the source the Netlify UI displays.
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Daily menu sync: Google Sheet → Supabase.
+# 08:00 UTC = 2 AM CST (Nov–Mar) / 3 AM CDT (Mar–Nov).
+# Canonical definition also in netlify/functions/scheduled-sync-menu.mts.
+[functions."scheduled-sync-menu"]
+  schedule = "0 8 * * *"

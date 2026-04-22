@@ -299,8 +299,9 @@ All routes under `app/api/`. Routes that require staff use an internal `assertSt
 | Route | Method | Description |
 |---|---|---|
 | `/api/push/event-reminder` | POST | Send push notifications for upcoming events (called by cron) |
+| `/api/sync-menu` | POST | Pull Google Sheet → Supabase `recipes`. Triggered by staff button and by a daily cron. |
 
-**Cron authentication:** The event reminder route requires an `x-cron-secret` header matching `CRON_SECRET`. Schedule this job on Netlify Scheduled Functions or an external cron service.
+**Cron authentication:** Scheduled routes accept an `x-cron-secret` header matching `CRON_SECRET`. Schedule these jobs via Netlify Scheduled Functions (`netlify/functions/*.mts`) or an external cron service. `/api/sync-menu` additionally accepts `x-sync-secret: SYNC_SECRET` so the staff "Sync Menu" button keeps working.
 
 ---
 
@@ -401,6 +402,18 @@ package = "@netlify/plugin-nextjs"
 [functions."push-event-reminder"]
 schedule = "0 14 * * *"   # 2pm UTC daily
 ```
+
+### Menu sync cron (already wired up)
+
+The Google Sheet → Supabase menu sync runs automatically every day at **08:00 UTC** (2 AM CST / 3 AM CDT — always before the tasting room opens). Implementation:
+
+- `netlify/functions/scheduled-sync-menu.mts` — the scheduled function; POSTs to `/api/sync-menu` with `x-cron-secret: $CRON_SECRET`.
+- `netlify.toml` — mirrors the cron expression under `[functions."scheduled-sync-menu"]`.
+- `/api/sync-menu` — the existing endpoint; accepts either `x-sync-secret` (button) or `x-cron-secret` (scheduler).
+
+To change the schedule, edit the cron expression in **both** `netlify/functions/scheduled-sync-menu.mts` (the `export const config`) **and** `netlify.toml` (the `schedule` key). Keep the staff "Sync Menu" button for ad-hoc refreshes between scheduled runs.
+
+Required env var: `CRON_SECRET` (also used by the event reminder cron). Set it in Netlify → Site configuration → Environment variables.
 
 ### Run a database migration
 
