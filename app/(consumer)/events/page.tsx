@@ -33,10 +33,67 @@ function fmtTime(iso: string) {
   })
 }
 
+// Matches http(s):// URLs and bare www.-prefixed URLs. Capture group ensures
+// String.split() returns the URLs interleaved with the surrounding text.
+const URL_RE = /(\b(?:https?:\/\/|www\.)[^\s<>"')\]]+)/gi
+const TRAILING_PUNCT_RE = /[.,!?:;)\]}]+$/
+
 function truncate(text: string | undefined, max = 220) {
   const t = (text ?? '').trim()
   if (!t) return ''
-  return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, '') + '…' : t
+  if (t.length <= max) return t
+
+  // Don't chop a URL in half — if the cutoff lands inside one, extend through
+  // the end of that URL so the link the user sees stays clickable.
+  let cut = max
+  let preserveTail = false
+  const re = new RegExp(URL_RE.source, 'gi')
+  let m: RegExpExecArray | null
+  while ((m = re.exec(t)) !== null) {
+    const start = m.index
+    const end = start + m[0].length
+    if (start >= max) break
+    if (end > max) {
+      cut = end
+      preserveTail = true
+      break
+    }
+  }
+
+  const sliced = t.slice(0, cut)
+  // Trim back to a word boundary only when we're not protecting a URL tail.
+  const trimmed = preserveTail ? sliced : sliced.replace(/\s+\S*$/, '')
+  return trimmed + (cut < t.length ? '…' : '')
+}
+
+// Turn URLs in plain text into clickable anchors. Returns an array of
+// React nodes so it can be dropped directly into JSX.
+function linkify(text: string) {
+  const parts = text.split(URL_RE)
+  return parts.map((part, i) => {
+    if (/^(?:https?:\/\/|www\.)/i.test(part)) {
+      // Strip trailing punctuation from the URL so "visit foo.com." doesn't
+      // link to "foo.com." (which most servers resolve, but looks ugly).
+      const tailMatch = part.match(TRAILING_PUNCT_RE)
+      const clean = tailMatch ? part.slice(0, -tailMatch[0].length) : part
+      const trail = tailMatch ? tailMatch[0] : ''
+      const href = clean.toLowerCase().startsWith('http') ? clean : `https://${clean}`
+      return (
+        <span key={i}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#96321F] underline underline-offset-2 hover:text-[#ae3a24] break-all"
+          >
+            {clean}
+          </a>
+          {trail}
+        </span>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
 }
 
 async function fetchFbEvents(): Promise<FbEvent[]> {
@@ -114,9 +171,9 @@ function EventCard({ ev, featured = false }: { ev: FbEvent; featured?: boolean }
           </div>
         )}
 
-        {/* Description */}
+        {/* Description — linkify so FB ticket/store URLs are clickable */}
         {desc && (
-          <p className="text-xs text-[#9E8F7E] leading-relaxed pt-1">{desc}</p>
+          <p className="text-xs text-[#9E8F7E] leading-relaxed pt-1">{linkify(desc)}</p>
         )}
       </div>
     </div>
