@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { reconcileToastToProfile } from '@/lib/earn-events'
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 async function assertStaff() {
@@ -129,7 +130,11 @@ export async function POST(req: NextRequest) {
     matchedEmail: 0,
     matchedPhone: 0,
     unmatched: 0,
-    pointsImported: 0,
+    profilesReconciled: 0,     // profiles that had a non-zero reconcile delta applied
+    profilesUnchanged: 0,      // profiles where Toast bucket already matched
+    pointsAdded: 0,            // total points added across profiles (positive deltas)
+    pointsRemoved: 0,          // total points removed across profiles (abs of negatives)
+    redemptions: 0,            // count of profiles with negative deltas (Toast-side redemptions)
     birthdaysSaved: 0,
     errors: 0,
   }
@@ -193,82 +198,73 @@ export async function POST(req: NextRequest) {
     counters.upserted += batch.length
   }
 
-  // ── Delta-based point import ───────────────────────────────────────────────
-  // Fetch ALL matched accounts (profile_id is set, toast_points > 0)
-  const { data: matchedAccounts } = await service
+  // ── Per-profile reconcile (not per-card!) ──────────────────────────────────
+  // Toast creates duplicate accounts for gift-card users; balances move in parallel.
+  // We reconcile at the profile level using reconcileToastToProfile, which picks
+  // MAX(toast_points) across a profile's linked cards. Negative deltas (Toast-side
+  // redemptions) flow through so balances go DOWN as well as UP.
+  const { data: linkedCards } = await service
     .from('toast_loyalty_accounts')
-    .select('id, toast_account_id, profile_id, toast_points, birthday')
+    .select('id, profile_id, toast_account_id, toast_points, birthday, last_trans_at')
     .not('profile_id', 'is', null)
-    .gt('toast_points', 0)
-    .limit(10000)
+    .eq('is_deactivated', false)
+    .limit(20000)
 
-  const accountIds = (matchedAccounts ?? []).map((a: any) => a.id)
-
-  // Sum what has already been imported for each account from earn_events.
-  // This is the source of truth — not the points_imported boolean.
-  // Ratio is 1:1 (1 app point per 1 Toast point).
-  const { data: importedEvents } = accountIds.length
-    ? await service
-        .from('earn_events')
-        .select('context_id, points_delta')
-        .eq('context_type', 'toast_import')
-        .in('context_id', accountIds)
-    : { data: [] }
-
-  const importedByAccount: Record<string, number> = {}
-  for (const ev of importedEvents ?? []) {
-    if (ev.context_id) {
-      importedByAccount[ev.context_id] = (importedByAccount[ev.context_id] ?? 0) + (ev.points_delta ?? 0)
-    }
+  // Group cards by profile, pick a canonical one for birthday / pos_customer_id metadata.
+  const cardsByProfile = new Map<string, any[]>()
+  for (const c of linkedCards ?? []) {
+    if (!c.profile_id) continue
+    const list = cardsByProfile.get(c.profile_id) ?? []
+    list.push(c)
+    cardsByProfile.set(c.profile_id, list)
   }
 
-  for (const acct of matchedAccounts ?? []) {
-    const profileId       = acct.profile_id
-    const totalToastPts   = acct.toast_points ?? 0
-    const alreadyImported = importedByAccount[acct.id] ?? 0
-    // 1 app point per 1 Toast point; only import the delta since last sync
-    const deltaAppPts     = totalToastPts - alreadyImported
+  for (const [profileId, cards] of cardsByProfile) {
+    // Canonical card: highest toast_points, tie-break by most recent transaction.
+    const canonical = [...cards].sort((a, b) =>
+      (b.toast_points ?? 0) - (a.toast_points ?? 0) ||
+      (new Date(b.last_trans_at ?? 0).getTime() - new Date(a.last_trans_at ?? 0).getTime())
+    )[0]
 
-    if (deltaAppPts <= 0) continue  // Nothing new to import
-
-    // Create earn_event for the delta only
-    const { error: eeErr } = await service.from('earn_events').insert({
-      user_id:      profileId,
-      event_type:   'purchase_recorded',
-      points_delta: deltaAppPts,
-      context_type: 'toast_import',
-      context_id:   acct.id,
-      notes:        `Toast import: ${totalToastPts} Toast pts total (${alreadyImported} prev imported, +${deltaAppPts} new)`,
-    })
-    if (!eeErr) counters.pointsImported++
-    else {
-      console.error('[toast-sync] earn_events insert failed:', eeErr?.message)
+    // Reconcile Toast-bucket points via the shared helper.
+    try {
+      const result = await reconcileToastToProfile({ userId: profileId, supabase: service })
+      if (result.delta > 0) {
+        counters.profilesReconciled++
+        counters.pointsAdded += result.delta
+      } else if (result.delta < 0) {
+        counters.profilesReconciled++
+        counters.redemptions++
+        counters.pointsRemoved += -result.delta
+      } else {
+        counters.profilesUnchanged++
+      }
+    } catch (e: any) {
+      console.error('[toast-sync] reconcile failed for profile', profileId, e?.message)
       counters.errors++
+      continue
     }
 
-    // Update pos_customer_id
-    await service
-      .from('profiles')
-      .update({ pos_customer_id: acct.toast_account_id })
-      .eq('id', profileId)
+    // Update pos_customer_id on the profile (any linked card's id works; pick canonical).
+    if (canonical?.toast_account_id) {
+      await service
+        .from('profiles')
+        .update({ pos_customer_id: canonical.toast_account_id })
+        .eq('id', profileId)
+    }
 
-    // Backfill birthday if profile has none
-    if (acct.birthday) {
+    // Backfill birthday if profile has none and any card has one.
+    const cardWithBirthday = cards.find(c => c.birthday)
+    if (cardWithBirthday?.birthday) {
       const profile = (profilesRaw ?? []).find((p: any) => p.id === profileId)
       if (profile && !profile.birthday) {
         await service
           .from('profiles')
-          .update({ birthday: acct.birthday })
+          .update({ birthday: cardWithBirthday.birthday })
           .eq('id', profileId)
         counters.birthdaysSaved++
       }
     }
-
-    // Mark imported (still tracked for visibility in the DB)
-    await service
-      .from('toast_loyalty_accounts')
-      .update({ points_imported: true })
-      .eq('id', acct.id)
   }
 
   return NextResponse.json({ ok: true, counters })

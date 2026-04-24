@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/staff-auth'
+import { reconcileToastToProfile } from '@/lib/earn-events'
 
 function normalizePhone(raw: string): string | null {
   const digits = (raw ?? '').replace(/\D/g, '')
@@ -66,29 +67,25 @@ async function linkToastAccount(service: ReturnType<typeof createServiceClient>,
     }
   }
 
-  // Seed points if not already imported
-  const appPts = (toastAccount.toast_points ?? 0) * 10
-  if (appPts > 0 && !toastAccount.points_imported) {
-    const { error: eeErr } = await service.from('earn_events').insert({
-      user_id:      profileId,
-      event_type:   'purchase_recorded',
-      points_delta: appPts,
-      context_type: 'toast_import',
-      context_id:   toastAccount.id,
-      notes:        `Toast loyalty link: ${toastAccount.toast_points} Toast pts → ${appPts} app pts`,
-    })
-    if (!eeErr) {
-      await service
-        .from('toast_loyalty_accounts')
-        .update({ points_imported: true })
-        .eq('id', toastAccount.id)
-    }
+  // Reconcile Toast-bucket points (1:1, delta-based, duplicate-safe via MAX across cards).
+  const reconcile = await reconcileToastToProfile({
+    userId:     profileId,
+    supabase:   service,
+    notePrefix: 'Toast loyalty link',
+  })
+
+  if (reconcile.delta > 0) {
+    await service
+      .from('toast_loyalty_accounts')
+      .update({ points_imported: true })
+      .eq('id', toastAccount.id)
   }
 
   return {
     toastPoints:  toastAccount.toast_points ?? 0,
-    appPoints:    appPts,
-    alreadyHad:   toastAccount.points_imported,
+    appPoints:    reconcile.target,        // current Toast-bucket balance after reconcile
+    delta:        reconcile.delta,          // what this link added (0 if already in sync)
+    alreadyHad:   reconcile.delta === 0,
     cardId:       toastAccount.toast_card_id,
   }
 }

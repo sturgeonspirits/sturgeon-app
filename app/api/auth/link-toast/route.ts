@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { reconcileToastToProfile } from '@/lib/earn-events'
 
 function normalizePhone(raw: string): string | null {
   const digits = (raw ?? '').replace(/\D/g, '')
@@ -76,33 +77,29 @@ export async function POST() {
       .eq('id', profile.id)
   }
 
-  // Seed points
-  const appPts = (toastAccount.toast_points ?? 0) * 10
-  let pointsSeeded = false
+  // Reconcile Toast-bucket points for this profile (1:1, delta-based).
+  // If this is a first-time link, prior = 0 and delta = Toast balance.
+  // If the autolink DB trigger already seeded, delta will be 0.
+  const reconcile = await reconcileToastToProfile({
+    userId:     profile.id,
+    supabase:   service,
+    notePrefix: 'Toast loyalty link',
+  })
 
-  if (appPts > 0 && !toastAccount.points_imported) {
-    const { error: eeErr } = await service.from('earn_events').insert({
-      user_id:      profile.id,
-      event_type:   'purchase_recorded',
-      points_delta: appPts,
-      context_type: 'toast_import',
-      context_id:   toastAccount.id,
-      notes:        `Toast loyalty link at sign-up: ${toastAccount.toast_points} Toast pts → ${appPts} app pts`,
-    })
-    if (!eeErr) {
-      await service
-        .from('toast_loyalty_accounts')
-        .update({ points_imported: true })
-        .eq('id', toastAccount.id)
-      pointsSeeded = true
-    }
+  // Mark points_imported for visibility (not used for math — ledger is source of truth).
+  if (reconcile.delta > 0) {
+    await service
+      .from('toast_loyalty_accounts')
+      .update({ points_imported: true })
+      .eq('id', toastAccount.id)
   }
 
   return NextResponse.json({
     toastInfo: {
-      toastPoints:  toastAccount.toast_points ?? 0,
-      appPoints:    appPts,
-      alreadyHad:   toastAccount.points_imported && !pointsSeeded,
+      toastPoints:   toastAccount.toast_points ?? 0,
+      appPoints:     reconcile.target,         // current Toast-bucket balance after reconcile
+      delta:         reconcile.delta,           // what this link added (0 if already in sync)
+      alreadyHad:    reconcile.delta === 0,
       birthdaySaved: !!(toastAccount.birthday && !profile.birthday),
     },
   })

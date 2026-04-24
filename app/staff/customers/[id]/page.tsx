@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import RedeemPanel from './RedeemPanel'
+import AdjustPointsPanel from './AdjustPointsPanel'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -18,13 +19,19 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   const [
     { data: ledger },
-    { data: toastAccount },
+    { data: toastCards },
     { data: redemptions },
     { data: rewards },
     { data: recentEarns },
+    { data: allEarns },
   ] = await Promise.all([
     service.from('points_ledger').select('balance').eq('user_id', id).maybeSingle(),
-    service.from('toast_loyalty_accounts').select('toast_points, card_number, last_trans_at').eq('profile_id', id).maybeSingle(),
+    // Fetch ALL linked Toast cards (duplicates exist; we show the canonical MAX).
+    service
+      .from('toast_loyalty_accounts')
+      .select('toast_points, card_number, last_trans_at, is_deactivated')
+      .eq('profile_id', id)
+      .eq('is_deactivated', false),
     service
       .from('reward_redemptions')
       .select('id, status, redeemed_at, notes, created_at, rewards(name, icon, points_cost), profiles!redeemed_by(display_name)')
@@ -42,9 +49,39 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       .eq('user_id', id)
       .order('created_at', { ascending: false })
       .limit(15),
+    // Full earn_events breakdown for the App-awarded vs From-Toast split.
+    service
+      .from('earn_events')
+      .select('points_delta, context_type')
+      .eq('user_id', id),
   ])
 
   const balance = ledger?.balance ?? 0
+
+  // App-awarded vs From-Toast split. Any context_type other than 'toast_import'
+  // (including null) counts as app-awarded: missions, rewards, staff adjustments, etc.
+  let fromToast = 0
+  let appAwarded = 0
+  for (const ev of allEarns ?? []) {
+    if (ev.context_type === 'toast_import') {
+      fromToast += ev.points_delta ?? 0
+    } else {
+      appAwarded += ev.points_delta ?? 0
+    }
+  }
+
+  // Canonical Toast POS balance: MAX across duplicate cards.
+  const toastPosBalance = (toastCards ?? []).reduce(
+    (m: number, c: any) => Math.max(m, c.toast_points ?? 0), 0
+  )
+  const lastToastVisit = (toastCards ?? []).reduce(
+    (latest: string | null, c: any) => {
+      if (!c.last_trans_at) return latest
+      if (!latest) return c.last_trans_at
+      return new Date(c.last_trans_at).getTime() > new Date(latest).getTime() ? c.last_trans_at : latest
+    },
+    null as string | null
+  )
 
   return (
     <div className="space-y-6 py-4">
@@ -74,24 +111,44 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </span>
         </div>
 
-        {/* Points */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <div className="bg-[#F7F5EF] rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-[#7E613F] mb-1">App Points</p>
-            <p className="text-2xl font-bold text-[#96321F]">{balance.toLocaleString()}</p>
+        {/* Points breakdown */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="bg-[#F7F5EF] rounded-xl px-3 py-3 text-center">
+            <p className="text-[10px] text-[#7E613F] mb-1 uppercase tracking-wide">App-Awarded</p>
+            <p className="text-xl font-bold text-[#96321F]">{appAwarded.toLocaleString()}</p>
           </div>
-          <div className="bg-[#F7F5EF] rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-[#7E613F] mb-1">Toast Loyalty</p>
-            <p className="text-2xl font-bold text-[#242622]">{(toastAccount?.toast_points ?? 0).toLocaleString()}</p>
+          <div className="bg-[#F7F5EF] rounded-xl px-3 py-3 text-center">
+            <p className="text-[10px] text-[#7E613F] mb-1 uppercase tracking-wide">From Toast</p>
+            <p className="text-xl font-bold text-[#242622]">{fromToast.toLocaleString()}</p>
+          </div>
+          <div className="bg-[#96321F]/10 rounded-xl px-3 py-3 text-center">
+            <p className="text-[10px] text-[#96321F] mb-1 uppercase tracking-wide">Total</p>
+            <p className="text-xl font-bold text-[#96321F]">{balance.toLocaleString()}</p>
           </div>
         </div>
 
-        {toastAccount?.last_trans_at && (
-          <p className="text-xs text-[#9E8F7E]">
-            Last Toast visit: {new Date(toastAccount.last_trans_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
+        {/* Toast POS reference (raw balance from Toast, for comparison) */}
+        {toastPosBalance > 0 && (
+          <div className="flex items-center justify-between text-xs text-[#9E8F7E] pt-1">
+            <span>Toast POS balance: {toastPosBalance.toLocaleString()}</span>
+            {lastToastVisit && (
+              <span>
+                Last Toast visit: {new Date(lastToastVisit).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </span>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Adjust points */}
+      <section>
+        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Adjust Points</h2>
+        <AdjustPointsPanel
+          userId={id}
+          initialBalance={balance}
+          customerLabel={profile.display_name ?? profile.full_name ?? profile.email ?? undefined}
+        />
+      </section>
 
       {/* Grant a reward */}
       <section>

@@ -51,6 +51,92 @@ export async function emitEarnEvent(params: EmitEarnEventParams): Promise<EarnEv
   return data as EarnEvent
 }
 
+// ─── Toast reconcile ─────────────────────────────────────────
+
+export interface ReconcileToastParams {
+  userId: string
+  supabase: Client
+  /**
+   * Notes prefix. If omitted, chosen automatically:
+   *   delta > 0 → 'Toast sync'
+   *   delta < 0 → 'Toast redemption'
+   * Use 'Toast loyalty link' for first-link flows so the audit trail reads naturally.
+   */
+  notePrefix?: string
+}
+
+export interface ReconcileToastResult {
+  /** Signed change applied. 0 means no earn_event was emitted. */
+  delta: number
+  /** Target Toast balance = MAX(toast_points) across the profile's linked active cards. */
+  target: number
+  /** Sum of prior `toast_import` earn_events for this profile. */
+  prior: number
+  /** New earn_event id, or null when delta was 0. */
+  earnEventId: string | null
+}
+
+/**
+ * Align a profile's Toast-bucket points to the CURRENT Toast balance.
+ *
+ * Toast sometimes creates duplicate accounts for one person (gift-card flow)
+ * with IDENTICAL balances that move in parallel. We pick MAX(toast_points)
+ * across linked active cards as the canonical target — SUM would multi-count.
+ *
+ * Semantics:
+ *   target  = MAX(toast_points) across linked active toast_loyalty_accounts
+ *   prior   = SUM(points_delta) of earn_events WHERE context_type = 'toast_import'
+ *   delta   = target - prior                 (can be negative; Toast redemptions)
+ *
+ * If delta is non-zero, emits a single corrective earn_event tagged
+ * context_type = 'toast_import' so future reconciles keep working.
+ * Leaves App-awarded points (all other context_types) untouched.
+ */
+export async function reconcileToastToProfile(params: ReconcileToastParams): Promise<ReconcileToastResult> {
+  const { userId, supabase, notePrefix } = params
+
+  // 1. Target: MAX(toast_points) across the profile's linked active Toast cards.
+  const { data: cards } = await supabase
+    .from('toast_loyalty_accounts')
+    .select('toast_points')
+    .eq('profile_id', userId)
+    .eq('is_deactivated', false)
+
+  const target = ((cards ?? []) as { toast_points: number | null }[])
+    .reduce((m, c) => Math.max(m, c.toast_points ?? 0), 0)
+
+  // 2. Prior: sum of previous toast_import earn_events for this profile.
+  const { data: priorEvents } = await supabase
+    .from('earn_events')
+    .select('points_delta')
+    .eq('user_id', userId)
+    .eq('context_type', 'toast_import')
+
+  const prior = ((priorEvents ?? []) as { points_delta: number | null }[])
+    .reduce((s, e) => s + (e.points_delta ?? 0), 0)
+
+  const delta = target - prior
+
+  if (delta === 0) {
+    return { delta: 0, target, prior, earnEventId: null }
+  }
+
+  // 3. Emit corrective event. Keep context_type='toast_import' so the math holds next time.
+  const prefix = notePrefix ?? (delta > 0 ? 'Toast sync' : 'Toast redemption')
+  const notes  = `${prefix}: ${delta > 0 ? '+' : ''}${delta} pts (Toast balance now ${target}, was ${prior})`
+
+  const evt = await emitEarnEvent({
+    userId,
+    eventType:   'purchase_recorded',
+    pointsDelta: delta,
+    contextType: 'toast_import',
+    notes,
+    supabase,
+  })
+
+  return { delta, target, prior, earnEventId: evt.id }
+}
+
 // ─── Mission helpers ─────────────────────────────────────────
 
 export interface CompleteMissionParams {
