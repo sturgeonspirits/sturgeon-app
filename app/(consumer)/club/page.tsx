@@ -1,9 +1,17 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-04-25.1 — Added HoursBanner(s) at top of /club for live "Open now"
+//                   status. Sources from distillery_hours table.
+// ─────────────────────────────────────────────
+
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import TierProgress from '@/components/club/TierProgress'
 import MissionGrid from '@/components/club/MissionGrid'
 import ShopMenu from '@/components/club/ShopMenu'
+import HoursBanner from '@/components/club/HoursBanner'
+import type { HoursRow } from '@/lib/hours'
 
 export default async function ClubPage() {
   const { supabase, user } = await getAuthUser()
@@ -17,7 +25,7 @@ export default async function ClubPage() {
     redirect('/onboarding')
   }
 
-  const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes, pendingRequestsRes, { data: tiers }] = await Promise.all([
+  const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes, pendingRequestsRes, { data: tiers }, hoursRes] = await Promise.all([
     supabase.from('profiles').select('display_name, tier, full_name').eq('id', user.id).single(),
     supabase.from('points_ledger').select('balance, lifetime_earned, lifetime_spent').eq('user_id', user.id).maybeSingle(),
     supabase.from('missions').select('id, title, description, icon, points, slug, sort_order, completion_trigger, is_repeatable, is_active').eq('is_active', true).order('sort_order'),
@@ -25,7 +33,25 @@ export default async function ClubPage() {
     supabase.from('challenges').select('id, title, description, icon, bonus_points, sort_order, challenge_missions(mission_id)').eq('is_active', true).order('sort_order'),
     supabase.from('mission_completion_requests').select('mission_id').eq('user_id', user.id).eq('status', 'pending'),
     supabase.from('tier_thresholds').select('*').order('min_lifetime'),
+    // Hours: pull all rows for every location, then group below.
+    (supabase as any).from('distillery_hours').select('*').order('sort_order'),
   ])
+
+  // Group hours rows by location, with primary location(s) first.
+  const allHoursRows = ((hoursRes?.data ?? []) as HoursRow[])
+  const hoursByLocation = new Map<string, HoursRow[]>()
+  for (const r of allHoursRows) {
+    const list = hoursByLocation.get(r.location) ?? []
+    list.push(r)
+    hoursByLocation.set(r.location, list)
+  }
+  // Sort locations: primary first, then alphabetical.
+  const sortedLocations = Array.from(hoursByLocation.keys()).sort((a, b) => {
+    const aPrimary = (hoursByLocation.get(a) ?? []).some(r => r.is_primary)
+    const bPrimary = (hoursByLocation.get(b) ?? []).some(r => r.is_primary)
+    if (aPrimary !== bPrimary) return aPrimary ? -1 : 1
+    return a.localeCompare(b)
+  })
 
   const profile     = profileRes.data
   const ledger      = ledgerRes.data
@@ -108,6 +134,15 @@ export default async function ClubPage() {
       </div>
 
       <div className="px-4 space-y-6 pb-6">
+        {/* Hours banner(s) — one per location, primary first */}
+        {sortedLocations.length > 0 && (
+          <div className="space-y-2">
+            {sortedLocations.map(loc => (
+              <HoursBanner key={loc} location={loc} rows={hoursByLocation.get(loc) ?? []} />
+            ))}
+          </div>
+        )}
+
         {/* Tier progress */}
         {tiers && profile && ledger && (
           <TierProgress

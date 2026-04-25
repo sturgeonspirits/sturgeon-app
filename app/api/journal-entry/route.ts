@@ -1,3 +1,12 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-04-25.1 — Audit P0-3 follow-up: gracefully handle the new
+//                   atomic-balance-check trigger when reversing points on
+//                   journal delete. Previously a silent clamp masked the
+//                   "user already spent these points" case; now the trigger
+//                   raises and we have to decide whether to abort the delete.
+// ─────────────────────────────────────────────
+
 /**
  * POST /api/journal-entry  — save a tasting log + emit earn events
  * DELETE /api/journal-entry — remove a tasting log owned by the caller
@@ -130,10 +139,14 @@ export async function DELETE(req: NextRequest) {
     if (!log) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (log.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    // Delete the log
-    await service.from('tasting_logs').delete().eq('id', logId)
+    // Reverse the earn event FIRST so the points stay consistent. If the
+    // user has already spent the points, the atomic-balance-check trigger
+    // (migration 20260425000002) will raise SQLSTATE 23514. Catch it and
+    // continue with the delete — the journal entry shouldn't be permanently
+    // undeletable just because the points were spent.
+    let pointsReversed: number | null = null
+    let pointsReversalSkipped: 'insufficient_balance' | null = null
 
-    // Reverse the earn event if one exists (deduct points)
     if (log.earn_event_id) {
       const { data: earn } = await service
         .from('earn_events')
@@ -142,19 +155,44 @@ export async function DELETE(req: NextRequest) {
         .maybeSingle()
 
       if (earn) {
-        await emitEarnEvent({
-          userId:      user.id,
-          eventType:   'journal_entry_removed',
-          pointsDelta: -Math.abs(earn.points_delta),
-          contextType: 'journal_entry',
-          contextId:   logId,
-          notes:       'Tasting entry removed',
-          supabase:    service,
-        })
+        try {
+          const reversal = await emitEarnEvent({
+            userId:      user.id,
+            eventType:   'journal_entry_removed',
+            pointsDelta: -Math.abs(earn.points_delta),
+            contextType: 'journal_entry',
+            contextId:   logId,
+            notes:       'Tasting entry removed',
+            supabase:    service,
+          })
+          pointsReversed = reversal.points_delta
+        } catch (e: any) {
+          // Postgres SQLSTATE 23514 = check_violation, raised by the
+          // sync_points_ledger trigger on overdraft. Any other error should
+          // still bubble up so we don't silently swallow real bugs.
+          const msg = String(e?.message ?? '')
+          if (msg.includes('Insufficient points balance')) {
+            pointsReversalSkipped = 'insufficient_balance'
+            console.warn(
+              '[journal/delete] points already spent; deleting log without reversal',
+              { userId: user.id, logId, originalDelta: earn.points_delta },
+            )
+          } else {
+            throw e
+          }
+        }
       }
     }
 
-    return NextResponse.json({ success: true })
+    // Now delete the log. We do this AFTER the reversal attempt so a real
+    // (non-overdraft) DB error rolls back cleanly without orphaning state.
+    await service.from('tasting_logs').delete().eq('id', logId)
+
+    return NextResponse.json({
+      success: true,
+      pointsReversed,
+      pointsReversalSkipped,
+    })
   } catch (err: any) {
     console.error('Journal delete error:', err)
     return NextResponse.json({ error: err.message ?? 'Internal error' }, { status: 500 })

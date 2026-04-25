@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-04-25.1 — Add 'journal_entry_removed' to EarnEventType union
+//                   (was already in the DB enum via 20260403000000; this just
+//                   un-breaks tsc on app/api/journal-entry/route.ts).
+// ─────────────────────────────────────────────
+
 // Run `npm run db:types` to regenerate from your live Supabase schema.
 // This file is the manual baseline — keep in sync with migrations.
 
@@ -6,6 +13,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type EarnEventType =
   | 'mission_completed'
   | 'journal_entry'
+  | 'journal_entry_removed'
   | 'leaderboard_awarded'
   | 'reward_redeemed'
   | 'tier_unlocked'
