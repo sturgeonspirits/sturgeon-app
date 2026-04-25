@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-04-25.1 — Added Announcements link to staff nav
+// ─────────────────────────────────────────────
+
 'use client'
 
 import { useState } from 'react'
@@ -6,17 +11,18 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV_LINKS = [
-  { href: '/staff',             label: 'Dashboard'    },
-  { href: '/staff/scores',      label: 'Scores'       },
-  { href: '/staff/customers',   label: 'Customers'    },
-  { href: '/staff/redemptions', label: 'Redemptions'  },
-  { href: '/staff/rewards',     label: 'Rewards'      },
-  { href: '/staff/missions',    label: 'Missions'     },
-  { href: '/staff/events',      label: 'Events'       },
-  { href: '/staff/teams',       label: 'Teams'        },
-  { href: '/staff/menu',        label: 'Menu'         },
-  { href: '/staff/toast-sync',  label: 'Toast Sync'   },
-  { href: '/leaderboards',      label: 'Leaderboards' },
+  { href: '/staff',               label: 'Dashboard'     },
+  { href: '/staff/scores',        label: 'Scores'        },
+  { href: '/staff/customers',     label: 'Customers'     },
+  { href: '/staff/redemptions',   label: 'Redemptions'   },
+  { href: '/staff/rewards',       label: 'Rewards'       },
+  { href: '/staff/missions',      label: 'Missions'      },
+  { href: '/staff/events',        label: 'Events'        },
+  { href: '/staff/teams',         label: 'Teams'         },
+  { href: '/staff/announcements', label: 'Announcements' },
+  { href: '/staff/menu',          label: 'Menu'          },
+  { href: '/staff/toast-sync',    label: 'Toast Sync'    },
+  { href: '/leaderboards',        label: 'Leaderboards'  },
 ]
 
 export default function StaffNavBar() {
