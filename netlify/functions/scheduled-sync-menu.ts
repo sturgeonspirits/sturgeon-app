@@ -1,7 +1,9 @@
-/* v1.2 — updated 2026-04-25
-   changes: Added unconditional proof-of-life log at handler entry to
-   detect cold-start failures. Still on TEMP every-minute schedule.
-   Revert schedule to '0 8 * * *' and remove diagnostic log once verified. */
+/* v1.0 — created 2026-04-25
+   changes: Replaces scheduled-sync-menu.mts. The .mts extension was
+   loaded by Netlify's build (function appeared as "Scheduled") but
+   the runtime never executed it — even "Run now" produced no logs.
+   Switching to .ts to use the better-supported function bundler path.
+   Currently TEMP every-minute schedule; revert to '0 8 * * *' once verified. */
 
 /**
  * Daily automated menu sync.
@@ -16,6 +18,7 @@
 
 export default async () => {
   console.log('[scheduled-sync-menu] handler entered at', new Date().toISOString())
+
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
     console.error('[scheduled-sync-menu] CRON_SECRET is not set')
@@ -56,7 +59,6 @@ export default async () => {
 
 // TEMP DIAGNOSTIC: every minute. Verifying the scheduler fires at all.
 // Production schedule is '0 8 * * *' (08:00 UTC = 3 AM CDT). REVERT after testing.
-// Netlify reads this export at build time; no type import required.
 export const config = {
   schedule: '* * * * *',
 }
