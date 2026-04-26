@@ -2,6 +2,8 @@
 // Changelog
 //   v2026-04-25.1 — Added HoursBanner(s) at top of /club for live "Open now"
 //                   status. Sources from distillery_hours table.
+//   v2026-04-25.2 — Moved HoursBanner(s) up into the hero card, between the
+//                   "Spearers Club" brand header and the "Welcome back" greeting.
 // ─────────────────────────────────────────────
 
 import { getAuthUser } from '@/lib/supabase/server'
@@ -96,7 +98,7 @@ export default async function ClubPage() {
 
         <div className="relative">
           {/* Brand header */}
-          <div className="mb-5">
+          <div className="mb-4">
             <p className="text-[10px] font-semibold text-[#9E8F7E] uppercase tracking-[0.25em]">
               Sturgeon Spirits
             </p>
@@ -104,6 +106,15 @@ export default async function ClubPage() {
               Spearers Club
             </p>
           </div>
+
+          {/* Hours banner(s) — between Spearers Club header and the greeting */}
+          {sortedLocations.length > 0 && (
+            <div className="space-y-2 mb-5">
+              {sortedLocations.map(loc => (
+                <HoursBanner key={loc} location={loc} rows={hoursByLocation.get(loc) ?? []} />
+              ))}
+            </div>
+          )}
 
           {/* Greeting */}
           <p className="text-xs text-[#7E613F] uppercase tracking-[0.18em] mb-0.5">
@@ -134,15 +145,6 @@ export default async function ClubPage() {
       </div>
 
       <div className="px-4 space-y-6 pb-6">
-        {/* Hours banner(s) — one per location, primary first */}
-        {sortedLocations.length > 0 && (
-          <div className="space-y-2">
-            {sortedLocations.map(loc => (
-              <HoursBanner key={loc} location={loc} rows={hoursByLocation.get(loc) ?? []} />
-            ))}
-          </div>
-        )}
-
         {/* Tier progress */}
         {tiers && profile && ledger && (
           <TierProgress
