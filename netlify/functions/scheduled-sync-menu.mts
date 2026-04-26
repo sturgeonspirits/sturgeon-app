@@ -1,6 +1,7 @@
-/* v1.1 — updated 2026-04-25
-   changes: TEMP every-minute schedule for scheduler-firing diagnostic.
-   Revert to '0 8 * * *' once we see log entries. */
+/* v1.2 — updated 2026-04-25
+   changes: Added unconditional proof-of-life log at handler entry to
+   detect cold-start failures. Still on TEMP every-minute schedule.
+   Revert schedule to '0 8 * * *' and remove diagnostic log once verified. */
 
 /**
  * Daily automated menu sync.
@@ -14,6 +15,7 @@
  */
 
 export default async () => {
+  console.log('[scheduled-sync-menu] handler entered at', new Date().toISOString())
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
     console.error('[scheduled-sync-menu] CRON_SECRET is not set')
