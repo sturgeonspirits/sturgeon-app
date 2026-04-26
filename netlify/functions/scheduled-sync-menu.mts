@@ -1,3 +1,7 @@
+/* v1.1 — updated 2026-04-25
+   changes: TEMP every-minute schedule for scheduler-firing diagnostic.
+   Revert to '0 8 * * *' once we see log entries. */
+
 /**
  * Daily automated menu sync.
  *
@@ -48,10 +52,9 @@ export default async () => {
   }
 }
 
-// Schedule: 08:00 UTC daily
-// → 2:00 AM CST (Nov–Mar) / 3:00 AM CDT (Mar–Nov)
-// Always runs well before the tasting room opens, regardless of DST.
+// TEMP DIAGNOSTIC: every minute. Verifying the scheduler fires at all.
+// Production schedule is '0 8 * * *' (08:00 UTC = 3 AM CDT). REVERT after testing.
 // Netlify reads this export at build time; no type import required.
 export const config = {
-  schedule: '0 8 * * *',
+  schedule: '* * * * *',
 }

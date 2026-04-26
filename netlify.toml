@@ -1,3 +1,7 @@
+# v1.1 — updated 2026-04-25
+# changes: TEMP every-minute schedule for scheduler-firing diagnostic.
+# Revert to "0 8 * * *" once we see log entries.
+
 # Netlify configuration for sturgeon-spirits-app.
 #
 # The @netlify/plugin-nextjs plugin handles the Next.js build and
@@ -8,8 +12,8 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Daily menu sync: Google Sheet → Supabase.
-# 08:00 UTC = 2 AM CST (Nov–Mar) / 3 AM CDT (Mar–Nov).
+# TEMP DIAGNOSTIC: every minute. Verifying the scheduler fires at all.
+# Production schedule is "0 8 * * *" (08:00 UTC = 3 AM CDT). REVERT after testing.
 # Canonical definition also in netlify/functions/scheduled-sync-menu.mts.
 [functions."scheduled-sync-menu"]
-  schedule = "0 8 * * *"
+  schedule = "* * * * *"
