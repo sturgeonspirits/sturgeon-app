@@ -1,19 +1,16 @@
-# v1.1 — updated 2026-04-25
-# changes: TEMP every-minute schedule for scheduler-firing diagnostic.
-# Revert to "0 8 * * *" once we see log entries.
+# v2.0 — updated 2026-04-25
+# changes: Removed broken scheduled-sync-menu function block. The Netlify
+#          scheduled-functions runtime never executed it under @netlify/plugin-nextjs.
+#          Daily menu sync is now driven by Supabase pg_cron — see
+#          supabase/cron/setup-daily-menu-sync.sql.
+#          v1.1 — TEMP every-minute schedule diagnostic (now obsolete).
+#          v1.0 — initial Netlify config with Next.js plugin + scheduled function.
 
 # Netlify configuration for sturgeon-spirits-app.
 #
 # The @netlify/plugin-nextjs plugin handles the Next.js build and
-# server-rendered routes. Scheduled Functions live under netlify/functions/
-# and declare their own cron expression; the schedule here mirrors that
-# declaration for clarity and is the source the Netlify UI displays.
+# all server-rendered + API routes (including /api/sync-menu, which
+# the Supabase pg_cron job hits on schedule).
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# TEMP DIAGNOSTIC: every minute. Verifying the scheduler fires at all.
-# Production schedule is "0 8 * * *" (08:00 UTC = 3 AM CDT). REVERT after testing.
-# Canonical definition also in netlify/functions/scheduled-sync-menu.mts.
-[functions."scheduled-sync-menu"]
-  schedule = "* * * * *"
