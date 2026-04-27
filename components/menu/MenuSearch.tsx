@@ -1,6 +1,21 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-04-27.1 — Added "By Flavor" / "By Spirit" grouping toggle.
+//                   New default view buckets recipes into 6 flavor categories
+//                   (Bright & Citrusy, Boozy & Spirit-Forward, Fruity &
+//                   Tropical, Herbal & Botanical, Sweet & Rich, Smoky &
+//                   Bitter). A recipe can appear in multiple categories.
+//                   "By Spirit" preserves the previous menu_section grouping.
+// ─────────────────────────────────────────────
+
 'use client'
 
 import { useState, useMemo } from 'react'
+import {
+  FLAVOR_CATEGORIES,
+  categorizeRecipe,
+  type FlavorCategory,
+} from '@/lib/flavor-categories'
 
 interface Recipe {
   id: string
@@ -19,9 +34,12 @@ interface Props {
   eventRecipes:   Recipe[]
 }
 
+type GroupMode = 'flavor' | 'spirit'
+
 export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
   const [query,       setQuery]       = useState('')
   const [isEventMenu, setIsEventMenu] = useState(false)
+  const [groupMode,   setGroupMode]   = useState<GroupMode>('flavor')
 
   const activeRecipes = isEventMenu ? eventRecipes : regularRecipes
 
@@ -36,23 +54,48 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
     )
   }, [activeRecipes, query])
 
-  // Build sections preserving the server's sort order (menu_section → sort_order → name).
-  // Do NOT re-sort with Object.keys().sort() — that alphabetises and ignores the DB ordering.
+  // Build sections — either by flavor category (a recipe can appear in
+  // multiple buckets) or by the original menu_section, preserving the
+  // server's sort order for the latter.
   const { sections, sectionNames } = useMemo(() => {
     const map:   Record<string, Recipe[]> = {}
     const order: string[] = []
+
+    if (groupMode === 'flavor') {
+      // Pre-seed all 6 flavor buckets in canonical order so categories with
+      // matches always appear in the same sequence.
+      for (const cat of FLAVOR_CATEGORIES) {
+        map[cat] = []
+        order.push(cat)
+      }
+      for (const r of filtered) {
+        const cats = categorizeRecipe(r)
+        if (cats.length === 0) {
+          if (!map['Other']) { map['Other'] = []; order.push('Other') }
+          map['Other'].push(r)
+        } else {
+          for (const c of cats) map[c].push(r)
+        }
+      }
+      // Strip empty buckets so we don't render section headers with nothing
+      // under them.
+      const trimmedOrder = order.filter(s => map[s] && map[s].length > 0)
+      return { sections: map, sectionNames: trimmedOrder }
+    }
+
+    // Spirit/section mode — preserve the server's ordering.
     for (const r of filtered) {
       const s = r.menu_section ?? 'Other'
       if (!map[s]) { map[s] = []; order.push(s) }
       map[s].push(r)
     }
     return { sections: map, sectionNames: order }
-  }, [filtered])
+  }, [filtered, groupMode])
 
   return (
     <>
-      {/* Menu toggle — always visible, switches between show_on_menu (col B) and is_event_menu (col AA) */}
-      <div className="flex items-center bg-[#F1F1E7] rounded-xl p-1 mb-5 gap-1">
+      {/* Menu toggle — switches between show_on_menu (col B) and is_event_menu (col AA) */}
+      <div className="flex items-center bg-[#F1F1E7] rounded-xl p-1 mb-3 gap-1">
         <button
           onClick={() => { setIsEventMenu(false); setQuery('') }}
           className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${
@@ -75,10 +118,37 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
         </button>
       </div>
 
+      {/* Group-mode toggle — By Flavor (default) vs. By Spirit */}
+      <div className="flex items-center bg-[#F1F1E7] rounded-xl p-1 mb-5 gap-1">
+        <button
+          onClick={() => setGroupMode('flavor')}
+          className={`flex-1 text-xs font-semibold py-1.5 rounded-lg transition-all ${
+            groupMode === 'flavor'
+              ? 'bg-[#FFFFFF] text-[#242622] shadow-sm'
+              : 'text-[#7E613F] hover:text-[#242622]'
+          }`}
+          aria-pressed={groupMode === 'flavor'}
+        >
+          By Flavor
+        </button>
+        <button
+          onClick={() => setGroupMode('spirit')}
+          className={`flex-1 text-xs font-semibold py-1.5 rounded-lg transition-all ${
+            groupMode === 'spirit'
+              ? 'bg-[#FFFFFF] text-[#242622] shadow-sm'
+              : 'text-[#7E613F] hover:text-[#242622]'
+          }`}
+          aria-pressed={groupMode === 'spirit'}
+        >
+          By Spirit
+        </button>
+      </div>
+
       {/* Count */}
       <p className="text-xs text-[#9E8F7E] mb-4">
         {activeRecipes.length} {activeRecipes.length === 1 ? 'cocktail' : 'cocktails'}
         {isEventMenu ? ' on tonight\'s event menu' : ' · crafted in Oshkosh'}
+        {groupMode === 'flavor' && ' · grouped by flavor'}
       </p>
 
       {/* Search bar */}
@@ -144,12 +214,18 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
           <section key={section}>
             <div className="flex items-center gap-3 mb-3">
               <p className="text-xs font-bold text-[#96321F] uppercase tracking-[0.18em]">{section}</p>
+              <span className="text-[10px] text-[#9E8F7E] tabular-nums">
+                {sections[section].length}
+              </span>
               <div className="flex-1 h-px bg-[#D4CFC3]" />
             </div>
 
             <div className="space-y-2">
               {sections[section].map(r => (
-                <div key={r.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
+                // When grouping by flavor a single recipe can appear in
+                // multiple sections, so the React key needs the section
+                // prefix to stay unique.
+                <div key={`${section}:${r.id}`} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[#242622]">
