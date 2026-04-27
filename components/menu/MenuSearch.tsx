@@ -1,5 +1,10 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-04-27.2 — Added sticky jump-to-section pill bar above the recipe
+//                   list. Tapping a category pill smooth-scrolls to that
+//                   section. Bar appears in both grouping modes and only
+//                   surfaces categories that actually have matches under
+//                   the current search.
 //   v2026-04-27.1 — Added "By Flavor" / "By Spirit" grouping toggle.
 //                   New default view buckets recipes into 6 flavor categories
 //                   (Bright & Citrusy, Boozy & Spirit-Forward, Fruity &
@@ -10,12 +15,8 @@
 
 'use client'
 
-import { useState, useMemo } from 'react'
-import {
-  FLAVOR_CATEGORIES,
-  categorizeRecipe,
-  type FlavorCategory,
-} from '@/lib/flavor-categories'
+import { useMemo, useState } from 'react'
+import { FLAVOR_CATEGORIES, categorizeRecipe } from '@/lib/flavor-categories'
 
 interface Recipe {
   id: string
@@ -182,6 +183,28 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
         </p>
       )}
 
+      {/* Jump-to-section pill bar — sticky so it stays reachable as the
+          user scrolls. Only renders when there's more than one section
+          actually visible (a single bucket needs no nav). */}
+      {sectionNames.length > 1 && (
+        <div className="sticky top-0 z-20 -mx-4 px-4 py-2 mb-4 bg-[#FAF7EC]/95 backdrop-blur supports-[backdrop-filter]:bg-[#FAF7EC]/80 border-b border-[#EDE9DC]">
+          <div className="flex gap-2 overflow-x-auto -my-1 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {sectionNames.map(section => (
+              <button
+                key={section}
+                onClick={() => scrollToSection(section)}
+                className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FFFFFF] border border-[#D4CFC3] text-[#7E613F] hover:bg-[#96321F] hover:text-white hover:border-[#96321F] active:scale-95 transition-all whitespace-nowrap"
+              >
+                {section}
+                <span className="ml-1.5 text-[10px] opacity-70 tabular-nums">
+                  {sections[section].length}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* No results */}
       {filtered.length === 0 && (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
@@ -211,7 +234,13 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
       {/* Recipe list */}
       <div className="space-y-8">
         {sectionNames.map(section => (
-          <section key={section}>
+          <section
+            key={section}
+            id={sectionId(section)}
+            // scroll-mt offsets the smooth-scroll target by the height of the
+            // sticky pill bar so the section header isn't hidden under it.
+            className="scroll-mt-20"
+          >
             <div className="flex items-center gap-3 mb-3">
               <p className="text-xs font-bold text-[#96321F] uppercase tracking-[0.18em]">{section}</p>
               <span className="text-[10px] text-[#9E8F7E] tabular-nums">
@@ -266,6 +295,18 @@ export default function MenuSearch({ regularRecipes, eventRecipes }: Props) {
       </div>
     </>
   )
+}
+
+/** Build a stable, URL-safe id from a section name (used for scroll anchors). */
+function sectionId(name: string): string {
+  return 'section-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+}
+
+/** Smooth-scroll to a section by name. Falls back gracefully if the element
+ *  isn't found (shouldn't happen — the pill bar is built from sectionNames). */
+function scrollToSection(name: string) {
+  const el = document.getElementById(sectionId(name))
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function HighlightMatch({ text, query }: { text: string; query: string }) {
