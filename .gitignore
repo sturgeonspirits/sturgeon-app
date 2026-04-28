@@ -49,3 +49,17 @@ node_modules/
 node_modules/
 .env.local
 .env.local.txt
+
+# Local Netlify folder
+.netlify
+
+# Netlify CLI build artifacts
+deno.lock
+
+# next-pwa generated service worker + workbox bundles
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/worker-*.js
+public/worker-*.js.map
