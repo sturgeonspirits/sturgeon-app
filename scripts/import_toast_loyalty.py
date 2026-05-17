@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# ─────────────────────────────────────────────
+# Changelog
+#   v2026-05-17.1 — Skip CSV rows missing Card ID / Account ID (mirrors toast-sync route fix)
+# ─────────────────────────────────────────────
 """
 import_toast_loyalty.py
 =======================
@@ -136,12 +140,22 @@ def main(csv_path: str):
 
     counters = dict(upserted=0, matched_email=0, matched_phone=0,
                     unmatched=0, points_imported=0, birthdays_saved=0,
-                    skipped_deactivated=len(rows) - len(active))
+                    skipped_deactivated=len(rows) - len(active),
+                    skipped_no_card_id=0)
 
     BATCH = 200
     records_to_upsert = []
 
     for r in active:
+        # Guard: toast_card_id and toast_account_id are NOT NULL UNIQUE in the DB.
+        # Toast occasionally exports voided/promo rows with blank IDs; skip them so
+        # one bad row doesn't blow up the whole batch.
+        card_id    = (r.get('Card ID') or '').strip()
+        account_id = (r.get('Account ID') or '').strip()
+        if not card_id or not account_id:
+            counters['skipped_no_card_id'] += 1
+            continue
+
         toast_pts = int(r.get('Total Points', '0') or '0')
         email     = r.get('Email', '').strip().lower() or None
         phone_raw = r.get('Phone number', '').strip()
@@ -161,8 +175,8 @@ def main(csv_path: str):
                 match_method = 'phone'
 
         records_to_upsert.append({
-            'toast_card_id':    r['Card ID'],
-            'toast_account_id': r['Account ID'],
+            'toast_card_id':    card_id,
+            'toast_account_id': account_id,
             'card_number':      r.get('Card Number', '').strip() or None,
             'is_classic_card':  r.get('Classic Card?', '').lower() == 'true',
             'is_deactivated':   False,
@@ -197,6 +211,8 @@ def main(csv_path: str):
         print(f'    Upserted {min(i + BATCH, len(records_to_upsert)):,}/{len(records_to_upsert):,}', end='\r')
 
     print(f'\n  ✓ {counters["upserted"]:,} accounts upserted')
+    if counters['skipped_no_card_id']:
+        print(f'  ⚠  {counters["skipped_no_card_id"]:,} row(s) skipped — blank Card ID or Account ID')
     print(f'    Matched by email:  {counters["matched_email"]:,}')
     print(f'    Matched by phone:  {counters["matched_phone"]:,}')
     print(f'    Unmatched:         {counters["unmatched"]:,}')

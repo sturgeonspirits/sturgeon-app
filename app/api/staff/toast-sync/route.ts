@@ -1,3 +1,7 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-05-17.1 — Skip CSV rows missing Card ID; add skippedNoCardId counter (fixes NOT NULL upsert error on toast_card_id)
+// ─────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { reconcileToastToProfile } from '@/lib/earn-events'
@@ -126,6 +130,7 @@ export async function POST(req: NextRequest) {
     total: rows.length,
     active: active.length,
     skippedDeactivated: rows.length - active.length,
+    skippedNoCardId: 0,        // rows dropped because Card ID was blank/missing
     upserted: 0,
     matchedEmail: 0,
     matchedPhone: 0,
@@ -140,8 +145,24 @@ export async function POST(req: NextRequest) {
   }
 
   const toUpsert: any[] = []
+  const skippedNoCardIdRows: number[] = []  // 1-indexed CSV row numbers for logging
 
-  for (const r of active) {
+  for (let idx = 0; idx < active.length; idx++) {
+    const r = active[idx]
+
+    // Guard: toast_card_id and toast_account_id are NOT NULL UNIQUE in the DB.
+    // Toast occasionally exports voided/promo rows with blank IDs — skipping them
+    // here prevents one bad row from killing the whole batch.
+    const cardId    = (r['Card ID'] ?? '').trim()
+    const accountId = (r['Account ID'] ?? '').trim()
+    if (!cardId || !accountId) {
+      counters.skippedNoCardId++
+      // +2 because: header line = row 1, and idx is 0-based within `active`.
+      // (Approximate — deactivated rows were filtered out — but useful for support.)
+      skippedNoCardIdRows.push(idx + 2)
+      continue
+    }
+
     const toastPts = parseInt(r['Total Points'] || '0') || 0
     const email    = r['Email']?.toLowerCase().trim() || null
     const phone    = normalizePhone(r['Phone number'] ?? '')
@@ -163,8 +184,8 @@ export async function POST(req: NextRequest) {
     else counters.unmatched++
 
     toUpsert.push({
-      toast_card_id:    r['Card ID'],
-      toast_account_id: r['Account ID'],
+      toast_card_id:    cardId,
+      toast_account_id: accountId,
       card_number:      r['Card Number']?.trim() || null,
       is_classic_card:  (r['Classic Card?'] ?? '').toLowerCase() === 'true',
       is_deactivated:   false,
@@ -267,5 +288,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, counters })
+  // Include the first 20 skipped row numbers in the response so the operator
+  // can spot-check the CSV without us having to dump the whole list.
+  const responseBody: any = { ok: true, counters }
+  if (skippedNoCardIdRows.length > 0) {
+    responseBody.skippedNoCardIdSample = skippedNoCardIdRows.slice(0, 20)
+    console.warn(
+      `[toast-sync] Skipped ${skippedNoCardIdRows.length} row(s) with missing Card ID / Account ID. ` +
+      `First 20: ${skippedNoCardIdRows.slice(0, 20).join(', ')}`
+    )
+  }
+  return NextResponse.json(responseBody)
 }
