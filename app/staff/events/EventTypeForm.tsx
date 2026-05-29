@@ -29,7 +29,7 @@ interface EventType {
   description: string | null
   participant_type: string | null
   scoring_method: string | null
-  is_active: boolean
+  is_active: boolean | null
   sort_order: number | null
 }
 

@@ -167,7 +167,7 @@ export default function JournalSearch({ entries }: Props) {
                 <HighlightMatch text={log.overall_notes} query={query} />
               </p>
             )}
-            <p className="text-xs text-[#9E8F7E] mt-2">{relativeTime(log.visited_at)}</p>
+            <p className="text-xs text-[#9E8F7E] mt-2">{relativeTime(log.visited_at ?? '')}</p>
           </div>
         ))}
       </div>

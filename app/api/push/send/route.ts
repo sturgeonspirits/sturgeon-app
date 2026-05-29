@@ -66,8 +66,7 @@ export async function POST(req: NextRequest) {
       service.from('push_subscriptions')
         .update({ last_used_at: new Date().toISOString() })
         .eq('endpoint', sub.endpoint)
-        .then(() => {})
-        .catch(() => {})
+        .then(() => {}, () => {})
     } catch (e: any) {
       failed++
       // 410 Gone = subscription expired, clean it up

@@ -56,7 +56,7 @@ export default async function StaffScoresPage() {
       />
 
       <SeasonManager
-        eventTypes={(eventTypes ?? []).map(et => ({ id: et.id, name: et.name, icon: et.icon }))}
+        eventTypes={(eventTypes ?? []).map(et => ({ id: et.id, name: et.name, icon: et.icon ?? '' }))}
       />
     </div>
   )

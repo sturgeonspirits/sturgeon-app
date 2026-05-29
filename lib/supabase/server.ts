@@ -1,7 +1,14 @@
 // Server-side Supabase client (use in Server Components, Server Actions, Route Handlers)
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-05-29.1 — Import Database from ./database.types (auto-generated,
+//                   complete) instead of ./types (hand-maintained, missing
+//                   ~15 tables → data typed as `never`).
+// ─────────────────────────────────────────────
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import type { Database } from './types'
+import type { Database } from './database.types'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -44,8 +51,7 @@ export async function getAuthUser() {
 // Service-role client for privileged server operations (Netlify functions, Edge Functions)
 // Never expose this to the browser.
 export function createServiceClient() {
-  const { createClient } = require('@supabase/supabase-js')
-  return createClient<Database>(
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }

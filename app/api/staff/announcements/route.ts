@@ -49,7 +49,7 @@ export async function GET() {
 
   // Best-effort enrich with sender display name. Done as a separate fetch to
   // sidestep PostgREST FK cache issues (same pattern as /staff/missions).
-  const senderIds = Array.from(new Set((data ?? []).map((a: any) => a.sent_by).filter(Boolean)))
+  const senderIds: string[] = Array.from(new Set((data ?? []).map((a: any) => a.sent_by as string).filter(Boolean)))
   let senderMap: Record<string, { display_name: string | null; full_name: string | null }> = {}
   if (senderIds.length) {
     const { data: profiles } = await service

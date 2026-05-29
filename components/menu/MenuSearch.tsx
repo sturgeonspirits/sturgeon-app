@@ -26,8 +26,8 @@ interface Recipe {
   price: number | null
   flavor_tags: string[] | null
   glassware: string | null
-  show_on_menu?: boolean
-  is_event_menu?: boolean
+  show_on_menu?: boolean | null
+  is_event_menu?: boolean | null
 }
 
 interface Props {

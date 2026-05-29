@@ -68,37 +68,21 @@ export default function ShopMenu() {
             </div>
 
             {SHOP_LINKS.map(link => (
-              link.href ? (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 hover:border-[#C8BCA4] active:scale-[0.99] transition-all"
-                >
-                  <span className="text-2xl">{link.icon}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-[#242622]">{link.label}</p>
-                    <p className="text-xs text-[#7E613F]">{link.desc}</p>
-                  </div>
-                  <span className="text-[#C8BCA4] text-lg">→</span>
-                </a>
-              ) : (
-                <div
-                  key={link.label}
-                  className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3]/60 rounded-xl px-4 py-3 opacity-50"
-                >
-                  <span className="text-2xl">{link.icon}</span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-semibold text-[#242622]">{link.label}</p>
-                      <span className="text-[9px] font-bold text-[#9E8F7E] bg-[#EDE9DC] px-1.5 py-0.5 rounded-full uppercase">Soon</span>
-                    </div>
-                    <p className="text-xs text-[#9E8F7E]">{link.desc}</p>
-                  </div>
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 hover:border-[#C8BCA4] active:scale-[0.99] transition-all"
+              >
+                <span className="text-2xl">{link.icon}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#242622]">{link.label}</p>
+                  <p className="text-xs text-[#7E613F]">{link.desc}</p>
                 </div>
-              )
+                <span className="text-[#C8BCA4] text-lg">→</span>
+              </a>
             ))}
           </div>
         </div>

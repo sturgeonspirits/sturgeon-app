@@ -32,13 +32,13 @@ export default async function ClubPage() {
   const [profileRes, ledgerRes, missionsRes, completionsRes, challengesRes, pendingRequestsRes, { data: tiers }, hoursRes] = await Promise.all([
     supabase.from('profiles').select('display_name, tier, full_name').eq('id', user.id).single(),
     supabase.from('points_ledger').select('balance, lifetime_earned, lifetime_spent').eq('user_id', user.id).maybeSingle(),
-    supabase.from('missions').select('id, title, description, icon, points, slug, sort_order, completion_trigger, is_repeatable, is_active').eq('is_active', true).order('sort_order'),
+    supabase.from('missions').select('id, title, description, icon, points, slug, sort_order, completion_trigger, is_repeatable, is_active, repeat_limit, repeat_cooldown_days, min_tier, metadata, created_at').eq('is_active', true).order('sort_order'),
     supabase.from('mission_completions').select('mission_id').eq('user_id', user.id),
     supabase.from('challenges').select('id, title, description, icon, bonus_points, sort_order, challenge_missions(mission_id)').eq('is_active', true).order('sort_order'),
     supabase.from('mission_completion_requests').select('mission_id').eq('user_id', user.id).eq('status', 'pending'),
     supabase.from('tier_thresholds').select('*').order('min_lifetime'),
     // Hours: pull all rows for every location, then group below.
-    (supabase as any).from('distillery_hours').select('*').order('sort_order'),
+    supabase.from('distillery_hours').select('*').order('sort_order'),
   ])
 
   // Group hours rows by location, with primary location(s) first.

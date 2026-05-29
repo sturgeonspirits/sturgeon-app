@@ -3,6 +3,10 @@
 //   v2026-04-25.1 — Add 'journal_entry_removed' to EarnEventType union
 //                   (was already in the DB enum via 20260403000000; this just
 //                   un-breaks tsc on app/api/journal-entry/route.ts).
+//   v2026-05-29.1 — Align interface nullability with actual DB schema so that
+//                   auto-typed Supabase query results are assignable to these
+//                   types. Relaxed: Mission, EventType, LeaderboardPeriod,
+//                   TierThreshold, Reward, LeaderboardTeam.
 // ─────────────────────────────────────────────
 
 // Run `npm run db:types` to regenerate from your live Supabase schema.
@@ -60,11 +64,11 @@ export interface PointsLedger {
 }
 
 export interface TierThreshold {
-  tier: UserTier
+  tier: string
   min_lifetime: number
   label: string
   color: string
-  perks: string[]
+  perks: Json | null
 }
 
 export interface EarnEvent {
@@ -84,17 +88,17 @@ export interface Mission {
   slug: string
   title: string
   description: string | null
-  icon: string
+  icon: string | null
   points: number
   completion_trigger: CompletionTrigger
-  is_repeatable: boolean
+  is_repeatable: boolean | null
   repeat_limit: number | null
   repeat_cooldown_days: number | null
-  min_tier: string
-  is_active: boolean
-  sort_order: number
-  metadata: Json
-  created_at: string
+  min_tier: string | null
+  is_active: boolean | null
+  sort_order: number | null
+  metadata: Json | null
+  created_at: string | null
 }
 
 export interface MissionCompletion {
@@ -127,29 +131,32 @@ export interface EventType {
   name: string
   slug: string
   description: string | null
-  participant_type: ParticipantType
-  scoring_method: ScoringMethod
+  participant_type: string
+  scoring_method: string
   participation_mission_slug: string | null
   win_mission_slug: string | null
-  placement_points: Json
-  icon: string
-  color: string
+  placement_points: Json | null
+  icon: string | null
+  color: string | null
   day_of_week: number | null
   typical_time: string | null
-  is_active: boolean
-  sort_order: number
-  created_at: string
+  schedule_label: string | null
+  is_active: boolean | null
+  sort_order: number | null
+  created_at: string | null
 }
 
 export interface LeaderboardPeriod {
   id: string
   event_type_id: string
+  event_id: string | null
+  join_token: string | null
   label: string
-  period_type: 'single_night' | 'weekly' | 'monthly' | 'season' | 'all_time'
+  period_type: string
   starts_at: string
   ends_at: string | null
-  is_finalized: boolean
-  created_at: string
+  is_finalized: boolean | null
+  created_at: string | null
 }
 
 export interface LeaderboardEvent {
@@ -179,20 +186,20 @@ export interface Reward {
   id: string
   name: string
   description: string | null
-  icon: string
+  icon: string | null
   redemption_method: RedemptionMethod
-  points_cost: number
-  trigger_params: Json
+  points_cost: number | null
+  trigger_params: Json | null
   reward_type: string
   reward_value: string | null
-  is_active: boolean
+  is_active: boolean | null
   max_per_user: number | null
   total_supply: number | null
-  redeemed_count: number
-  tier_required: string
-  sort_order: number
+  redeemed_count: number | null
+  tier_required: string | null
+  sort_order: number | null
   expires_at: string | null
-  created_at: string
+  created_at: string | null
 }
 
 export interface RewardRedemption {

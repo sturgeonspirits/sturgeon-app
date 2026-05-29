@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Check the customer has sufficient points
-  if (reward.points_cost > 0) {
+  const pointsCost = reward.points_cost ?? 0
+  if (pointsCost > 0) {
     const { data: ledger } = await service
       .from('points_ledger')
       .select('balance')
@@ -55,9 +56,9 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     const balance = ledger?.balance ?? 0
-    if (balance < reward.points_cost) {
+    if (balance < pointsCost) {
       return NextResponse.json(
-        { error: `Not enough points (have ${balance}, need ${reward.points_cost})` },
+        { error: `Not enough points (have ${balance}, need ${pointsCost})` },
         { status: 400 }
       )
     }

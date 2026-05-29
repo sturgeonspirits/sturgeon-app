@@ -93,8 +93,9 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     const balance = ledger?.balance ?? 0
-    if (reward.points_cost > 0 && balance < reward.points_cost) {
-      return NextResponse.json({ error: `Not enough points (have ${balance}, need ${reward.points_cost})` }, { status: 400 })
+    const pointsCost = reward.points_cost ?? 0
+    if (pointsCost > 0 && balance < pointsCost) {
+      return NextResponse.json({ error: `Not enough points (have ${balance}, need ${pointsCost})` }, { status: 400 })
     }
 
     // Create redemption record (already redeemed — no pending step)
@@ -114,11 +115,11 @@ export async function POST(req: NextRequest) {
     if (rrErr || !rr) throw rrErr ?? new Error('Could not create redemption')
 
     // Deduct points
-    if (reward.points_cost > 0) {
+    if (pointsCost > 0) {
       const earnEvent = await emitEarnEvent({
         userId,
         eventType:   'reward_redeemed',
-        pointsDelta: -reward.points_cost,
+        pointsDelta: -pointsCost,
         contextType: 'reward',
         contextId:   reward.id,
         notes:       `Redeemed: ${reward.name}${notes ? ` — ${notes}` : ''}`,

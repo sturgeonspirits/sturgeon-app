@@ -28,10 +28,10 @@ interface Reward {
   description: string | null
   icon: string | null
   redemption_method: string
-  points_cost: number
+  points_cost: number | null
   reward_type: string
   reward_value: string | null
-  is_active: boolean
+  is_active: boolean | null
   max_per_user: number | null
   total_supply: number | null
   tier_required: string | null

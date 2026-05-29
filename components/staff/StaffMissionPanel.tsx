@@ -14,7 +14,7 @@ type PendingRequest = {
   created_at: string
   user_id: string
   mission_id: string
-  missions: { title: string; icon: string; points: number } | null
+  missions: { title: string; icon: string | null; points: number } | null
   profiles: { display_name: string | null; full_name: string | null; email: string | null } | null
 }
 

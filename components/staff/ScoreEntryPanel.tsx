@@ -9,16 +9,14 @@ import { dayOfWeekLabel } from '@/lib/utils'
 
 interface ScheduledEvent {
   id: string
-  event_type_id: string
+  event_type_id: string | null
   event_date: string      // 'YYYY-MM-DD'
   start_time: string | null
   notes: string | null
 }
 
-// leaderboard_periods now has event_id linking it to a specific scheduled event
-interface Period extends LeaderboardPeriod {
-  event_id?: string | null
-}
+// leaderboard_periods has event_id linking it to a specific scheduled event (in base type)
+type Period = LeaderboardPeriod
 
 interface Props {
   eventTypes:      EventType[]
@@ -354,7 +352,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
 
           {/* Finalize night — awards placement bonuses for individual events */}
           {selectedET.participant_type === 'individual' && (
-            <FinalizeNightButton periodId={selectedPeriod.id} isFinalized={selectedPeriod.is_finalized} />
+            <FinalizeNightButton periodId={selectedPeriod.id} isFinalized={selectedPeriod.is_finalized ?? false} />
           )}
         </div>
       )}
@@ -680,8 +678,8 @@ function FinalizeNightButton({ periodId, isFinalized }: { periodId: string; isFi
 
       {result ? (
         <div className="space-y-1">
-          {result.map(r => (
-            <div key={r.userId} className="flex items-center gap-2 bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
+          {result.map((r, i) => (
+            <div key={i} className="flex items-center gap-2 bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
               <span className="text-lg">{r.place === 1 ? '🥇' : '🥈'}</span>
               <span className="text-sm font-semibold text-[#242622] flex-1">{r.name}</span>
               <span className="text-sm font-bold text-[#87A67F]">+{r.bonus} pts</span>

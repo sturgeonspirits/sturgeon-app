@@ -272,7 +272,7 @@ export async function POST(request: Request) {
       const batch = deduped.slice(i, i + BATCH)
       const { error } = await supabase
         .from('recipes')
-        .upsert(batch, { onConflict: 'name', ignoreDuplicates: false })
+        .upsert(batch as any, { onConflict: 'name', ignoreDuplicates: false })
       if (error) throw error
       inserted += batch.length
     }

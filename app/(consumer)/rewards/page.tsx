@@ -101,7 +101,7 @@ export default async function RewardsPage() {
                   <p className="text-sm font-semibold text-[#242622]">{(r.rewards as any)?.name}</p>
                   <p className="text-xs text-[#9E8F7E]">
                     {(r.redeemed_at ?? r.created_at)
-                      ? new Date(r.redeemed_at ?? r.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                      ? new Date((r.redeemed_at ?? r.created_at)!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                       : '—'}
                   </p>
                 </div>
@@ -119,7 +119,7 @@ export default async function RewardsPage() {
         <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">All Rewards</h2>
         <div className="space-y-3">
           {(rewards ?? []).map(reward => {
-            const canAfford = reward.redemption_method === 'points' ? balance >= reward.points_cost : null
+            const canAfford = reward.redemption_method === 'points' ? balance >= (reward.points_cost ?? 0) : null
             return (
               <div key={reward.id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4">
                 <div className="flex items-start gap-3">
@@ -137,7 +137,7 @@ export default async function RewardsPage() {
                       {reward.redemption_method === 'points' && (
                         <RedeemButton
                           rewardId={reward.id}
-                          pointsCost={reward.points_cost}
+                          pointsCost={reward.points_cost ?? 0}
                           canAfford={!!canAfford}
                         />
                       )}

@@ -25,15 +25,15 @@ type Mission = {
   slug: string
   title: string
   description: string | null
-  icon: string
+  icon: string | null
   points: number
   completion_trigger: string
-  is_repeatable: boolean
+  is_repeatable: boolean | null
   repeat_limit: number | null
   repeat_cooldown_days: number | null
-  min_tier: string
-  is_active: boolean
-  sort_order: number
+  min_tier: string | null
+  is_active: boolean | null
+  sort_order: number | null
 }
 
 export default function MissionForm({ existing }: { existing: Mission | null }) {

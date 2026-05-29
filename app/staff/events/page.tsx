@@ -35,8 +35,9 @@ export default async function StaffEventsPage() {
   // Group upcoming events by event_type_id
   const eventsByType: Record<string, typeof upcomingEvents> = {}
   for (const ev of (upcomingEvents ?? [])) {
-    if (!eventsByType[ev.event_type_id]) eventsByType[ev.event_type_id] = []
-    eventsByType[ev.event_type_id]!.push(ev)
+    const key = ev.event_type_id ?? ''
+    if (!eventsByType[key]) eventsByType[key] = []
+    eventsByType[key]!.push(ev)
   }
 
   return (

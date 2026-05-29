@@ -205,6 +205,57 @@ export type Database = {
         }
         Relationships: []
       }
+      distillery_hours: {
+        Row: {
+          close_time: string | null
+          closes_next_day: boolean
+          created_at: string
+          day_of_week: number | null
+          id: string
+          is_closed: boolean
+          is_primary: boolean
+          location: string
+          note: string | null
+          open_time: string | null
+          override_date: string | null
+          raw_hours_text: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          close_time?: string | null
+          closes_next_day?: boolean
+          created_at?: string
+          day_of_week?: number | null
+          id?: string
+          is_closed?: boolean
+          is_primary?: boolean
+          location: string
+          note?: string | null
+          open_time?: string | null
+          override_date?: string | null
+          raw_hours_text?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          close_time?: string | null
+          closes_next_day?: boolean
+          created_at?: string
+          day_of_week?: number | null
+          id?: string
+          is_closed?: boolean
+          is_primary?: boolean
+          location?: string
+          note?: string | null
+          open_time?: string | null
+          override_date?: string | null
+          raw_hours_text?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       earn_events: {
         Row: {
           context_id: string | null

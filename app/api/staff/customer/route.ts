@@ -143,7 +143,6 @@ export async function POST(req: NextRequest) {
         display_name: displayName,
         phone:        phone ?? null,
         role:         'customer',
-        points_total: 0,
       }, { onConflict: 'id' })
 
       if (sendInvite) {

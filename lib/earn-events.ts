@@ -6,8 +6,14 @@
  * The DB trigger handles ledger sync automatically.
  */
 
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-05-29.1 — Import Database from ./supabase/database.types (complete,
+//                   auto-generated) instead of ./supabase/types (incomplete).
+// ─────────────────────────────────────────────
 import { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, EarnEvent, EarnEventType } from './supabase/types'
+import type { Database } from './supabase/database.types'
+import type { EarnEvent, EarnEventType } from './supabase/types'
 
 type Client = SupabaseClient<Database>
 

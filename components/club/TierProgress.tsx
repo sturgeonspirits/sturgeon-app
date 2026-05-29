@@ -2,7 +2,7 @@ import type { TierThreshold, UserTier } from '@/lib/supabase/types'
 import { tierLabel } from '@/lib/utils'
 
 interface Props {
-  currentTier: UserTier
+  currentTier: string
   lifetimeEarned: number
   tiers: TierThreshold[]
 }

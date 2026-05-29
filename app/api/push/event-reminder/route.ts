@@ -58,14 +58,14 @@ export async function POST(req: NextRequest) {
   const log: any[] = []
 
   for (const event of upcomingEvents) {
-    const et = etById[event.event_type_id]
+    const et = etById[event.event_type_id ?? '']
     if (!et) continue
 
     // Find the most recent leaderboard_period for this event type (excluding today's)
     const { data: lastPeriod } = await service
       .from('leaderboard_periods')
       .select('id')
-      .eq('event_type_id', event.event_type_id)
+      .eq('event_type_id', event.event_type_id ?? '')
       .lt('starts_at', new Date().toISOString())
       .order('starts_at', { ascending: false })
       .limit(1)

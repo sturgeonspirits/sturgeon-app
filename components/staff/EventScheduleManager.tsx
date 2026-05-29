@@ -8,7 +8,7 @@ interface ScheduledEvent {
   event_date: string   // 'YYYY-MM-DD'
   start_time: string | null
   notes: string | null
-  is_cancelled: boolean
+  is_cancelled: boolean | null
 }
 
 interface Props {

@@ -35,7 +35,7 @@ export default async function EventSignupPage({ params }: Props) {
   const { data: et } = await service
     .from('event_types')
     .select('name, icon, slug, participant_type')
-    .eq('id', event.event_type_id)
+    .eq('id', event.event_type_id ?? '')
     .maybeSingle()
 
   // This route is only for individual events. Team events use period-based routing.
@@ -58,7 +58,7 @@ export default async function EventSignupPage({ params }: Props) {
     .order('created_at', { ascending: true })
     .limit(1)
 
-  let period: { id: string; is_finalized: boolean } | null = (periods ?? [])[0] ?? null
+  let period: { id: string; is_finalized: boolean | null } | null = (periods ?? [])[0] ?? null
 
   if (!period) {
     // Auto-create the period so the sign-up can proceed
@@ -71,7 +71,7 @@ export default async function EventSignupPage({ params }: Props) {
     const { data: created } = await service
       .from('leaderboard_periods')
       .insert({
-        event_type_id: event.event_type_id,
+        event_type_id: event.event_type_id ?? '',
         event_id:      eventId,
         label,
         period_type:   'single_night',

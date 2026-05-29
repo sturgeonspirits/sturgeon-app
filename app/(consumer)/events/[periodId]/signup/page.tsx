@@ -28,7 +28,7 @@ export default async function EventSignupPage({ params }: Props) {
     .select('name, icon, slug, participant_type')
     .eq('id', period.event_type_id)
     .maybeSingle()
-  const participantType: 'team' | 'individual' = et?.participant_type ?? 'individual'
+  const participantType = (et?.participant_type ?? 'individual') as 'team' | 'individual'
   const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })
 
   // Get reliable event date: prefer linked event record, then parse label, then starts_at

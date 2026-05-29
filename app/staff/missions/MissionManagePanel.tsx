@@ -8,13 +8,13 @@ import { tierLabel } from '@/lib/utils'
 type Mission = {
   id: string
   title: string
-  icon: string
+  icon: string | null
   points: number
   completion_trigger: string
-  is_active: boolean
-  is_repeatable: boolean
-  min_tier: string
-  sort_order: number
+  is_active: boolean | null
+  is_repeatable: boolean | null
+  min_tier: string | null
+  sort_order: number | null
 }
 
 function triggerLabel(t: string) {
@@ -66,7 +66,7 @@ export default function MissionManagePanel({ missions }: { missions: Mission[] }
           <p className="text-sm font-semibold text-[#242622] truncate">{m.title}</p>
           <p className="text-xs text-[#7E613F]">
             {triggerLabel(m.completion_trigger)} · +{m.points} pts
-            {m.min_tier !== 'newcomer' && ` · ${tierLabel(m.min_tier)}+`}
+            {m.min_tier && m.min_tier !== 'newcomer' && ` · ${tierLabel(m.min_tier)}+`}
             {m.is_repeatable && ' · repeatable'}
           </p>
         </div>

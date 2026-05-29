@@ -4,12 +4,13 @@ import RewardForm from '../RewardForm'
 
 export const dynamic = 'force-dynamic'
 
-export default async function EditRewardPage({ params }: { params: { id: string } }) {
+export default async function EditRewardPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const service = createServiceClient()
   const { data: reward } = await service
     .from('rewards')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!reward) notFound()
