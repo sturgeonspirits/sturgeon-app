@@ -6,11 +6,16 @@ interface SyncCounters {
   total: number
   active: number
   skippedDeactivated: number
+  skippedNoCardId?: number
   upserted: number
   matchedEmail: number
   matchedPhone: number
   unmatched: number
-  pointsImported: number
+  profilesReconciled?: number
+  profilesUnchanged?: number
+  pointsAdded: number
+  pointsRemoved?: number
+  redemptions?: number
   birthdaysSaved: number
   errors: number
 }
@@ -206,7 +211,7 @@ export default function ToastSyncPage() {
             <Row label="Matched by email"    value={result.counters.matchedEmail.toLocaleString()} />
             <Row label="Matched by phone"    value={result.counters.matchedPhone.toLocaleString()} />
             <Row label="Unmatched (no app account)" value={result.counters.unmatched.toLocaleString()} muted />
-            <Row label="Points imported"     value={result.counters.pointsImported.toLocaleString()} highlight />
+            <Row label="Points imported"     value={result.counters.pointsAdded.toLocaleString()} highlight />
             <Row label="Birthdays saved"     value={result.counters.birthdaysSaved.toLocaleString()} />
             {result.counters.errors > 0 && (
               <Row label="Errors"            value={result.counters.errors.toLocaleString()} warn />
