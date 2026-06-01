@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Mission } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
 import QrScanner from './QrScanner'
+import { Camera } from '@/components/icons/brand'
 
 interface Props {
   mission: Mission
@@ -91,7 +92,7 @@ export default function MissionCard({ mission, completed, userId, pendingRequest
             onClick={() => setShowScanner(true)}
             className="mt-3 w-full bg-[#96321F]/10 border border-[#96321F]/20 text-[#96321F] text-xs font-semibold py-2 rounded-lg hover:bg-[#96321F]/20 transition-colors"
           >
-            📷 Scan QR Code
+            <Camera size={16} className="inline mr-1.5 align-middle" />Scan QR Code
           </button>
         )}
 
@@ -119,7 +120,7 @@ export default function MissionCard({ mission, completed, userId, pendingRequest
                 disabled={requestState === 'loading'}
                 className="w-full bg-[#96321F]/10 border border-[#96321F]/20 text-[#96321F] text-xs font-semibold py-2 rounded-lg hover:bg-[#96321F]/20 disabled:opacity-50 transition-colors"
               >
-                {requestState === 'loading' ? 'Sending…' : '✋ I did this! — Request approval'}
+                {requestState === 'loading' ? 'Sending…' : 'I did this — Request approval'}
               </button>
             )}
           </div>

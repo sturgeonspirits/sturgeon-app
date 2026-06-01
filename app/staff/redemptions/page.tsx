@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import RedemptionActions from './RedemptionActions'
+import { Ticket, Medal } from '@/components/icons/brand'
 
 export default async function RedemptionsPage() {
   const supabase = await createClient()
@@ -75,7 +76,7 @@ export default async function RedemptionsPage() {
 
       {(redemptions ?? []).length === 0 && (
         <div className="text-center py-16 text-[#7E613F]">
-          <p className="text-4xl mb-3">🎟️</p>
+          <Ticket size={44} className="text-[#D4CFC3] mx-auto mb-3" />
           <p className="font-semibold">No redemptions yet</p>
           <p className="text-sm mt-1">They'll appear here when members request rewards.</p>
         </div>
@@ -108,7 +109,10 @@ function RedemptionRow({
 
   return (
     <div className="bg-white border border-[#D4CFC3] rounded-xl p-3 flex items-center gap-3">
-      <span className="text-2xl flex-shrink-0">{reward?.icon ?? '🎁'}</span>
+      {reward?.icon
+        ? <span className="text-2xl flex-shrink-0">{reward.icon}</span>
+        : <Medal size={24} className="text-[#7E613F] shrink-0" />
+      }
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[#242622] truncate">{reward?.name}</p>
         <p className="text-xs text-[#7E613F] truncate">

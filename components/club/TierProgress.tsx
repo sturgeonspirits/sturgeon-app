@@ -1,5 +1,6 @@
 import type { TierThreshold, UserTier } from '@/lib/supabase/types'
 import { tierLabel } from '@/lib/utils'
+import { Trophy } from '@/components/icons/brand'
 
 interface Props {
   currentTier: string
@@ -30,7 +31,7 @@ export default function TierProgress({ currentTier, lifetimeEarned, tiers }: Pro
     return (
       <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">⚓</span>
+          <Trophy size={22} className="text-[#96321F]" />
           <p className="font-bold text-[#96321F]">Captain</p>
         </div>
         <p className="text-xs text-[#7E613F]">You've reached the highest tier. Legendary.</p>

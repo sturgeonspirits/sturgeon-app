@@ -2,6 +2,7 @@ import { getAuthUser, createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { tierLabel, tierColor, formatPoints, relativeTime } from '@/lib/utils'
 import BirthdayEditor from '@/components/profile/BirthdayEditor'
+import { Sliders } from '@/components/icons/brand'
 
 // Brand-aligned tier colors (override lib/utils generic colors at display level)
 const TIER_COLORS: Record<string, string> = {
@@ -101,7 +102,7 @@ export default async function ProfilePage() {
       {['staff', 'admin'].includes(profile?.role ?? '') && (
         <a href="/staff" className="flex items-center justify-between w-full bg-[#242622] text-[#F1F1E7] rounded-2xl px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="text-xl">⚙️</span>
+            <Sliders size={22} className="text-[#C8BCA4]" />
             <div>
               <p className="font-semibold text-sm">Staff Portal</p>
               <p className="text-xs text-[#C8BCA4]">Manage events, scores & customers</p>

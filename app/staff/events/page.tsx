@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EventScheduleManager from '@/components/staff/EventScheduleManager'
+import { CalendarIcon } from '@/components/icons/brand'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -59,7 +60,7 @@ export default async function StaffEventsPage() {
 
       {rows.length === 0 ? (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-4xl mb-3">📅</p>
+          <CalendarIcon size={44} className="text-[#D4CFC3] mx-auto mb-3" />
           <p className="font-semibold text-[#242622] mb-1">No events yet</p>
           <p className="text-sm text-[#7E613F] mb-4">Add your recurring events like Trivia Night, Cribbage League, etc.</p>
           <Link
@@ -80,7 +81,10 @@ export default async function StaffEventsPage() {
               >
                 {/* Header row */}
                 <div className="flex items-center gap-4">
-                  <span className="text-2xl shrink-0">{et.icon ?? '📅'}</span>
+                  {et.icon
+                    ? <span className="text-2xl shrink-0">{et.icon}</span>
+                    : <CalendarIcon size={24} className="text-[#7E613F] shrink-0" />
+                  }
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-[#242622] truncate">{et.name}</p>
                     <p className="text-xs text-[#7E613F] mt-0.5">

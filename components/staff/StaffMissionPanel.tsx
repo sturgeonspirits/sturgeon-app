@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Mission } from '@/lib/supabase/types'
+import { Camera } from '@/components/icons/brand'
 
 type MemberOption = { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }
 function memberLabel(m: MemberOption) {
@@ -196,7 +197,7 @@ export default function StaffMissionPanel({ missions, members, staffId, pendingR
                   disabled={loading}
                   className="w-full bg-[#96321F] text-[#FFFFFF] font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-[#ae3a24] transition-colors"
                 >
-                  {loading ? 'Generating…' : '📷 Generate QR Code'}
+                  {loading ? 'Generating…' : <><Camera size={14} className="inline mr-1.5 align-middle" />Generate QR Code</>}
                 </button>
               )}
             </div>

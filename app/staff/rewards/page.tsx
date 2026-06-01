@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import RewardToggle from './RewardToggle'
+import { Medal } from '@/components/icons/brand'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,7 +51,7 @@ export default async function StaffRewardsPage() {
 
       {(rewards ?? []).length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-[#D4CFC3]">
-          <p className="text-4xl mb-3">🎁</p>
+          <Medal size={44} className="text-[#D4CFC3] mx-auto mb-3" />
           <p className="font-semibold text-[#242622] mb-1">No rewards yet</p>
           <p className="text-sm text-[#7E613F]">Create your first reward to get started.</p>
           <Link href="/staff/rewards/new" className="inline-block mt-4 text-sm text-[#96321F] font-semibold underline">
@@ -88,7 +89,10 @@ function RewardCard({ reward }: { reward: any }) {
   return (
     <div className={`bg-white border rounded-2xl p-4 ${reward.is_active ? 'border-[#D4CFC3]' : 'border-[#E8E4DA] opacity-60'}`}>
       <div className="flex items-start gap-3">
-        <span className="text-2xl mt-0.5 shrink-0">{reward.icon ?? '🎁'}</span>
+        {reward.icon
+          ? <span className="text-2xl mt-0.5 shrink-0">{reward.icon}</span>
+          : <Medal size={24} className="text-[#7E613F] mt-0.5 shrink-0" />
+        }
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-[#242622] text-sm">{reward.name}</p>

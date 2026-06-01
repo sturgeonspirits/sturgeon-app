@@ -300,3 +300,216 @@ export function ShoppingBag({ size = 24, className }: IconProps) {
     </svg>
   )
 }
+
+// ─── Additional icons ─────────────────────────────────────────────────────────
+
+/** Trophy cup — finalize night, standings hero */
+export function Trophy({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 32 34" className={className}>
+      {/* Cup body */}
+      <path d="M7 2 L25 2 L25 16 Q25 26 16 26 Q7 26 7 16 Z" strokeWidth="2.5" />
+      {/* Left handle */}
+      <path d="M7 8 Q2 8 2 14 Q2 20 7 20" strokeWidth="2.5" />
+      {/* Right handle */}
+      <path d="M25 8 Q30 8 30 14 Q30 20 25 20" strokeWidth="2.5" />
+      {/* Stem */}
+      <line x1="16" y1="26" x2="16" y2="31" strokeWidth="2.5" />
+      {/* Base */}
+      <line x1="9" y1="31" x2="23" y2="31" strokeWidth="3" />
+    </svg>
+  )
+}
+
+/** Magnifying glass — search empty states */
+export function Search({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 24" className={className}>
+      <circle cx="10" cy="10" r="7" strokeWidth="2.5" />
+      <line x1="15.5" y1="15.5" x2="22" y2="22" strokeWidth="3" />
+    </svg>
+  )
+}
+
+/** Sliders — settings / staff portal link */
+export function Sliders({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 24" className={className}>
+      {/* Top rail */}
+      <line x1="2" y1="5"  x2="22" y2="5"  strokeWidth="2" />
+      <circle cx="16" cy="5"  r="2.5" fill="currentColor" stroke="none" />
+      {/* Middle rail */}
+      <line x1="2" y1="12" x2="22" y2="12" strokeWidth="2" />
+      <circle cx="8"  cy="12" r="2.5" fill="currentColor" stroke="none" />
+      {/* Bottom rail */}
+      <line x1="2" y1="19" x2="22" y2="19" strokeWidth="2" />
+      <circle cx="16" cy="19" r="2.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/** Calendar — events pages */
+export function CalendarIcon({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 24" className={className}>
+      {/* Body */}
+      <rect x="1" y="3" width="22" height="20" rx="2" strokeWidth="2.5" />
+      {/* Header divider */}
+      <line x1="1" y1="9" x2="23" y2="9" strokeWidth="2" />
+      {/* Peg left */}
+      <line x1="7"  y1="1" x2="7"  y2="6" strokeWidth="2.5" />
+      {/* Peg right */}
+      <line x1="17" y1="1" x2="17" y2="6" strokeWidth="2.5" />
+      {/* Date diamond — center of body */}
+      <path d="M12 13 L15 16 L12 19 L9 16 Z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/** Ticket — redemptions, RSVP */
+export function Ticket({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 32 16" className={className}>
+      {/* Body */}
+      <rect x="1" y="1" width="30" height="14" rx="2" strokeWidth="2.5" />
+      {/* Left notch */}
+      <path d="M1 5.5 Q5 8 1 10.5" strokeWidth="2" />
+      {/* Right notch */}
+      <path d="M31 5.5 Q27 8 31 10.5" strokeWidth="2" />
+      {/* Perforation */}
+      <line x1="11" y1="2" x2="11" y2="14" strokeWidth="1.5" strokeDasharray="2 2" />
+    </svg>
+  )
+}
+
+/** Person silhouette — customers */
+export function Person({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 24" className={className}>
+      {/* Head */}
+      <circle cx="12" cy="7" r="4.5" strokeWidth="2.5" />
+      {/* Shoulders */}
+      <path d="M2 22 Q2 14 12 14 Q22 14 22 22" strokeWidth="2.5" />
+    </svg>
+  )
+}
+
+/** Bar chart — dashboard */
+export function BarChart({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 22" className={className}>
+      <rect x="1"  y="12" width="6" height="8"  strokeWidth="2" />
+      <rect x="9"  y="6"  width="6" height="14" strokeWidth="2.5" />
+      <rect x="17" y="2"  width="6" height="18" strokeWidth="2" />
+      <line x1="1" y1="21" x2="23" y2="21" strokeWidth="2.5" />
+    </svg>
+  )
+}
+
+/** Clipboard — missions */
+export function Clipboard({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 28" className={className}>
+      {/* Board */}
+      <rect x="2" y="5" width="20" height="22" rx="2" strokeWidth="2.5" />
+      {/* Clip */}
+      <rect x="8" y="1" width="8" height="7" rx="1.5" strokeWidth="2" />
+      {/* Lines */}
+      <line x1="6" y1="13" x2="18" y2="13" strokeWidth="2" />
+      <line x1="6" y1="18" x2="14" y2="18" strokeWidth="2" />
+      <line x1="6" y1="23" x2="18" y2="23" strokeWidth="2" />
+    </svg>
+  )
+}
+
+/** Camera — QR scan button */
+export function Camera({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 28 22" className={className}>
+      {/* Viewfinder notch */}
+      <path d="M9 5 L10 1 L18 1 L19 5" strokeWidth="2" />
+      {/* Body */}
+      <rect x="1" y="5" width="26" height="16" rx="3" strokeWidth="2.5" />
+      {/* Lens outer */}
+      <circle cx="14" cy="13" r="5"   strokeWidth="2.5" />
+      {/* Lens inner */}
+      <circle cx="14" cy="13" r="2"   fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/** Sync arrows — Toast sync */
+export function SyncArrows({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 24" className={className}>
+      {/* Top arc: left → right */}
+      <path d="M4 8 Q4 2 12 2 Q18 2 20 6" strokeWidth="2.5" />
+      <path d="M20 6 L20 2 M20 6 L16 6" strokeWidth="2.5" />
+      {/* Bottom arc: right → left */}
+      <path d="M20 16 Q20 22 12 22 Q6 22 4 18" strokeWidth="2.5" />
+      <path d="M4 18 L4 22 M4 18 L8 18" strokeWidth="2.5" />
+    </svg>
+  )
+}
+
+/** Document with fold — file upload */
+export function Document({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 22 28" className={className}>
+      {/* Body with corner fold */}
+      <path d="M2 2 L14 2 L20 8 L20 26 L2 26 Z" strokeWidth="2.5" />
+      {/* Fold triangle */}
+      <path d="M14 2 L14 8 L20 8" strokeWidth="2" />
+      {/* Content lines */}
+      <line x1="5" y1="13" x2="17" y2="13" strokeWidth="2" />
+      <line x1="5" y1="17" x2="17" y2="17" strokeWidth="2" />
+      <line x1="5" y1="21" x2="12" y2="21" strokeWidth="2" />
+    </svg>
+  )
+}
+
+/** Package / box — DTC / shipping link */
+export function Package({ size = 24, className }: IconProps) {
+  return (
+    <svg {...base(size)} viewBox="0 0 24 24" className={className}>
+      {/* Box body */}
+      <path d="M2 8 L12 3 L22 8 L22 20 L12 25 L2 20 Z" strokeWidth="2.5" />
+      {/* Top edge */}
+      <path d="M2 8 L12 13 L22 8" strokeWidth="2" />
+      {/* Center spine */}
+      <line x1="12" y1="13" x2="12" y2="25" strokeWidth="2" />
+      {/* Left seam */}
+      <path d="M7 5.5 L7 16" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+/**
+ * Placement ring — leaderboard 1st / 2nd / 3rd.
+ * Renders a circle with the rank number inside using brand metallic tones.
+ * Uses inline SVG text so it works at any size without extra deps.
+ */
+export function PlaceRing({ place, size = 28 }: { place: number; size?: number }) {
+  const palette: Record<number, { ring: string; fill: string }> = {
+    1: { ring: '#B8860B', fill: '#96321F' }, // dark-gold ring, rust numeral
+    2: { ring: '#888888', fill: '#555555' }, // silver
+    3: { ring: '#8B4513', fill: '#7E613F' }, // sienna / bronze
+  }
+  const { ring, fill } = palette[place] ?? { ring: '#D4CFC3', fill: '#9E8F7E' }
+  const fs = Math.round(size * 0.46)
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="12" stroke={ring} strokeWidth="2.5" />
+      <text
+        x="14" y="19"
+        textAnchor="middle"
+        fontSize={fs}
+        fontWeight="700"
+        fill={fill}
+        fontFamily="Georgia, serif"
+      >
+        {place}
+      </text>
+    </svg>
+  )
+}

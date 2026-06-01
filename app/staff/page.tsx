@@ -2,6 +2,11 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getDailyToken } from '@/lib/checkin-token'
+import {
+  BarChart, RocksGlass, Person, Ticket, Medal, Clipboard,
+  CalendarIcon, DiamondSuit, CocktailGlass, SyncArrows,
+} from '@/components/icons/brand'
+import type { ComponentType } from 'react'
 
 export default async function StaffDashboard() {
   const supabase = await createClient()
@@ -65,17 +70,17 @@ export default async function StaffDashboard() {
   const checkinUrl   = `https://club.sturgeonspirits.com/checkin?t=${checkinToken}`
   const qrImageUrl   = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkinUrl)}&format=png`
 
-  const cards = [
-    { href: '/staff/dashboard',    icon: '📊', label: 'Dashboard',       desc: 'Members, points, top lists' },
-    { href: '/staff/scores',       icon: '🥃', label: 'Enter Scores',   desc: 'Cribbage & Trivia'     },
-    { href: '/staff/customers',    icon: '👤', label: 'Customers',       desc: 'Add & search members'  },
-    { href: '/staff/redemptions',  icon: '🎟️', label: 'Redemptions',     desc: 'Approve member requests', badge: pendingCount ?? 0 },
-    { href: '/staff/rewards',      icon: '🎁', label: 'Rewards',         desc: 'Add & edit catalog'    },
-    { href: '/staff/missions',     icon: '📋', label: 'Missions',        desc: 'Add & mark completions'},
-    { href: '/staff/events',       icon: '📅', label: 'Events',          desc: 'Manage weekly events'  },
-    { href: '/staff/teams',        icon: '🎮', label: 'Teams',            desc: 'Rename & delete teams' },
-    { href: '/staff/menu',         icon: '🍹', label: 'Menu',            desc: 'View & sync recipes'   },
-    { href: '/staff/toast-sync',   icon: '🔄', label: 'Toast Sync',      desc: 'Import loyalty points' },
+  const cards: { href: string; Icon: ComponentType<{ size?: number; className?: string }>; label: string; desc: string; badge?: number }[] = [
+    { href: '/staff/dashboard',    Icon: BarChart,      label: 'Dashboard',     desc: 'Members, points, top lists'   },
+    { href: '/staff/scores',       Icon: RocksGlass,    label: 'Enter Scores',  desc: 'Cribbage & Trivia'            },
+    { href: '/staff/customers',    Icon: Person,        label: 'Customers',     desc: 'Add & search members'         },
+    { href: '/staff/redemptions',  Icon: Ticket,        label: 'Redemptions',   desc: 'Approve member requests', badge: pendingCount ?? 0 },
+    { href: '/staff/rewards',      Icon: Medal,         label: 'Rewards',       desc: 'Add & edit catalog'           },
+    { href: '/staff/missions',     Icon: Clipboard,     label: 'Missions',      desc: 'Add & mark completions'       },
+    { href: '/staff/events',       Icon: CalendarIcon,  label: 'Events',        desc: 'Manage weekly events'         },
+    { href: '/staff/teams',        Icon: DiamondSuit,   label: 'Teams',         desc: 'Rename & delete teams'        },
+    { href: '/staff/menu',         Icon: CocktailGlass, label: 'Menu',          desc: 'View & sync recipes'          },
+    { href: '/staff/toast-sync',   Icon: SyncArrows,    label: 'Toast Sync',    desc: 'Import loyalty points'        },
   ]
 
   return (
@@ -124,7 +129,7 @@ export default async function StaffDashboard() {
                 {card.badge}
               </span>
             )}
-            <p className="text-2xl mb-2">{card.icon}</p>
+            <card.Icon size={26} className="text-[#7E613F] mb-2" />
             <p className="font-semibold text-[#242622] text-sm">{card.label}</p>
             <p className="text-xs text-[#7E613F] mt-0.5">{card.desc}</p>
           </Link>

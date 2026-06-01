@@ -1,24 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { ShoppingBag } from '@/components/icons/brand'
+import { ShoppingBag, CocktailGlass, RocksGlass, Package } from '@/components/icons/brand'
 
 const SHOP_LINKS = [
   {
     href:  'https://order.toasttab.com/online/sturgeon-spirits-craft-distillery',
-    icon:  '🍸',
+    Icon:  CocktailGlass,
     label: 'Order Online',
     desc:  'Order bottles, boxes, merch, and more for pickup',
   },
   {
     href:  'https://www.sturgeonspirits.com/pre-orders',
-    icon:  '🥃',
+    Icon:  RocksGlass,
     label: 'Pre-Orders',
     desc:  'Pre-order upcoming releases',
   },
   {
     href:  'https://sturgeonspirits.myshopify.com/',
-    icon:  '📦',
+    Icon:  Package,
     label: 'Direct to Consumer',
     desc:  'Ship bottles to your door',
   },
@@ -77,7 +77,7 @@ export default function ShopMenu() {
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-4 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 hover:border-[#C8BCA4] active:scale-[0.99] transition-all"
               >
-                <span className="text-2xl">{link.icon}</span>
+                <link.Icon size={22} className="text-[#7E613F] shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-[#242622]">{link.label}</p>
                   <p className="text-xs text-[#7E613F]">{link.desc}</p>

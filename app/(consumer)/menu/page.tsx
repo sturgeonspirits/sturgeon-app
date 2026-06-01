@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import MenuSearch from '@/components/menu/MenuSearch'
+import { RocksGlass } from '@/components/icons/brand'
 
 export default async function MenuPage() {
   const { supabase, user } = await getAuthUser()
@@ -32,7 +33,7 @@ export default async function MenuPage() {
 
       {allRecipes.length === 0 ? (
         <div className="text-center py-20 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-5xl mb-4">🥃</p>
+          <RocksGlass size={52} className="text-[#D4CFC3] mx-auto mb-4" />
           <p className="font-semibold text-[#242622] mb-1">Menu coming soon</p>
           <p className="text-sm text-[#7E613F]">Staff will sync the cocktail menu shortly</p>
         </div>

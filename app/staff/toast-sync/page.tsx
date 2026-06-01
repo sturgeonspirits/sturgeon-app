@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { Document } from '@/components/icons/brand'
 
 interface SyncCounters {
   total: number
@@ -136,7 +137,7 @@ export default function ToastSyncPage() {
                 : 'border-[#D4CFC3] bg-[#FFFFFF] hover:border-[#96321F] hover:bg-[#96321F]/5'}
             `}
           >
-            <div className="text-4xl">📄</div>
+            <Document size={44} className="text-[#9E8F7E]" />
             {file ? (
               <div className="text-center">
                 <p className="font-semibold text-[#242622]">{file.name}</p>

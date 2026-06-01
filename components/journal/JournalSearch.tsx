@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import DeleteEntryButton from '@/components/journal/DeleteEntryButton'
 import { relativeTime } from '@/lib/utils'
+import { Search } from '@/components/icons/brand'
 
 interface Entry {
   id: string
@@ -120,7 +121,7 @@ export default function JournalSearch({ entries }: Props) {
       {/* ── No results ───────────────────────────────── */}
       {filtered.length === 0 && (
         <div className="text-center py-14 bg-[#FFFFFF] rounded-xl border border-[#D4CFC3]">
-          <p className="text-4xl mb-3">🔍</p>
+          <Search size={40} className="text-[#D4CFC3] mx-auto mb-3" />
           <p className="font-semibold text-[#242622] mb-1">No entries found</p>
           <p className="text-sm text-[#7E613F]">Try different keywords or clear your filters</p>
           <button

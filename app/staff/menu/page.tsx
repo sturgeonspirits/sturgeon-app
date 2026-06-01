@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import SyncMenuButton from './SyncMenuButton'
 import StaffMenuSearch from './StaffMenuSearch'
+import { CocktailGlass } from '@/components/icons/brand'
 
 export default async function StaffMenuPage() {
   const supabase = await createClient()
@@ -35,7 +36,7 @@ export default async function StaffMenuPage() {
 
       {allRecipes.length === 0 ? (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-4xl mb-3">🍹</p>
+          <CocktailGlass size={44} className="text-[#D4CFC3] mx-auto mb-3" />
           <p className="font-semibold text-[#242622] mb-1">No recipes yet</p>
           <p className="text-sm text-[#7E613F] mb-4">
             First, share your Google Sheet with "Anyone with link can view", then tap Sync.

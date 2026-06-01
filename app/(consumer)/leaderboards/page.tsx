@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Trophy, RocksGlass } from '@/components/icons/brand'
 
 // Format a YYYY-MM-DD date string as "Wed, Apr 16"
 function fmtEventDate(dateStr: string): string {
@@ -222,7 +223,7 @@ export default async function LeaderboardsPage() {
                     <span className="text-lg">{et.icon}</span>
                     <span className="text-xs text-[#7E613F] font-medium">{et.name}</span>
                   </div>
-                  <p className="text-lg">🏆</p>
+                  <Trophy size={22} className="text-[#7E613F] mx-auto" />
                   <p className="font-bold text-[#242622] mt-1 truncate">
                     {winner.winnerName}
                   </p>
@@ -239,7 +240,7 @@ export default async function LeaderboardsPage() {
 
       {events.length === 0 ? (
         <div className="text-center py-16 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-5xl mb-4">🥃</p>
+          <RocksGlass size={52} className="text-[#D4CFC3] mx-auto mb-4" />
           <p className="font-semibold text-[#242622] mb-1">Leaderboards coming soon</p>
           <p className="text-sm text-[#7E613F] px-6">
             Staff will set up event boards for Cribbage Night, Trivia, and more. Check back after your first event!

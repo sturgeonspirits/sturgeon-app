@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { EventType, LeaderboardPeriod } from '@/lib/supabase/types'
 import { ordinal, privateName } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { PlaceRing, BarChart, RocksGlass } from '@/components/icons/brand'
 
 interface Props {
   eventType:          EventType
@@ -212,7 +213,7 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
   if (sorted.length === 0) {
     return (
       <div className="text-center py-10 text-[#7E613F]">
-        <p className="text-3xl mb-2">📊</p>
+        <BarChart size={36} className="text-[#D4CFC3] mx-auto mb-2" />
         <p className="font-medium text-sm">No scores recorded yet</p>
         <p className="text-xs mt-1 text-[#9E8F7E]">Staff can enter tonight's results from the portal</p>
       </div>
@@ -222,13 +223,12 @@ function PointsBoard({ entries, currentUserId }: { entries: any[]; currentUserId
     <div className="space-y-2">
       {sorted.map((e, i) => {
         const isMe  = e.user_id === currentUserId
-        const medal = ['🥇', '🥈', '🥉'][i]
         return (
           <div key={e.id} className={cn(
             'bg-[#FFFFFF] border rounded-xl px-4 py-3 flex items-center gap-3',
             isMe ? 'border-[#7E613F]/40' : 'border-[#D4CFC3]'
           )}>
-            <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm">{i + 1}</span>}</span>
+            <PlaceRing place={i + 1} size={28} />
             <p className={cn('flex-1 font-semibold text-sm', isMe ? 'text-[#7E613F]' : 'text-[#242622]')}>
               {privateName(e.profiles?.display_name)}
               {isMe && <span className="ml-2 text-xs text-[#7E613F]/60">you</span>}
@@ -300,7 +300,7 @@ function TeamBoard({
 
       {sorted.length === 0 ? (
         <div className="text-center py-10 text-[#7E613F]">
-          <p className="text-3xl mb-2">🥃</p>
+          <RocksGlass size={36} className="text-[#D4CFC3] mx-auto mb-2" />
           <p className="font-medium text-sm">No teams yet</p>
           <p className="text-xs mt-1 text-[#9E8F7E]">
             {openPeriodId ? 'Be the first to join!' : 'Check back after the next event night'}
@@ -314,7 +314,7 @@ function TeamBoard({
           const isMyTeam    = (joinedTeamId === team.permanent_team_id)
                             || (!joinedTeamId && !!currentUserId && memberIds.includes(currentUserId))
           const isJoining   = joiningId === team.permanent_team_id
-          const medal       = ['🥇', '🥈', '🥉'][i]
+          const _medal      = i // unused — replaced by PlaceRing
           const showJoinBtn = canJoin && !isMyTeam
 
           return (
@@ -326,7 +326,7 @@ function TeamBoard({
               onClick={showJoinBtn ? () => handleJoin(team.permanent_team_id) : undefined}
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm">{i + 1}</span>}</span>
+                <PlaceRing place={i + 1} size={28} />
                 <p className={cn('flex-1 font-semibold', isMyTeam ? 'text-[#87A67F]' : 'text-[#242622]')}>
                   {team.name}
                   {isMyTeam && <span className="ml-2 text-xs text-[#87A67F]/60">your team</span>}
@@ -381,7 +381,7 @@ function AllTimeBoard({ rows, eventType, currentUserId }: { rows: any[]; eventTy
             'bg-[#FFFFFF] border rounded-xl px-4 py-3 flex items-center gap-3',
             isMe ? 'border-[#96321F]/40' : 'border-[#D4CFC3]'
           )}>
-            <span className="w-7 text-center">{medal ?? <span className="text-[#7E613F] text-sm font-mono">{ordinal(i + 1)}</span>}</span>
+            <PlaceRing place={i + 1} size={28} />
             <div className="flex-1 min-w-0">
               <p className={cn('font-semibold text-sm truncate', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
                 {privateName(row.profiles?.display_name)}

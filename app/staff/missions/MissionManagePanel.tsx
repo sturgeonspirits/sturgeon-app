@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { tierLabel } from '@/lib/utils'
+import { Clipboard } from '@/components/icons/brand'
 
 type Mission = {
   id: string
@@ -112,7 +113,7 @@ export default function MissionManagePanel({ missions }: { missions: Mission[] }
 
       {missions.length === 0 && (
         <div className="text-center py-12 text-[#7E613F]">
-          <p className="text-3xl mb-2">📋</p>
+          <Clipboard size={36} className="text-[#D4CFC3] mx-auto mb-2" />
           <p className="font-semibold">No missions yet</p>
           <p className="text-sm mt-1">Create your first mission above.</p>
         </div>

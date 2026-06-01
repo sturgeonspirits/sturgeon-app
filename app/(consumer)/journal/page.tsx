@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { RocksGlass } from '@/components/icons/brand'
 import JournalSearch from '@/components/journal/JournalSearch'
 
 export default async function JournalPage() {
@@ -35,7 +36,7 @@ export default async function JournalPage() {
 
       {entries.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-5xl mb-4">🥃</p>
+          <RocksGlass size={52} className="text-[#D4CFC3] mx-auto mb-4" />
           <p className="text-[#242622] font-semibold mb-2">No entries yet</p>
           <p className="text-[#7E613F] text-sm mb-6">Log your first tasting to earn points</p>
           <Link

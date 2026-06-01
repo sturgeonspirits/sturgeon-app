@@ -6,6 +6,7 @@ import CribbageScoreForm from './CribbageScoreForm'
 import TriviaIndividualForm from './TriviaIndividualForm'
 import TriviaTeamForm from './TriviaTeamForm'
 import { dayOfWeekLabel } from '@/lib/utils'
+import { Clipboard, CalendarIcon, PlaceRing, Trophy } from '@/components/icons/brand'
 
 interface ScheduledEvent {
   id: string
@@ -247,7 +248,7 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
                 const { period } = entry
                 return (
                   <div key={period.id} className="border border-[#D4CFC3] bg-[#FAFAF7] rounded-xl px-4 py-3 flex items-center gap-3">
-                    <span className="text-[#7E613F]">📋</span>
+                    <Clipboard size={16} className="text-[#7E613F]" />
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-[#242622]">{period.label}</p>
                       <p className="text-xs text-[#9E8F7E]">Unlinked period</p>
@@ -316,7 +317,10 @@ export default function ScoreEntryPanel({ eventTypes, openPeriods, members, staf
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-[#242622]">{selectedET.name}</h3>
-              <p className="text-xs text-[#7E613F] mt-0.5">📅 {selectedPeriod.label}</p>
+              <p className="text-xs text-[#7E613F] mt-0.5 flex items-center gap-1">
+                <CalendarIcon size={12} className="inline shrink-0" />
+                {selectedPeriod.label}
+              </p>
             </div>
             <button
               onClick={() => { setSelectedPeriodId(null); setSelectedEventId(null) }}
@@ -680,7 +684,7 @@ function FinalizeNightButton({ periodId, isFinalized }: { periodId: string; isFi
         <div className="space-y-1">
           {result.map((r, i) => (
             <div key={i} className="flex items-center gap-2 bg-white border border-[#E8E4DB] rounded-lg px-3 py-2">
-              <span className="text-lg">{r.place === 1 ? '🥇' : '🥈'}</span>
+              <PlaceRing place={r.place ?? 1} size={24} />
               <span className="text-sm font-semibold text-[#242622] flex-1">{r.name}</span>
               <span className="text-sm font-bold text-[#87A67F]">+{r.bonus} pts</span>
             </div>
@@ -693,7 +697,7 @@ function FinalizeNightButton({ periodId, isFinalized }: { periodId: string; isFi
           disabled={saving}
           className="w-full bg-[#87A67F] text-white font-semibold py-3 rounded-xl disabled:opacity-40 hover:bg-[#769968] active:scale-[0.98] transition-all text-sm"
         >
-          {saving ? 'Finalizing…' : '🏆 Finalize & Award Bonuses'}
+          {saving ? 'Finalizing…' : <><Trophy size={16} className="inline mr-1.5 align-middle" />Finalize & Award Bonuses</>}
         </button>
       )}
 

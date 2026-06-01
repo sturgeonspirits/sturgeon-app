@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DiamondSuit } from '@/components/icons/brand'
 
 export interface Team {
   id:          string
@@ -88,7 +89,7 @@ export default function TeamManager({ groups }: { groups: EventTypeGroup[] }) {
     <div className="space-y-8">
       {allEmpty && (
         <div className="text-center py-16 bg-white border border-[#D4CFC3] rounded-2xl">
-          <p className="text-4xl mb-3">🎮</p>
+          <DiamondSuit size={44} className="text-[#D4CFC3] mx-auto mb-3" />
           <p className="font-semibold text-[#242622]">No teams yet</p>
           <p className="text-sm text-[#7E613F] mt-1">Teams appear here once customers sign up for an event</p>
         </div>
