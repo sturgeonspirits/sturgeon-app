@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { RocksGlass, GlassesClinking, Anchor } from '@/components/icons/brand'
 
 // jsQR is CJS — dynamic import avoids SSR issues
 type JsQR = (data: Uint8ClampedArray, width: number, height: number, options?: { inversionAttempts?: string }) => { data: string } | null
@@ -150,13 +151,13 @@ export default function QRScanner() {
   if (phase === 'birthday') {
     return (
       <ResultScreen>
-        <p className="text-6xl animate-bounce">🎂</p>
+        <GlassesClinking size={80} className="text-[#96321F] animate-bounce mx-auto" />
         <p className="text-2xl font-bold text-[#96321F]">Happy Birthday!</p>
         <p className="text-sm text-[#7E613F] text-center">
           You've got a <strong>free cocktail</strong> waiting — show this screen to your bartender.
         </p>
         <div className="bg-[#96321F]/5 border border-[#96321F]/20 rounded-2xl px-6 py-4 text-center w-full">
-          <p className="text-2xl font-bold text-[#96321F]">🍹 Birthday Cocktail</p>
+          <p className="text-2xl font-bold text-[#96321F]">Birthday Cocktail</p>
           <p className="text-xs text-[#7E613F] mt-1">Valid 30 days</p>
         </div>
         <p className="text-xs text-[#9E8F7E]">+{points} check-in points also added</p>
@@ -168,7 +169,7 @@ export default function QRScanner() {
   if (phase === 'success') {
     return (
       <ResultScreen>
-        <p className="text-6xl">🎉</p>
+        <RocksGlass size={80} className="text-[#96321F] mx-auto" />
         <p className="text-3xl font-bold text-[#96321F]">+{points} pts</p>
         <p className="text-sm text-[#7E613F]">Checked in! Enjoy your visit.</p>
         <BackToClub />
@@ -179,7 +180,7 @@ export default function QRScanner() {
   if (phase === 'already') {
     return (
       <ResultScreen>
-        <p className="text-4xl">✅</p>
+        <RocksGlass size={64} className="text-[#87A67F] mx-auto" />
         <p className="text-base font-semibold text-[#242622] text-center">
           You've already checked in today — see you next time!
         </p>
@@ -191,7 +192,7 @@ export default function QRScanner() {
   if (phase === 'error') {
     return (
       <ResultScreen>
-        <p className="text-4xl">😕</p>
+        <Anchor size={64} className="text-[#9E8F7E] mx-auto" />
         <p className="text-sm text-[#7E613F] text-center max-w-xs">{message}</p>
         <BackToClub />
       </ResultScreen>

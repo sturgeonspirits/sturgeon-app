@@ -16,6 +16,15 @@ import MissionGrid from '@/components/club/MissionGrid'
 import ShopMenu from '@/components/club/ShopMenu'
 import HoursBanner from '@/components/club/HoursBanner'
 import type { HoursRow } from '@/lib/hours'
+import {
+  CocktailGlass,
+  PenNib,
+  Podium,
+  Medal,
+  DiamondSuit,
+  Spear,
+  GlassesTouch,
+} from '@/components/icons/brand'
 
 export default async function ClubPage() {
   const { supabase, user } = await getAuthUser()
@@ -160,20 +169,20 @@ export default async function ClubPage() {
         <section>
           <SectionHeader label="Explore" />
           <div className="grid grid-cols-2 gap-2">
-            {[
-              { href: '/menu',         icon: '🍸', label: 'Cocktail Menu',   desc: 'Browse our drinks'        },
-              { href: '/journal',      icon: '✍️',  label: 'Tasting Journal', desc: 'Log + earn points'        },
-              { href: '/leaderboards', icon: '🥃',  label: 'Standings',       desc: 'Weekly leaderboards'      },
-              { href: '/rewards',      icon: '🍾',  label: 'Rewards',         desc: 'Redeem your points'       },
-              { href: '/events',       icon: '📅',  label: 'Events',          desc: 'What\'s on this week'     },
-              { href: '/checkin/scan', icon: '📍',  label: 'Check In',        desc: 'Scan QR at the distillery'       },
-            ].map(item => (
+            {([
+              { href: '/menu',         Icon: CocktailGlass, label: 'Cocktail Menu',   desc: 'Browse our drinks'         },
+              { href: '/journal',      Icon: PenNib,        label: 'Tasting Journal', desc: 'Log + earn points'         },
+              { href: '/leaderboards', Icon: Podium,        label: 'Standings',       desc: 'Weekly leaderboards'       },
+              { href: '/rewards',      Icon: Medal,         label: 'Rewards',         desc: 'Redeem your points'        },
+              { href: '/events',       Icon: DiamondSuit,   label: 'Events',          desc: "What's on this week"       },
+              { href: '/checkin/scan', Icon: Spear,         label: 'Check In',        desc: 'Scan QR at the distillery' },
+            ] as const).map(item => (
               <Link
                 key={item.label}
                 href={item.href}
                 className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 flex flex-col gap-2 hover:border-[#C8BCA4] active:scale-[0.98] transition-all"
               >
-                <span className="text-2xl">{item.icon}</span>
+                <item.Icon size={26} className="text-[#7E613F]" />
                 <div>
                   <p className="text-sm font-semibold text-[#242622]">{item.label}</p>
                   <p className="text-xs text-[#7E613F] mt-0.5">{item.desc}</p>
@@ -184,14 +193,14 @@ export default async function ClubPage() {
             {/* Shop — opens bottom sheet with multiple destinations */}
             <ShopMenu />
 
-            {/* Book a Private Event — single column */}
+            {/* Book a Private Event */}
             <a
               href="https://sturgeonspirits.com/private-events"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 flex flex-col gap-2 hover:border-[#C8BCA4] active:scale-[0.98] transition-all"
             >
-              <span className="text-2xl">🥂</span>
+              <GlassesTouch size={26} className="text-[#7E613F]" />
               <div>
                 <p className="text-sm font-semibold text-[#242622]">Book an Event</p>
                 <p className="text-xs text-[#7E613F] mt-0.5">Private tastings & parties</p>

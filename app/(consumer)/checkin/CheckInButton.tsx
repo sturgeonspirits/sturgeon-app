@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { RocksGlass, GlassesClinking, Anchor } from '@/components/icons/brand'
 
 const POINTS = 15
 
@@ -43,7 +44,7 @@ export default function CheckInButton({ token }: { token: string }) {
     if (birthday) {
       return (
         <div className="space-y-4 text-center">
-          <p className="text-6xl animate-bounce">🎂</p>
+          <GlassesClinking size={72} className="text-[#96321F] animate-bounce mx-auto" />
           <div>
             <p className="text-2xl font-bold text-[#96321F]">Happy Birthday!</p>
             <p className="text-sm text-[#7E613F] mt-1">
@@ -51,7 +52,7 @@ export default function CheckInButton({ token }: { token: string }) {
             </p>
           </div>
           <div className="bg-[#96321F]/5 border border-[#96321F]/20 rounded-2xl p-4">
-            <p className="text-3xl font-bold text-[#96321F]">🍹 Birthday Cocktail</p>
+            <p className="text-3xl font-bold text-[#96321F]">Birthday Cocktail</p>
             <p className="text-xs text-[#7E613F] mt-1">Redeemable tonight · Valid 30 days</p>
           </div>
           <p className="text-xs text-[#9E8F7E]">+{points} check-in points also added</p>
@@ -67,7 +68,7 @@ export default function CheckInButton({ token }: { token: string }) {
 
     return (
       <div className="space-y-4 text-center">
-        <p className="text-6xl">🎉</p>
+        <RocksGlass size={72} className="text-[#96321F] mx-auto" />
         <div>
           <p className="text-3xl font-bold text-[#96321F]">+{points} pts</p>
           <p className="text-sm text-[#7E613F] mt-1">Checked in! Enjoy your visit.</p>
@@ -86,7 +87,8 @@ export default function CheckInButton({ token }: { token: string }) {
     const alreadyIn = message.toLowerCase().includes('already checked in')
     return (
       <div className="space-y-4 text-center">
-        <p className="text-4xl">{alreadyIn ? '✅' : '😕'}</p>
+        {alreadyIn && <RocksGlass size={52} className="text-[#87A67F] mx-auto" />}
+        {!alreadyIn && <Anchor size={52} className="text-[#9E8F7E] mx-auto" />}
         <p className="text-sm text-[#7E613F]">{message}</p>
         {!alreadyIn && (
           <button

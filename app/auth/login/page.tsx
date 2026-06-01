@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Suspense } from 'react'
+import { Envelope } from '@/components/icons/brand'
 
 function LoginPageInner() {
   const router = useRouter()
@@ -159,7 +160,7 @@ function LoginPageInner() {
           ) : (
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#96321F]/10 border border-[#96321F]/25 mb-5">
-                <span className="text-3xl">✉️</span>
+                <Envelope size={30} className="text-[#96321F]" />
               </div>
               <h2 className="text-lg font-semibold text-[#242622] mb-2">Check your email</h2>
               <p className="text-sm text-[#7E613F] mb-1">

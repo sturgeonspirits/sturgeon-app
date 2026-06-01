@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ShoppingBag } from '@/components/icons/brand'
 
 const SHOP_LINKS = [
   {
@@ -33,7 +34,7 @@ export default function ShopMenu() {
         onClick={() => setOpen(true)}
         className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 flex flex-col gap-2 text-left hover:border-[#C8BCA4] active:scale-[0.98] transition-all w-full"
       >
-        <span className="text-2xl">🛒</span>
+        <ShoppingBag size={26} className="text-[#7E613F]" />
         <div>
           <p className="text-sm font-semibold text-[#242622]">Shop</p>
           <p className="text-xs text-[#7E613F] mt-0.5">Order, pre-order & ship</p>

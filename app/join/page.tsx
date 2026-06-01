@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Anchor } from '@/components/icons/brand'
 
 interface Team {
   id: string
@@ -158,7 +159,7 @@ function JoinPageInner() {
   if (view === 'error') return (
     <Shell>
       <div className="text-center space-y-3">
-        <p className="text-3xl">🦫</p>
+        <Anchor size={48} className="text-[#9E8F7E] mx-auto" />
         <p className="font-bold text-[#242622]">Something's off</p>
         <p className="text-sm text-[#7E613F]">{error}</p>
         <a href="/events" className="text-sm text-[#96321F] underline">View upcoming events</a>

@@ -121,7 +121,7 @@ export default async function EventSignupPage({ params }: Props) {
         <IndividualSignupForm
           periodId={period.id}
           eventName={et.name}
-          eventIcon={et.icon ?? '🎮'}
+          eventIcon={et.icon ?? '🃏'}
           eventDate={eventDate}
           isRegistered={isRegistered}
         />

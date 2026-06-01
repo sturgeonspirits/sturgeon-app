@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Envelope } from '@/components/icons/brand'
 
 export default function VerifyPage() {
   const router = useRouter()
@@ -106,7 +107,7 @@ export default function VerifyPage() {
       <div className="relative w-full max-w-sm">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#96321F]/10 border border-[#96321F]/20 mb-4">
-            <span className="text-3xl">📬</span>
+            <Envelope size={30} className="text-[#96321F]" />
           </div>
           <h1 className="text-xl font-bold text-[#242622]">Check your email</h1>
           <p className="text-sm text-[#7E613F] mt-2">

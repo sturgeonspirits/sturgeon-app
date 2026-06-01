@@ -2,6 +2,7 @@ import { validateDailyToken } from '@/lib/checkin-token'
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CheckInButton from './CheckInButton'
+import { CopperStill, Anchor } from '@/components/icons/brand'
 
 const CHECKIN_POINTS = 15
 
@@ -22,7 +23,7 @@ export default async function CheckInPage({
     return (
       <Shell>
         <div className="text-center space-y-3">
-          <p className="text-4xl">🦫</p>
+          <Anchor size={52} className="text-[#9E8F7E] mx-auto" />
           <p className="font-bold text-[#242622]">QR code expired</p>
           <p className="text-sm text-[#7E613F]">
             This link is no longer valid. Ask a staff member for the latest QR code.
@@ -53,7 +54,7 @@ export default async function CheckInPage({
   return (
     <Shell>
       <div className="w-full max-w-sm space-y-6 text-center">
-        <p className="text-5xl">📍</p>
+        <CopperStill size={64} className="text-[#7E613F] mx-auto" />
 
         <div>
           <h1 className="text-2xl font-bold text-[#242622]">

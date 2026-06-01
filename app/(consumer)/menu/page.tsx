@@ -32,7 +32,7 @@ export default async function MenuPage() {
 
       {allRecipes.length === 0 ? (
         <div className="text-center py-20 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
-          <p className="text-5xl mb-4">🍹</p>
+          <p className="text-5xl mb-4">🥃</p>
           <p className="font-semibold text-[#242622] mb-1">Menu coming soon</p>
           <p className="text-sm text-[#7E613F]">Staff will sync the cocktail menu shortly</p>
         </div>

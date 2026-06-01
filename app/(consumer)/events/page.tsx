@@ -306,7 +306,7 @@ export default async function EventsPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-[#96321F]/10 border border-[#96321F]/20 flex items-center justify-center text-2xl shrink-0">
-                      {et.icon ?? '📅'}
+                      {et.icon ?? '🃏'}
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-[#242622]">{et.name}</p>
