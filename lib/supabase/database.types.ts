@@ -468,6 +468,64 @@ export type Database = {
           },
         ]
       }
+      cribbage_match_reports: {
+        Row: {
+          created_at: string
+          id: string
+          match_number: number
+          opponent_id: string
+          period_id: string
+          reporter_id: string
+          spread: number
+          updated_at: string
+          won: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_number: number
+          opponent_id: string
+          period_id: string
+          reporter_id: string
+          spread?: number
+          updated_at?: string
+          won: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_number?: number
+          opponent_id?: string
+          period_id?: string
+          reporter_id?: string
+          spread?: number
+          updated_at?: string
+          won?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cribbage_match_reports_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cribbage_match_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cribbage_match_reports_opponent_id_fkey"
+            columns: ["opponent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaderboard_events: {
         Row: {
           earn_event_id: string | null

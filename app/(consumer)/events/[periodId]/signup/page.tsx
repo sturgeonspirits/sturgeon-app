@@ -1,6 +1,13 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-06-03.1 — Individual (cribbage) nights: load signed-up players and
+//                   their match reports so registered users can self-report
+//                   each of their 3 matches with a running nightly total.
+// ─────────────────────────────────────────────
 import { redirect } from 'next/navigation'
 import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import EventSignupForm from '@/components/events/EventSignupForm'
+import CribbageMatchReport, { type PlayerOption, type MatchReport } from '@/components/events/CribbageMatchReport'
 import Link from 'next/link'
 
 interface Props { params: Promise<{ periodId: string }> }
@@ -62,16 +69,43 @@ export default async function EventSignupPage({ params }: Props) {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   })
 
-  // ── Individual events (e.g. cribbage): just check if user is already registered ──
+  // ── Individual events (e.g. cribbage): check registration + load self-report data ──
   let isRegistered = false
+  let players: PlayerOption[] = []
+  let matchReports: MatchReport[] = []
   if (participantType === 'individual') {
-    const { data: existing } = await service
+    // All signed-up players for the night (each has a leaderboard_events row).
+    const { data: regRows } = await service
       .from('leaderboard_events')
-      .select('id')
+      .select('user_id')
       .eq('period_id', periodId)
-      .eq('user_id', user.id)
-      .maybeSingle()
-    isRegistered = !!existing
+
+    const playerIds = (regRows ?? []).map((r: any) => r.user_id)
+    isRegistered = playerIds.includes(user.id)
+
+    if (playerIds.length > 0) {
+      const { data: profs } = await service
+        .from('profiles')
+        .select('id, display_name, full_name')
+        .in('id', playerIds)
+      const profMap = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p]))
+      players = playerIds.map((id: string) => ({
+        id,
+        name: profMap[id]?.display_name ?? profMap[id]?.full_name ?? 'Player',
+      }))
+    }
+
+    const { data: reportRows } = await service
+      .from('cribbage_match_reports')
+      .select('reporter_id, opponent_id, match_number, won, spread')
+      .eq('period_id', periodId)
+    matchReports = (reportRows ?? []).map((r: any) => ({
+      reporterId:  r.reporter_id,
+      opponentId:  r.opponent_id,
+      matchNumber: r.match_number,
+      won:         r.won,
+      spread:      r.spread ?? 0,
+    }))
   }
 
   // ── Team events (e.g. trivia): load teams ────────────────────────────────────
@@ -185,6 +219,26 @@ export default async function EventSignupPage({ params }: Props) {
           myTeam={myTeam}
           isRegistered={isRegistered}
         />
+
+        {/* Self-report match scores — individual events, once signed up */}
+        {participantType === 'individual' && isRegistered && (
+          <div className="mt-8 pt-6 border-t border-[#D4CFC3]">
+            <h2 className="text-lg font-bold text-[#242622] mb-3">Add your match scores</h2>
+            {players.length < 2 ? (
+              <p className="text-sm text-[#7E613F]">
+                Once another player signs up you’ll be able to record your matches here.
+              </p>
+            ) : (
+              <CribbageMatchReport
+                periodId={periodId}
+                currentUserId={user.id}
+                players={players}
+                reports={matchReports}
+                slug={et?.slug ?? undefined}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

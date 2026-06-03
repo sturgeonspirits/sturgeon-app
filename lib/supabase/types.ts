@@ -7,6 +7,7 @@
 //                   auto-typed Supabase query results are assignable to these
 //                   types. Relaxed: Mission, EventType, LeaderboardPeriod,
 //                   TierThreshold, Reward, LeaderboardTeam.
+//   v2026-06-03.1 — Add CribbageMatchReport (per-match self-reported scores).
 // ─────────────────────────────────────────────
 
 // Run `npm run db:types` to regenerate from your live Supabase schema.
@@ -173,6 +174,18 @@ export interface LeaderboardEvent {
   notes: string | null
 }
 
+export interface CribbageMatchReport {
+  id: string
+  period_id: string
+  reporter_id: string
+  opponent_id: string
+  match_number: number
+  won: boolean
+  spread: number
+  created_at: string
+  updated_at: string
+}
+
 export interface LeaderboardTeam {
   id: string
   period_id: string
@@ -263,6 +276,7 @@ export interface Database {
       event_types:             { Row: EventType;          Insert: Partial<EventType>;          Update: Partial<EventType> }
       leaderboard_periods:     { Row: LeaderboardPeriod;  Insert: Partial<LeaderboardPeriod>;  Update: Partial<LeaderboardPeriod> }
       leaderboard_events:      { Row: LeaderboardEvent;   Insert: Partial<LeaderboardEvent>;   Update: Partial<LeaderboardEvent> }
+      cribbage_match_reports:  { Row: CribbageMatchReport; Insert: Partial<CribbageMatchReport>; Update: Partial<CribbageMatchReport> }
       leaderboard_teams:       { Row: LeaderboardTeam;    Insert: Partial<LeaderboardTeam>;    Update: Partial<LeaderboardTeam> }
       rewards:                 { Row: Reward;             Insert: Partial<Reward>;             Update: Partial<Reward> }
       reward_redemptions:      { Row: RewardRedemption;   Insert: Partial<RewardRedemption>;   Update: Partial<RewardRedemption> }
