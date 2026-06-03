@@ -1,3 +1,7 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-06-03.1 — Cribbage board: render guest (no-app) players with a tag.
+// ─────────────────────────────────────────────
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -184,8 +188,9 @@ function WinsLossesBoard({ entries, currentUserId }: { entries: any[]; currentUs
             <span className="text-[#7E613F] text-sm w-6 text-center font-mono">{ordinal(i + 1)}</span>
             <div className="flex-1">
               <p className={cn('font-semibold text-sm', isMe ? 'text-[#96321F]' : 'text-[#242622]')}>
-                {privateName(e.profiles?.display_name)}
+                {e.isGuest ? e.profiles?.display_name : privateName(e.profiles?.display_name)}
                 {isMe && <span className="ml-2 text-xs text-[#96321F]/60">you</span>}
+                {e.isGuest && <span className="ml-2 text-[10px] font-bold text-[#7E613F] bg-[#EDE9DC] px-1.5 py-0.5 rounded-full uppercase tracking-wide">guest</span>}
               </p>
               {total > 0 && (
                 <p className="text-xs text-[#7E613F] mt-0.5">

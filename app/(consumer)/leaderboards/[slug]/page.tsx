@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-06-03.1 — Inject guest (no-app) cribbage opponents into the nightly
+//                   standings, derived from app players' match reports.
+// ─────────────────────────────────────────────
 import { getAuthUser } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import LeaderboardBoard from '@/components/leaderboard/LeaderboardBoard'
@@ -156,6 +161,40 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
         }))
       } else {
         entries = []
+      }
+
+      // ── Guest opponents (players without the app) ──────────────────────────
+      // Guests have no account, so their record is derived from the mirror of
+      // each app player's report against them. They show on the nightly board
+      // by name but earn no points (nothing to credit).
+      const { data: guestReports } = await supabase
+        .from('cribbage_match_reports')
+        .select('opponent_name, won, spread')
+        .eq('period_id', currentPeriod.id)
+        .not('opponent_name', 'is', null)
+
+      const guestAgg = new Map<string, { name: string; wins: number; losses: number; score: number }>()
+      for (const r of (guestReports ?? [])) {
+        const raw = (r as any).opponent_name as string
+        if (!raw) continue
+        const key = raw.trim().toLowerCase()
+        const g = guestAgg.get(key) ?? { name: raw.trim(), wins: 0, losses: 0, score: 0 }
+        // Mirror the reporter's result onto the guest.
+        if ((r as any).won) g.losses += 1; else g.wins += 1
+        g.score += -((r as any).spread ?? 0)
+        guestAgg.set(key, g)
+      }
+
+      for (const g of guestAgg.values()) {
+        entries.push({
+          id:        `guest:${g.name}`,
+          user_id:   null,
+          wins:      g.wins,
+          losses:    g.losses,
+          score:     g.score,
+          isGuest:   true,
+          profiles:  { display_name: g.name, avatar_url: null },
+        })
       }
     }
   }

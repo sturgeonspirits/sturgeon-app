@@ -3,6 +3,8 @@
 //   v2026-06-03.1 — New: player self-reported per-match cribbage scores.
 //                   Upserts one match report, recomputes the player's nightly
 //                   leaderboard_events total, awards attendance once.
+//   v2026-06-03.2 — Accept guest opponents (no app): opponentName instead of
+//                   opponentId. Guest result counts for the reporter only.
 // ─────────────────────────────────────────────
 /**
  * POST /api/events/match-report
@@ -11,7 +13,10 @@
  * opponent reports their own mirror result; agreement/conflict is surfaced in
  * the UI but never gates the running total.
  *
- * Body: { periodId, matchNumber (1-3), opponentId, won, spread }
+ * Each player faces a different opponent in each of their 3 matches.
+ * The opponent is either an app user (opponentId) or a guest (opponentName).
+ *
+ * Body: { periodId, matchNumber (1-3), opponentId?, opponentName?, won, spread }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
@@ -26,12 +31,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { periodId, matchNumber, opponentId, won, spread = 0 } = body
+    const opponentName = typeof body.opponentName === 'string' ? body.opponentName.trim() : ''
+    const isGuest = !opponentId && opponentName.length > 0
 
-    if (!periodId || !opponentId) return NextResponse.json({ error: 'Missing periodId or opponentId' }, { status: 400 })
+    if (!periodId) return NextResponse.json({ error: 'Missing periodId' }, { status: 400 })
+    if (!opponentId && !isGuest) return NextResponse.json({ error: 'Pick an opponent or enter a guest name' }, { status: 400 })
     const mn = parseInt(String(matchNumber), 10)
     if (!(mn >= 1 && mn <= 3)) return NextResponse.json({ error: 'matchNumber must be 1, 2 or 3' }, { status: 400 })
     if (typeof won !== 'boolean') return NextResponse.json({ error: 'won must be true or false' }, { status: 400 })
-    if (opponentId === user.id) return NextResponse.json({ error: 'You can’t play yourself' }, { status: 400 })
+    if (opponentId && opponentId === user.id) return NextResponse.json({ error: 'You can’t play yourself' }, { status: 400 })
     const spreadNum = parseInt(String(spread), 10) || 0
 
     const supabase = createServiceClient()
@@ -52,29 +60,48 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     if (!eventType) return NextResponse.json({ error: 'Event type not found' }, { status: 404 })
 
-    // Both players must be registered for this night.
+    // The reporter must be registered. App opponents must be too; guests need not be.
+    const lookupIds = [user.id, ...(opponentId ? [opponentId] : [])]
     const { data: registered } = await supabase
       .from('leaderboard_events')
       .select('user_id, wins, losses, score')
       .eq('period_id', periodId)
-      .in('user_id', [user.id, opponentId])
+      .in('user_id', lookupIds)
 
-    const myRow       = (registered ?? []).find((r: any) => r.user_id === user.id)
-    const opponentReg = (registered ?? []).some((r: any) => r.user_id === opponentId)
-    if (!myRow)       return NextResponse.json({ error: 'Sign up for this night before reporting a score' }, { status: 403 })
-    if (!opponentReg) return NextResponse.json({ error: 'Your opponent isn’t signed up for this night yet' }, { status: 400 })
+    const myRow = (registered ?? []).find((r: any) => r.user_id === user.id)
+    if (!myRow) return NextResponse.json({ error: 'Sign up for this night before reporting a score' }, { status: 403 })
+    if (opponentId && !(registered ?? []).some((r: any) => r.user_id === opponentId)) {
+      return NextResponse.json({ error: 'Your opponent isn’t signed up — add them as a guest instead' }, { status: 400 })
+    }
+
+    // Each of the 3 matches is against a DIFFERENT opponent. Reject an opponent
+    // already used in one of the player's other match slots.
+    const { data: myExisting } = await supabase
+      .from('cribbage_match_reports')
+      .select('match_number, opponent_id, opponent_name')
+      .eq('period_id', periodId)
+      .eq('reporter_id', user.id)
+
+    const dupe = (myExisting ?? []).some((r: any) =>
+      r.match_number !== mn && (
+        (opponentId && r.opponent_id === opponentId) ||
+        (isGuest && (r.opponent_name ?? '').toLowerCase() === opponentName.toLowerCase())
+      )
+    )
+    if (dupe) return NextResponse.json({ error: 'You already logged a match against this opponent — each of your 3 matches is a different opponent' }, { status: 400 })
 
     // Upsert this player's report for the chosen match slot.
     const { error: reportErr } = await supabase
       .from('cribbage_match_reports')
       .upsert({
-        period_id:    periodId,
-        reporter_id:  user.id,
-        opponent_id:  opponentId,
-        match_number: mn,
+        period_id:     periodId,
+        reporter_id:   user.id,
+        opponent_id:   isGuest ? null : opponentId,
+        opponent_name: isGuest ? opponentName : null,
+        match_number:  mn,
         won,
-        spread:       spreadNum,
-        updated_at:   new Date().toISOString(),
+        spread:        spreadNum,
+        updated_at:    new Date().toISOString(),
       }, { onConflict: 'period_id,reporter_id,match_number' })
     if (reportErr) throw new Error(`Could not save report: ${reportErr.message}`)
 

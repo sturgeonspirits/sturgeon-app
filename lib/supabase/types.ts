@@ -178,7 +178,8 @@ export interface CribbageMatchReport {
   id: string
   period_id: string
   reporter_id: string
-  opponent_id: string
+  opponent_id: string | null   // null when the opponent is a guest (no app)
+  opponent_name: string | null // set when the opponent is a guest
   match_number: number
   won: boolean
   spread: number

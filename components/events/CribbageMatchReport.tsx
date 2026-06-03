@@ -3,6 +3,8 @@
 //   v2026-06-03.1 — New: players self-report each of their 3 cribbage matches
 //                   (opponent, win/loss, spread) with a running nightly total
 //                   and opponent-agreement status.
+//   v2026-06-03.2 — Guest opponents (no app) + enforce a different opponent for
+//                   each of the 3 matches.
 // ─────────────────────────────────────────────
 'use client'
 
@@ -12,11 +14,12 @@ import { useRouter } from 'next/navigation'
 export interface PlayerOption { id: string; name: string }
 
 export interface MatchReport {
-  reporterId:  string
-  opponentId:  string
-  matchNumber: number
-  won:         boolean
-  spread:      number
+  reporterId:   string
+  opponentId:   string | null
+  opponentName: string | null   // set when the opponent is a guest
+  matchNumber:  number
+  won:          boolean
+  spread:       number
 }
 
 interface Props {
@@ -28,6 +31,9 @@ interface Props {
 }
 
 const MATCHES = [1, 2, 3]
+const GUEST = '__guest__'
+
+interface Draft { opponentId: string; guestName: string; won: boolean | null; spread: string }
 
 export default function CribbageMatchReport({ periodId, currentUserId, players, reports: initialReports, slug }: Props) {
   const router = useRouter()
@@ -52,36 +58,60 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
   const spread = myReports.reduce((s, r) => s + r.spread, 0)
 
   // Opponent agreement for one of my matches.
-  function agreement(mine: MatchReport): 'confirmed' | 'conflict' | 'pending' {
+  function agreement(mine: MatchReport): 'confirmed' | 'conflict' | 'pending' | 'guest' {
+    if (!mine.opponentId) return 'guest'  // guests can't reconcile — no account
     const theirs = reports.find(r => r.reporterId === mine.opponentId && r.opponentId === currentUserId)
     if (!theirs) return 'pending'
     return theirs.won === !mine.won && theirs.spread === -mine.spread ? 'confirmed' : 'conflict'
   }
 
-  // Local draft state per match row (opponent / won / spread) before saving.
-  const [drafts, setDrafts] = useState<Record<number, { opponentId: string; won: boolean | null; spread: string }>>(() => {
-    const d: Record<number, { opponentId: string; won: boolean | null; spread: string }> = {}
+  // Local draft state per match row before saving.
+  const [drafts, setDrafts] = useState<Record<number, Draft>>(() => {
+    const d: Record<number, Draft> = {}
     for (const n of MATCHES) {
       const r = initialReports.find(x => x.reporterId === currentUserId && x.matchNumber === n)
-      d[n] = r ? { opponentId: r.opponentId, won: r.won, spread: String(r.spread) } : { opponentId: '', won: null, spread: '' }
+      d[n] = r
+        ? { opponentId: r.opponentId ?? GUEST, guestName: r.opponentName ?? '', won: r.won, spread: String(r.spread) }
+        : { opponentId: '', guestName: '', won: null, spread: '' }
     }
     return d
   })
 
-  function setDraft(n: number, patch: Partial<{ opponentId: string; won: boolean | null; spread: string }>) {
+  function setDraft(n: number, patch: Partial<Draft>) {
     setDrafts(d => ({ ...d, [n]: { ...d[n], ...patch } }))
+  }
+
+  // App opponents already chosen in OTHER match slots — can't be reused.
+  function usedOpponentIds(exceptMatch: number): Set<string> {
+    const ids = new Set<string>()
+    for (const n of MATCHES) {
+      if (n === exceptMatch) continue
+      const id = drafts[n]?.opponentId
+      if (id && id !== GUEST) ids.add(id)
+    }
+    return ids
   }
 
   async function saveMatch(n: number) {
     const draft = drafts[n]
-    if (!draft.opponentId || draft.won === null) { setError('Pick an opponent and a result first'); return }
+    const isGuest = draft.opponentId === GUEST
+    if (!draft.opponentId) { setError('Pick an opponent first'); return }
+    if (isGuest && !draft.guestName.trim()) { setError('Enter the guest’s name'); return }
+    if (draft.won === null) { setError('Mark the match won or lost'); return }
     setSavingMatch(n)
     setError('')
     const spreadNum = parseInt(draft.spread, 10) || 0
     const res = await fetch('/api/events/match-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ periodId, matchNumber: n, opponentId: draft.opponentId, won: draft.won, spread: spreadNum }),
+      body: JSON.stringify({
+        periodId,
+        matchNumber: n,
+        opponentId:   isGuest ? null : draft.opponentId,
+        opponentName: isGuest ? draft.guestName.trim() : null,
+        won: draft.won,
+        spread: spreadNum,
+      }),
     })
     let json: any = {}
     try { json = await res.json() } catch {}
@@ -91,7 +121,14 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
     // Update local report list so the running total + status refresh instantly.
     setReports(prev => {
       const without = prev.filter(r => !(r.reporterId === currentUserId && r.matchNumber === n))
-      return [...without, { reporterId: currentUserId, opponentId: draft.opponentId, matchNumber: n, won: draft.won as boolean, spread: spreadNum }]
+      return [...without, {
+        reporterId:   currentUserId,
+        opponentId:   isGuest ? null : draft.opponentId,
+        opponentName: isGuest ? draft.guestName.trim() : null,
+        matchNumber:  n,
+        won:          draft.won as boolean,
+        spread:       spreadNum,
+      }]
     })
     router.refresh()
   }
@@ -100,6 +137,7 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
     confirmed: { label: 'Confirmed', cls: 'text-[#5a7a54] bg-[#87A67F]/15 border-[#87A67F]' },
     conflict:  { label: 'Doesn’t match opponent', cls: 'text-[#96321F] bg-[#96321F]/10 border-[#96321F]/40' },
     pending:   { label: 'Waiting on opponent', cls: 'text-[#7E613F] bg-[#EDE9DC] border-[#C8BCA4]' },
+    guest:     { label: 'Guest', cls: 'text-[#7E613F] bg-[#EDE9DC] border-[#C8BCA4]' },
   } as const
 
   return (
@@ -117,13 +155,15 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
       </div>
 
       <p className="text-xs text-[#7E613F]">
-        Report each of your 3 matches. Your opponent reports the same match from their side — when you both agree it shows as confirmed.
+        You play 3 matches — a different opponent each time. Report each one. If they have the app, their report confirms yours; otherwise add them as a guest.
       </p>
 
       {MATCHES.map(n => {
         const saved = myByMatch(n)
         const draft = drafts[n]
         const status = saved ? agreement(saved) : null
+        const isGuest = draft.opponentId === GUEST
+        const used = usedOpponentIds(n)
         return (
           <div key={n} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -143,9 +183,22 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
             >
               <option value="">Choose opponent…</option>
               {opponents.map(o => (
-                <option key={o.id} value={o.id}>{o.name}</option>
+                <option key={o.id} value={o.id} disabled={used.has(o.id)}>
+                  {o.name}{used.has(o.id) ? ' (already played)' : ''}
+                </option>
               ))}
+              <option value={GUEST}>Guest (not on the app)…</option>
             </select>
+
+            {isGuest && (
+              <input
+                type="text"
+                value={draft.guestName}
+                onChange={e => setDraft(n, { guestName: e.target.value })}
+                placeholder="Guest’s name"
+                className="w-full bg-white border border-[#C8BCA4] rounded-lg px-3 min-h-[44px] text-[#242622] text-base focus:outline-none focus:border-[#96321F]"
+              />
+            )}
 
             <div className="grid grid-cols-[1fr_96px] gap-2">
               {/* Win / Loss */}
@@ -180,13 +233,13 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
 
             {status === 'conflict' && (
               <p className="text-xs text-[#96321F]">
-                {nameById[saved!.opponentId] ?? 'Your opponent'} reported this match differently — double-check with them.
+                {(saved!.opponentId && nameById[saved!.opponentId]) || 'Your opponent'} reported this match differently — double-check with them.
               </p>
             )}
 
             <button
               onClick={() => saveMatch(n)}
-              disabled={savingMatch === n || !draft.opponentId || draft.won === null}
+              disabled={savingMatch === n || !draft.opponentId || draft.won === null || (isGuest && !draft.guestName.trim())}
               className="w-full bg-[#96321F] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-[#ae3a24] active:scale-[0.98] transition-all"
             >
               {savingMatch === n ? 'Saving…' : saved ? 'Update Match' : 'Save Match'}

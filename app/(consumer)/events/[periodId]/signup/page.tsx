@@ -97,14 +97,15 @@ export default async function EventSignupPage({ params }: Props) {
 
     const { data: reportRows } = await service
       .from('cribbage_match_reports')
-      .select('reporter_id, opponent_id, match_number, won, spread')
+      .select('reporter_id, opponent_id, opponent_name, match_number, won, spread')
       .eq('period_id', periodId)
     matchReports = (reportRows ?? []).map((r: any) => ({
-      reporterId:  r.reporter_id,
-      opponentId:  r.opponent_id,
-      matchNumber: r.match_number,
-      won:         r.won,
-      spread:      r.spread ?? 0,
+      reporterId:   r.reporter_id,
+      opponentId:   r.opponent_id,
+      opponentName: r.opponent_name,
+      matchNumber:  r.match_number,
+      won:          r.won,
+      spread:       r.spread ?? 0,
     }))
   }
 

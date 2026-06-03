@@ -473,7 +473,8 @@ export type Database = {
           created_at: string
           id: string
           match_number: number
-          opponent_id: string
+          opponent_id: string | null
+          opponent_name: string | null
           period_id: string
           reporter_id: string
           spread: number
@@ -484,7 +485,8 @@ export type Database = {
           created_at?: string
           id?: string
           match_number: number
-          opponent_id: string
+          opponent_id?: string | null
+          opponent_name?: string | null
           period_id: string
           reporter_id: string
           spread?: number
@@ -495,7 +497,8 @@ export type Database = {
           created_at?: string
           id?: string
           match_number?: number
-          opponent_id?: string
+          opponent_id?: string | null
+          opponent_name?: string | null
           period_id?: string
           reporter_id?: string
           spread?: number
