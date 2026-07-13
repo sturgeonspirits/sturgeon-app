@@ -1,5 +1,12 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-07-13.1 — Paginate the all-profiles fetch via fetchAllRows: PostgREST
+//                   caps responses at 1,000 rows, so the member picker would
+//                   silently omit members once profiles passed 1,000.
+// ─────────────────────────────────────────────
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import ScoreEntryPanel from '@/components/staff/ScoreEntryPanel'
 import SeasonManager from '@/components/staff/SeasonManager'
 
@@ -24,10 +31,13 @@ export default async function StaffScoresPage() {
     .order('starts_at', { ascending: false })
 
   // All profiles — no role filter so staff can enter scores even before customers sign up
-  const { data: members } = await service
+  // (paginated; secondary order('id') keeps pages stable across duplicate/null names)
+  const members = await fetchAllRows((from, to) => service
     .from('profiles')
     .select('id, display_name, full_name, phone, email')
     .order('full_name')
+    .order('id')
+    .range(from, to))
 
   // Scheduled event dates — look back 30 days so staff can enter past scores;
   // look ahead 60 days so upcoming events don't appear as orphan "generic periods"

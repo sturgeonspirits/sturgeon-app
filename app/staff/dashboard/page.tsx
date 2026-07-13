@@ -1,4 +1,13 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-07-13.1 — Paginate all row-level fetches via fetchAllRows: PostgREST
+//                   caps responses at 1,000 rows, so unique-active counts,
+//                   retention, top missions/rewards, and points-economy totals
+//                   were silently wrong once tables passed 1,000 rows.
+//                   Count-only (head: true) queries are unaffected.
+// ─────────────────────────────────────────────
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -82,32 +91,40 @@ export default async function StaffMetricsDashboard() {
       .eq('event_type', 'bar_checkin'),
 
     // For unique-active calculation: we only need user_ids, not full rows.
-    // These are separate from the count calls above.
-    service.from('earn_events').select('user_id').gte('created_at', iso7d),
-    service.from('earn_events').select('user_id').gte('created_at', iso30d),
+    // These are separate from the count calls above. Paginated — can exceed
+    // 1,000 rows, and PostgREST silently truncates unpaginated responses.
+    fetchAllRows((f, t) => service.from('earn_events').select('user_id')
+      .gte('created_at', iso7d).order('id').range(f, t)).then(data => ({ data })),
+    fetchAllRows((f, t) => service.from('earn_events').select('user_id')
+      .gte('created_at', iso30d).order('id').range(f, t)).then(data => ({ data })),
     // Prev-month window for retention: days 30-60 ago
-    service.from('earn_events').select('user_id')
-      .gte('created_at', iso60d).lt('created_at', iso30d),
+    fetchAllRows((f, t) => service.from('earn_events').select('user_id')
+      .gte('created_at', iso60d).lt('created_at', iso30d).order('id').range(f, t))
+      .then(data => ({ data })),
 
     service.from('mission_completions').select('id', { count: 'exact', head: true })
       .gte('completed_at', iso7d),
     service.from('mission_completions').select('id', { count: 'exact', head: true })
       .gte('completed_at', iso30d),
-    service.from('mission_completions').select('id, mission_id', { count: 'exact' }),
+    fetchAllRows((f, t) => service.from('mission_completions').select('id, mission_id')
+      .order('id').range(f, t)).then(data => ({ data, count: data.length })),
 
     service.from('reward_redemptions').select('id', { count: 'exact', head: true })
       .gte('created_at', iso7d),
     service.from('reward_redemptions').select('id', { count: 'exact', head: true })
       .gte('created_at', iso30d),
-    service.from('reward_redemptions').select('id, reward_id', { count: 'exact' }),
+    fetchAllRows((f, t) => service.from('reward_redemptions').select('id, reward_id')
+      .order('id').range(f, t)).then(data => ({ data, count: data.length })),
     service.from('reward_redemptions').select('id', { count: 'exact', head: true })
       .eq('status', 'pending'),
 
     service.from('missions').select('id, title, icon, points'),
     service.from('rewards').select('id, name, icon, points_cost'),
 
-    // Points economy — aggregate via full ledger fetch (small table, one row / user)
-    service.from('points_ledger').select('balance, lifetime_earned, lifetime_spent'),
+    // Points economy — full ledger fetch (one row / user), paginated
+    fetchAllRows((f, t) => service.from('points_ledger')
+      .select('balance, lifetime_earned, lifetime_spent')
+      .order('user_id').range(f, t)).then(data => ({ data })),
   ])
 
   // ── Derive unique-active counts from user_id lists ────────────

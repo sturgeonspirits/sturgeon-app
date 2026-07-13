@@ -1,5 +1,12 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-07-13.1 — Paginate the subscriptions fetch via fetchAllRows: PostgREST
+//                   caps responses at 1,000 rows, so "send to all" pushes would
+//                   silently skip subscribers beyond the first 1,000.
+// ─────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import webpush from 'web-push'
 
 function initWebPush() {
@@ -40,13 +47,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title and body required' }, { status: 400 })
   }
 
-  // Fetch subscriptions
-  let query = service.from('push_subscriptions').select('*')
-  if (userIds?.length) query = query.in('user_id', userIds)
-
-  const { data: subs, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!subs?.length) return NextResponse.json({ ok: true, sent: 0, message: 'No subscribers found' })
+  // Fetch subscriptions (paginated — "send to all" can exceed 1,000 rows)
+  let subs: any[]
+  try {
+    subs = await fetchAllRows((from, to) => {
+      let q = service.from('push_subscriptions').select('*')
+      if (userIds?.length) q = q.in('user_id', userIds)
+      return q.order('endpoint').range(from, to)
+    })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+  if (!subs.length) return NextResponse.json({ ok: true, sent: 0, message: 'No subscribers found' })
 
   const payload = JSON.stringify({ title, body, url, tag: tag || 'sturgeon-event' })
   let sent = 0

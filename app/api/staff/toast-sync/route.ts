@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-07-13.3 — Move fetchAllRows to shared lib/supabase/fetch-all (row-cap
+//                   audit found the same bug in dashboard, scores, and push-send)
 //   v2026-07-13.2 — Fix silent 1,000-row cap: Supabase/PostgREST truncates every
 //                   response at max-rows (1,000) regardless of .limit(). The
 //                   card-number fallback map only saw 1,000 of 3,545 existing
@@ -15,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { reconcileToastToProfile } from '@/lib/earn-events'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 async function assertStaff() {
@@ -50,23 +53,6 @@ function parseToastDate(s: string): string | null {
   return new Date(
     parseInt(yr), parseInt(mo) - 1, parseInt(dy), h, parseInt(mn)
   ).toISOString()
-}
-
-// PostgREST caps every response at its max-rows setting (default 1,000) no matter
-// what .limit() asks for. Any bulk fetch MUST paginate with .range() or it will
-// silently truncate — which is exactly what caused the 2026-07-13 duplicate import.
-async function fetchAllRows(
-  query: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }>
-): Promise<any[]> {
-  const PAGE = 1000
-  const all: any[] = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await query(from, from + PAGE - 1)
-    if (error) throw new Error(error.message)
-    all.push(...(data ?? []))
-    if (!data || data.length < PAGE) break
-  }
-  return all
 }
 
 function parseCSV(text: string): Record<string, string>[] {
