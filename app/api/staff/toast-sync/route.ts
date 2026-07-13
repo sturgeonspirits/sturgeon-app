@@ -1,5 +1,11 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-07-13.2 — Fix silent 1,000-row cap: Supabase/PostgREST truncates every
+//                   response at max-rows (1,000) regardless of .limit(). The
+//                   card-number fallback map only saw 1,000 of 3,545 existing
+//                   cards, so 2,828 CSV rows were inserted as duplicates. All
+//                   bulk fetches now paginate via .range(). Also: never overwrite
+//                   an existing profile link with null on upsert.
 //   v2026-07-13.1 — Support new Toast RewardsCards export format that dropped the
 //                   Card ID / Account ID columns: fall back to Card Number as the
 //                   identifier, mapping to existing rows via card_number so no
@@ -44,6 +50,23 @@ function parseToastDate(s: string): string | null {
   return new Date(
     parseInt(yr), parseInt(mo) - 1, parseInt(dy), h, parseInt(mn)
   ).toISOString()
+}
+
+// PostgREST caps every response at its max-rows setting (default 1,000) no matter
+// what .limit() asks for. Any bulk fetch MUST paginate with .range() or it will
+// silently truncate — which is exactly what caused the 2026-07-13 duplicate import.
+async function fetchAllRows(
+  query: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }>
+): Promise<any[]> {
+  const PAGE = 1000
+  const all: any[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await query(from, from + PAGE - 1)
+    if (error) throw new Error(error.message)
+    all.push(...(data ?? []))
+    if (!data || data.length < PAGE) break
+  }
+  return all
 }
 
 function parseCSV(text: string): Record<string, string>[] {
@@ -113,13 +136,17 @@ export async function POST(req: NextRequest) {
 
   const active = rows.filter(r => (r['De-activated?'] ?? '').toLowerCase() !== 'true')
 
-  // ── Fetch app profiles for matching ────────────────────────────────────────
-  const { data: profilesRaw, error: pErr } = await service
-    .from('profiles')
-    .select('id, email, phone, pos_customer_id, birthday')
-    .limit(20000)
-
-  if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
+  // ── Fetch app profiles for matching (paginated — see fetchAllRows) ─────────
+  let profilesRaw: any[]
+  try {
+    profilesRaw = await fetchAllRows((from, to) => service
+      .from('profiles')
+      .select('id, email, phone, pos_customer_id, birthday')
+      .order('id')
+      .range(from, to))
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 
   const emailToProfile: Record<string, any> = {}
   const phoneToProfile: Record<string, any> = {}
@@ -164,13 +191,18 @@ export async function POST(req: NextRequest) {
   )
   const existingByCardNumber: Record<string, { toast_card_id: string; toast_account_id: string }> = {}
   if (needsFallback) {
-    const { data: existing, error: eErr } = await service
-      .from('toast_loyalty_accounts')
-      .select('toast_card_id, toast_account_id, card_number')
-      .not('card_number', 'is', null)
-      .limit(20000)
-    if (eErr) return NextResponse.json({ error: eErr.message }, { status: 500 })
-    for (const a of existing ?? []) {
+    let existing: any[]
+    try {
+      existing = await fetchAllRows((from, to) => service
+        .from('toast_loyalty_accounts')
+        .select('toast_card_id, toast_account_id, card_number')
+        .not('card_number', 'is', null)
+        .order('id')
+        .range(from, to))
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 500 })
+    }
+    for (const a of existing) {
       if (a.card_number) existingByCardNumber[a.card_number.trim()] = a
     }
   }
@@ -243,16 +275,32 @@ export async function POST(req: NextRequest) {
   for (const rec of toUpsert) dedupedMap.set(rec.toast_card_id, rec)
   const deduped = [...dedupedMap.values()]
 
-  const BATCH = 200
-  for (let i = 0; i < deduped.length; i += BATCH) {
-    const batch = deduped.slice(i, i + BATCH)
-    const { error } = await service
-      .from('toast_loyalty_accounts')
-      .upsert(batch, { onConflict: 'toast_card_id', ignoreDuplicates: false })
-    if (error) {
-      return NextResponse.json({ error: `Upsert failed: ${error.message}` }, { status: 500 })
+  // Never overwrite an existing profile link with null: when CSV matching found
+  // no profile, omit profile_id from the payload so an UPDATE leaves any
+  // previously linked profile_id untouched (manual links, autolink trigger).
+  // PostgREST requires uniform keys per batch, so upsert the two groups separately.
+  const withProfile: any[] = []
+  const withoutProfile: any[] = []
+  for (const rec of deduped) {
+    if (rec.profile_id) withProfile.push(rec)
+    else {
+      const { profile_id: _omit, ...rest } = rec
+      withoutProfile.push(rest)
     }
-    counters.upserted += batch.length
+  }
+
+  const BATCH = 200
+  for (const group of [withProfile, withoutProfile]) {
+    for (let i = 0; i < group.length; i += BATCH) {
+      const batch = group.slice(i, i + BATCH)
+      const { error } = await service
+        .from('toast_loyalty_accounts')
+        .upsert(batch, { onConflict: 'toast_card_id', ignoreDuplicates: false })
+      if (error) {
+        return NextResponse.json({ error: `Upsert failed: ${error.message}` }, { status: 500 })
+      }
+      counters.upserted += batch.length
+    }
   }
 
   // ── Per-profile reconcile (not per-card!) ──────────────────────────────────
@@ -260,12 +308,18 @@ export async function POST(req: NextRequest) {
   // We reconcile at the profile level using reconcileToastToProfile, which picks
   // MAX(toast_points) across a profile's linked cards. Negative deltas (Toast-side
   // redemptions) flow through so balances go DOWN as well as UP.
-  const { data: linkedCards } = await service
-    .from('toast_loyalty_accounts')
-    .select('id, profile_id, toast_account_id, toast_points, birthday, last_trans_at')
-    .not('profile_id', 'is', null)
-    .eq('is_deactivated', false)
-    .limit(20000)
+  let linkedCards: any[] = []
+  try {
+    linkedCards = await fetchAllRows((from, to) => service
+      .from('toast_loyalty_accounts')
+      .select('id, profile_id, toast_account_id, toast_points, birthday, last_trans_at')
+      .not('profile_id', 'is', null)
+      .eq('is_deactivated', false)
+      .order('id')
+      .range(from, to))
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 
   // Group cards by profile, pick a canonical one for birthday / pos_customer_id metadata.
   const cardsByProfile = new Map<string, any[]>()
