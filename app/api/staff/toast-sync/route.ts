@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-07-13.1 — Support new Toast RewardsCards export format that dropped the
+//                   Card ID / Account ID columns: fall back to Card Number as the
+//                   identifier, mapping to existing rows via card_number so no
+//                   duplicates are created. Dedupe upsert batch by toast_card_id.
 //   v2026-05-17.1 — Skip CSV rows missing Card ID; add skippedNoCardId counter (fixes NOT NULL upsert error on toast_card_id)
 // ─────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
@@ -147,14 +151,40 @@ export async function POST(req: NextRequest) {
   const toUpsert: any[] = []
   const skippedNoCardIdRows: number[] = []  // 1-indexed CSV row numbers for logging
 
+  // ── Card Number → existing identifiers fallback ────────────────────────────
+  // Mid-2026, Toast dropped the "Card ID" / "Account ID" columns from the
+  // RewardsCards export, leaving "Card Number" as the only identifier. For rows
+  // without explicit IDs we fall back to Card Number — but first map it to the
+  // toast_card_id / toast_account_id already stored from earlier imports, so
+  // re-importing under the new format updates existing rows instead of
+  // creating duplicates keyed by card number.
+  const needsFallback = active.some(r =>
+    (!(r['Card ID'] ?? '').trim() || !(r['Account ID'] ?? '').trim()) &&
+    (r['Card Number'] ?? '').trim()
+  )
+  const existingByCardNumber: Record<string, { toast_card_id: string; toast_account_id: string }> = {}
+  if (needsFallback) {
+    const { data: existing, error: eErr } = await service
+      .from('toast_loyalty_accounts')
+      .select('toast_card_id, toast_account_id, card_number')
+      .not('card_number', 'is', null)
+      .limit(20000)
+    if (eErr) return NextResponse.json({ error: eErr.message }, { status: 500 })
+    for (const a of existing ?? []) {
+      if (a.card_number) existingByCardNumber[a.card_number.trim()] = a
+    }
+  }
+
   for (let idx = 0; idx < active.length; idx++) {
     const r = active[idx]
 
     // Guard: toast_card_id and toast_account_id are NOT NULL UNIQUE in the DB.
     // Toast occasionally exports voided/promo rows with blank IDs — skipping them
     // here prevents one bad row from killing the whole batch.
-    const cardId    = (r['Card ID'] ?? '').trim()
-    const accountId = (r['Account ID'] ?? '').trim()
+    const cardNumber = (r['Card Number'] ?? '').trim()
+    const existing   = cardNumber ? existingByCardNumber[cardNumber] : undefined
+    const cardId     = (r['Card ID'] ?? '').trim() || existing?.toast_card_id || cardNumber
+    const accountId  = (r['Account ID'] ?? '').trim() || existing?.toast_account_id || cardId
     if (!cardId || !accountId) {
       counters.skippedNoCardId++
       // +2 because: header line = row 1, and idx is 0-based within `active`.
@@ -186,7 +216,7 @@ export async function POST(req: NextRequest) {
     toUpsert.push({
       toast_card_id:    cardId,
       toast_account_id: accountId,
-      card_number:      r['Card Number']?.trim() || null,
+      card_number:      cardNumber || null,
       is_classic_card:  (r['Classic Card?'] ?? '').toLowerCase() === 'true',
       is_deactivated:   false,
       email,
@@ -207,9 +237,15 @@ export async function POST(req: NextRequest) {
   // Including it would reset the flag to false on every CSV upload, causing
   // all accounts to re-import points on the next sync. Let the DB keep its
   // existing value (true/false); we use delta logic below to decide what to import.
+  // Dedupe by toast_card_id (last row wins) — Postgres rejects an upsert batch
+  // that touches the same conflict key twice ("cannot affect row a second time").
+  const dedupedMap = new Map<string, any>()
+  for (const rec of toUpsert) dedupedMap.set(rec.toast_card_id, rec)
+  const deduped = [...dedupedMap.values()]
+
   const BATCH = 200
-  for (let i = 0; i < toUpsert.length; i += BATCH) {
-    const batch = toUpsert.slice(i, i + BATCH)
+  for (let i = 0; i < deduped.length; i += BATCH) {
+    const batch = deduped.slice(i, i + BATCH)
     const { error } = await service
       .from('toast_loyalty_accounts')
       .upsert(batch, { onConflict: 'toast_card_id', ignoreDuplicates: false })

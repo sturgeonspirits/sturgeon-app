@@ -1,5 +1,12 @@
 'use client'
 
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-07-13.1 — Show "Skipped (missing card ID)" row in summary; show a
+//                   warning banner instead of green success when 0 accounts
+//                   were upserted (previously a full-skip sync looked successful)
+// ─────────────────────────────────────────────
+
 import { useState, useRef, useCallback } from 'react'
 import { Document } from '@/components/icons/brand'
 
@@ -196,18 +203,34 @@ export default function ToastSyncPage() {
       {/* Success result */}
       {result?.ok && result.counters && (
         <div className="space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">✅</span>
-              <p className="font-bold text-green-800">Sync Complete</p>
+          {result.counters.upserted === 0 && result.counters.active > 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl">⚠️</span>
+                <p className="font-bold text-amber-800">Nothing Synced</p>
+              </div>
+              <p className="text-sm text-amber-700">
+                The CSV was read, but no accounts were updated — every row was skipped.
+                Check the counts below; the file may not match the expected RewardsCards format.
+              </p>
             </div>
-            <p className="text-sm text-green-700">Toast loyalty data has been updated successfully.</p>
-          </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl">✅</span>
+                <p className="font-bold text-green-800">Sync Complete</p>
+              </div>
+              <p className="text-sm text-green-700">Toast loyalty data has been updated successfully.</p>
+            </div>
+          )}
 
           <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl divide-y divide-[#D4CFC3]">
             <Row label="Rows in CSV"         value={result.counters.total.toLocaleString()} />
             <Row label="Active cards"         value={result.counters.active.toLocaleString()} />
             <Row label="Skipped (deactivated)" value={result.counters.skippedDeactivated.toLocaleString()} muted />
+            {(result.counters.skippedNoCardId ?? 0) > 0 && (
+              <Row label="Skipped (missing card ID)" value={(result.counters.skippedNoCardId ?? 0).toLocaleString()} warn />
+            )}
             <Row label="Accounts upserted"   value={result.counters.upserted.toLocaleString()} />
             <Row label="Matched by email"    value={result.counters.matchedEmail.toLocaleString()} />
             <Row label="Matched by phone"    value={result.counters.matchedPhone.toLocaleString()} />
