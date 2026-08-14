@@ -1021,11 +1021,15 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_roster: boolean
           last_initial: string | null
           phone: string | null
           pos_customer_id: string | null
           preferred_name: string | null
           role: string
+          roster_created_at: string | null
+          roster_created_by: string | null
+          roster_note: string | null
           tier: string
           toast_customer_id: string | null
           toast_metadata: Json | null
@@ -1042,11 +1046,15 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_roster?: boolean
           last_initial?: string | null
           phone?: string | null
           pos_customer_id?: string | null
           preferred_name?: string | null
           role?: string
+          roster_created_at?: string | null
+          roster_created_by?: string | null
+          roster_note?: string | null
           tier?: string
           toast_customer_id?: string | null
           toast_metadata?: Json | null
@@ -1063,11 +1071,15 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_roster?: boolean
           last_initial?: string | null
           phone?: string | null
           pos_customer_id?: string | null
           preferred_name?: string | null
           role?: string
+          roster_created_at?: string | null
+          roster_created_by?: string | null
+          roster_note?: string | null
           tier?: string
           toast_customer_id?: string | null
           toast_metadata?: Json | null
@@ -1677,10 +1689,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      // Hand-added 2026-08-10 alongside migration 20260810000000. A regen with
+      // `supabase gen types` against a DB that has the migration applied will
+      // reproduce this — don't drop it if you regen against an older schema.
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          id: string | null
+          tier: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_is_staff: { Args: never; Returns: boolean }
+      // Hand-added 2026-08-10 alongside migration 20260810000001.
+      fulfill_redemption: {
+        Args: { p_redemption_id: string; p_staff_id: string; p_action?: string }
+        Returns: Json
+      }
       recalculate_tier: { Args: { p_user_id: string }; Returns: string }
     }
     Enums: {

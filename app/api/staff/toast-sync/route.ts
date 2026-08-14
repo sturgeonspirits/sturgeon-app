@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-08-14.1 — Exclude roster members from Toast matching.
 //   v2026-07-13.3 — Move fetchAllRows to shared lib/supabase/fetch-all (row-cap
 //                   audit found the same bug in dashboard, scores, and push-send)
 //   v2026-07-13.2 — Fix silent 1,000-row cap: Supabase/PostgREST truncates every
@@ -125,9 +126,14 @@ export async function POST(req: NextRequest) {
   // ── Fetch app profiles for matching (paginated — see fetchAllRows) ─────────
   let profilesRaw: any[]
   try {
+    // Roster members are excluded: they have no email and only a staff-entered
+    // phone, so a phone match here would silently link a Toast card to someone
+    // who can't log in — and then try to award them points. If a roster member
+    // turns up in Toast, the right move is to claim them into a real account.
     profilesRaw = await fetchAllRows((from, to) => service
       .from('profiles')
       .select('id, email, phone, pos_customer_id, birthday')
+      .eq('is_roster', false)
       .order('id')
       .range(from, to))
   } catch (e: any) {

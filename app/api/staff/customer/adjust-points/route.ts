@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Refuse point adjustments on roster members (no login, no
+//                   balance). Fails with a clear message instead of hitting the
+//                   DB trigger.
+// ─────────────────────────────────────────────
 /**
  * POST /api/staff/customer/adjust-points
  *
@@ -21,7 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/staff-auth'
-import { emitEarnEvent } from '@/lib/earn-events'
+import { emitEarnEvent, isRosterMember } from '@/lib/earn-events'
 
 const MAX_CREDIT = 500    // most points a single adjustment can ADD
 const MAX_DEBIT  = 5000   // most points a single adjustment can REMOVE (abs value)
@@ -42,6 +48,13 @@ export async function POST(req: NextRequest) {
 
   if (!userId || typeof userId !== 'string') {
     return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+  }
+
+  if (await isRosterMember(userId, createServiceClient())) {
+    return NextResponse.json(
+      { error: 'Roster members have no points balance. Link them to a real account first.' },
+      { status: 400 },
+    )
   }
 
   const reason = typeof rawReason === 'string' ? rawReason.trim() : ''

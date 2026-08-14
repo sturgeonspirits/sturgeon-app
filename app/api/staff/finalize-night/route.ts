@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Roster members rank normally but take no placement bonus
+//                   (they can't earn points). Also refuse to finalize a period
+//                   twice: with an all-roster podium no earn_events are written,
+//                   so the "already awarded" probe alone was no longer enough.
+// ─────────────────────────────────────────────
 /**
  * POST /api/staff/finalize-night
  * After all scores are entered for a cribbage/individual night,
@@ -12,7 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
-import { emitEarnEvent, completeMission } from '@/lib/earn-events'
+import { emitEarnEvent, completeMission, rosterMemberIds } from '@/lib/earn-events'
 import { requireStaff } from '@/lib/staff-auth'
 
 export async function POST(req: NextRequest) {
@@ -33,6 +40,9 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 })
+    if (period.is_finalized) {
+      return NextResponse.json({ error: 'This night has already been finalized' }, { status: 409 })
+    }
 
     // Fetch event type
     const { data: eventType } = await supabase
@@ -81,24 +91,35 @@ export async function POST(req: NextRequest) {
       return (b.score ?? 0) - (a.score ?? 0)
     })
 
-    const results: { userId: string; place: number; bonus: number }[] = []
+    const results: { userId: string; place: number; bonus: number; roster?: boolean }[] = []
+
+    // Roster members (name-only, no login) place normally but earn nothing.
+    const rosterIds = await rosterMemberIds(ranked.map(r => r.user_id), supabase)
 
     // Award 1st place
     if (ranked.length >= 1) {
       const first = ranked[0]
-      await emitEarnEvent({
+      const firstIsRoster = rosterIds.has(first.user_id)
+      if (!firstIsRoster) {
+        await emitEarnEvent({
+          userId: first.user_id,
+          eventType: 'leaderboard_awarded',
+          pointsDelta: firstBonus,
+          contextType: 'leaderboard_period',
+          contextId: periodId,
+          notes: `${eventType.name}: 1st place placement bonus`,
+          supabase,
+        })
+      }
+      results.push({
         userId: first.user_id,
-        eventType: 'leaderboard_awarded',
-        pointsDelta: firstBonus,
-        contextType: 'leaderboard_period',
-        contextId: periodId,
-        notes: `${eventType.name}: 1st place placement bonus`,
-        supabase,
+        place:  1,
+        bonus:  firstIsRoster ? 0 : firstBonus,
+        roster: firstIsRoster,
       })
-      results.push({ userId: first.user_id, place: 1, bonus: firstBonus })
 
       // Win mission
-      if (eventType.win_mission_slug) {
+      if (eventType.win_mission_slug && !firstIsRoster) {
         try {
           await completeMission({ userId: first.user_id, missionSlug: eventType.win_mission_slug, supabase })
         } catch (e) {
@@ -110,19 +131,27 @@ export async function POST(req: NextRequest) {
     // Award 2nd place
     if (ranked.length >= 2) {
       const second = ranked[1]
-      await emitEarnEvent({
+      const secondIsRoster = rosterIds.has(second.user_id)
+      if (!secondIsRoster) {
+        await emitEarnEvent({
+          userId: second.user_id,
+          eventType: 'leaderboard_awarded',
+          pointsDelta: secondBonus,
+          contextType: 'leaderboard_period',
+          contextId: periodId,
+          notes: `${eventType.name}: 2nd place placement bonus`,
+          supabase,
+        })
+      }
+      results.push({
         userId: second.user_id,
-        eventType: 'leaderboard_awarded',
-        pointsDelta: secondBonus,
-        contextType: 'leaderboard_period',
-        contextId: periodId,
-        notes: `${eventType.name}: 2nd place placement bonus`,
-        supabase,
+        place:  2,
+        bonus:  secondIsRoster ? 0 : secondBonus,
+        roster: secondIsRoster,
       })
-      results.push({ userId: second.user_id, place: 2, bonus: secondBonus })
 
       // 2nd place also gets win mission
-      if (eventType.win_mission_slug) {
+      if (eventType.win_mission_slug && !secondIsRoster) {
         try {
           await completeMission({ userId: second.user_id, missionSlug: eventType.win_mission_slug, supabase })
         } catch (e) {

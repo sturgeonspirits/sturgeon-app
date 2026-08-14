@@ -1,4 +1,10 @@
 'use client'
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Email is optional. Leaving it blank creates a roster
+//                   member: name-only, no login, no points, but pickable as a
+//                   cribbage opponent and carries a record across nights.
+// ─────────────────────────────────────────────
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -15,6 +21,7 @@ export default function NewCustomerForm() {
   const [error,     setError]     = useState<string | null>(null)
   const [success,   setSuccess]   = useState<string | null>(null)
   const [toastInfo, setToastInfo] = useState<{ toastPoints: number; appPoints: number; alreadyHad: boolean } | null>(null)
+  const [wasRoster, setWasRoster] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,7 +36,12 @@ export default function NewCustomerForm() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to create customer')
-      setSuccess(`${fullName || email} was added successfully${sendInvite ? ' — invite email sent' : ''}.`)
+      setSuccess(
+        json.isRoster
+          ? `${fullName} was added as a roster member.`
+          : `${fullName || email} was added successfully${sendInvite ? ' — invite email sent' : ''}.`
+      )
+      setWasRoster(!!json.isRoster)
       setToastInfo(json.toastInfo ?? null)
       setFullName('')
       setEmail('')
@@ -59,15 +71,23 @@ export default function NewCustomerForm() {
       </div>
 
       <div>
-        <label className={labelCls}>Email Address</label>
+        <label className={labelCls}>
+          Email Address <span className="font-normal text-[#9E8F7E] normal-case tracking-normal">(optional)</span>
+        </label>
         <input
-          required
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           placeholder="jane@example.com"
           className={inputCls}
         />
+        {!email.trim() && (
+          <p className="text-xs text-[#7E613F] mt-1.5 leading-relaxed">
+            No email? They&rsquo;ll be added as a <strong>roster member</strong> — they show up in
+            cribbage sign-ups and standings and keep a win/loss record, but can&rsquo;t sign in
+            and don&rsquo;t earn points. Link them to a real account later if they join.
+          </p>
+        )}
       </div>
 
       <div>
@@ -81,7 +101,8 @@ export default function NewCustomerForm() {
         />
       </div>
 
-      {/* Send invite toggle */}
+      {/* Send invite toggle — only meaningful when there's an email to send to */}
+      {email.trim() && (
       <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl p-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <div
@@ -98,6 +119,7 @@ export default function NewCustomerForm() {
           </div>
         </label>
       </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -110,7 +132,12 @@ export default function NewCustomerForm() {
       {success && (
         <div className="bg-[#87A67F]/10 border border-[#87A67F]/30 rounded-xl px-4 py-3 space-y-2">
           <p className="text-sm text-[#5a7a54] font-semibold">✓ {success}</p>
-          {toastInfo ? (
+          {wasRoster ? (
+            <p className="text-xs text-[#5a7a54]">
+              Roster member — no login, no points. Add them to a cribbage night from
+              Enter Scores and they&rsquo;ll appear in the opponent list.
+            </p>
+          ) : toastInfo ? (
             toastInfo.alreadyHad ? (
               <p className="text-xs text-[#5a7a54]">
                 🍞 Toast loyalty account already linked ({toastInfo.toastPoints.toLocaleString()} Toast pts)
@@ -129,7 +156,7 @@ export default function NewCustomerForm() {
           )}
           <button
             type="button"
-            onClick={() => { setSuccess(null); setToastInfo(null) }}
+            onClick={() => { setSuccess(null); setToastInfo(null); setWasRoster(false) }}
             className="text-xs text-[#5a7a54] underline"
           >
             Add another customer
@@ -143,7 +170,7 @@ export default function NewCustomerForm() {
           disabled={saving}
           className="flex-1 bg-[#96321F] text-[#FFFFFF] font-bold py-3 rounded-xl hover:bg-[#ae3a24] disabled:opacity-50 transition-colors"
         >
-          {saving ? 'Adding…' : 'Add Customer'}
+          {saving ? 'Adding…' : email.trim() ? 'Add Customer' : 'Add Roster Member'}
         </button>
         <button
           type="button"

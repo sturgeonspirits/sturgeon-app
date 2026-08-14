@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Roster members: still get their leaderboard_events row (the
+//                   record counts) but no attendance points, no missions and no
+//                   pending redemptions. A DB trigger rejects earn_events for
+//                   them, so skipping here keeps the batch from failing.
+// ─────────────────────────────────────────────
 /**
  * POST /api/staff/leaderboard-score
  * Submit scores for any event type. Handles wins_losses, points, and placement (team).
@@ -6,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
-import { emitEarnEvent, completeMission } from '@/lib/earn-events'
+import { emitEarnEvent, completeMission, rosterMemberIds } from '@/lib/earn-events'
 import { requireStaff } from '@/lib/staff-auth'
 
 export async function POST(req: NextRequest) {
@@ -21,6 +28,15 @@ export async function POST(req: NextRequest) {
     const { periodId, scoringMethod, staffId, entries = [], teams = [], replaceMode = false } = body
 
     const supabase = createServiceClient()
+
+    // Roster members (name-only, no login) keep a record but never earn points.
+    const rosterIds = await rosterMemberIds(
+      [
+        ...entries.map((e: any) => e.userId),
+        ...teams.flatMap((t: any) => t.memberIds ?? []),
+      ],
+      supabase,
+    )
 
     // Fetch period + event_type config (separate queries to avoid PostgREST FK cache issues)
     const { data: period } = await supabase
@@ -95,7 +111,9 @@ export async function POST(req: NextRequest) {
           pts = placementPoints['attend'] ?? placementPoints['participant'] ?? 15
         }
 
-        if (pts > 0) {
+        if (pts > 0 && rosterIds.has(userId)) {
+          results.push({ userId, pts: 0, skipped: 'roster' })
+        } else if (pts > 0) {
           const earnEvent = await emitEarnEvent({
             userId,
             eventType: 'leaderboard_awarded',
@@ -109,7 +127,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Mission: participation (non-fatal — mission may not exist yet)
-        if (eventType.participation_mission_slug) {
+        if (eventType.participation_mission_slug && !rosterIds.has(userId)) {
           try {
             await completeMission({ userId, missionSlug: eventType.participation_mission_slug, supabase })
           } catch (e) {
@@ -201,6 +219,10 @@ export async function POST(req: NextRequest) {
         const placeLabel = placement === 1 ? '1st' : placement === 2 ? '2nd' : placement === 3 ? '3rd' : `${placement}th`
 
         for (const userId of memberIds) {
+          if (rosterIds.has(userId)) {
+            results.push({ userId, pts: 0, skipped: 'roster' })
+            continue
+          }
           if (totalPts > 0) {
             await emitEarnEvent({
               userId,
@@ -232,7 +254,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Reward check pass ────────────────────────────────
-    await runRewardCheckPass({ periodId, eventType, entries, teams, supabase })
+    await runRewardCheckPass({ periodId, eventType, entries, teams, supabase, rosterIds })
 
     // Bust the consumer standings cache so the newly-entered scores show up
     // immediately on the next page view instead of after the 60s revalidate.
@@ -254,9 +276,10 @@ export async function POST(req: NextRequest) {
  * and create pending redemptions for anyone who qualifies.
  */
 async function runRewardCheckPass({
-  periodId, eventType, entries, teams, supabase
+  periodId, eventType, entries, teams, supabase, rosterIds
 }: {
   periodId: string; eventType: any; entries: any[]; teams: any[]; supabase: any
+  rosterIds: Set<string>
 }) {
   const { data: rewards } = await supabase
     .from('rewards')
@@ -288,6 +311,8 @@ async function runRewardCheckPass({
       const teamWinnerIds = winningTeams.flatMap((t: any) => t.memberIds ?? [])
 
       for (const userId of [...winners.map((e: any) => e.userId), ...teamWinnerIds]) {
+        // Roster members can't redeem — they have no account to redeem from.
+        if (rosterIds.has(userId)) continue
         await createPendingRedemption({ userId, rewardId: reward.id, supabase })
       }
     }

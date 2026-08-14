@@ -8,6 +8,8 @@
 
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-08-14.1 — Add rosterMemberIds/isRosterMember helpers so points paths
+//                   can skip name-only roster members (they cannot earn).
 //   v2026-05-29.1 — Import Database from ./supabase/database.types (complete,
 //                   auto-generated) instead of ./supabase/types (incomplete).
 // ─────────────────────────────────────────────
@@ -276,4 +278,32 @@ export async function getUserClubData(userId: string, supabase: Client) {
     completions: completionsRes.data ?? [],
     tiers:       tierRes.data ?? [],
   }
+}
+
+// ─── Roster members ──────────────────────────────────────────────────────────
+// Roster members are name-only profiles with no auth user (see migration
+// 20260814000000_roster_members.sql). They keep an event record but never earn
+// points — a DB trigger rejects any earn_event for them, so every points path
+// must filter them out FIRST or the whole batch fails.
+
+/** IDs from `ids` that belong to roster members. */
+export async function rosterMemberIds(ids: string[], supabase: Client): Promise<Set<string>> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (unique.length === 0) return new Set()
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .in('id', unique)
+    .eq('is_roster', true)
+  return new Set((data ?? []).map((r: { id: string }) => r.id))
+}
+
+/** True when this profile is a roster member (no login, no points). */
+export async function isRosterMember(id: string, supabase: Client): Promise<boolean> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('is_roster')
+    .eq('id', id)
+    .maybeSingle()
+  return !!(data as { is_roster?: boolean } | null)?.is_roster
 }

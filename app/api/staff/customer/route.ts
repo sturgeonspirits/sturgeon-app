@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Roster members: allow name-only customers (no email, no
+//                   auth user) for players who never sign in. Record-only —
+//                   no Toast link, no points. See 20260814000000_roster_members.
+// ─────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/staff-auth'
@@ -96,9 +102,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const service = createServiceClient()
-    const { fullName, email, phone, sendInvite } = await req.json()
+    const { fullName, email: rawEmail, phone, sendInvite } = await req.json()
 
-    if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    const email = typeof rawEmail === 'string' && rawEmail.trim() ? rawEmail.trim() : null
     if (!fullName) return NextResponse.json({ error: 'Full name is required' }, { status: 400 })
 
     // Build display name: "Karl B." style
@@ -106,6 +112,36 @@ export async function POST(req: NextRequest) {
     const displayName = parts.length > 1
       ? `${parts[0]} ${parts[parts.length - 1][0]}.`
       : parts[0]
+
+    // ── Roster member (no email) ───────────────────────────────────────────
+    // No email means no auth user, which means no login and no points. They
+    // exist so they can be picked as a cribbage opponent and carry a record
+    // across nights. `claim_roster_profile` merges them into a real account
+    // later if they sign up.
+    if (!email) {
+      const { data: roster, error: rosterErr } = await service
+        .from('profiles')
+        .insert({
+          // profiles.id has no DB default (it normally mirrors auth.users.id),
+          // and a roster member has no auth user — so mint one here.
+          id:                crypto.randomUUID(),
+          full_name:         fullName,
+          display_name:      displayName,
+          phone:             phone ?? null,
+          role:              'customer',
+          is_roster:         true,
+          roster_created_by: auth.user.id,
+          roster_created_at: new Date().toISOString(),
+        } as any)
+        .select('id')
+        .single()
+
+      if (rosterErr) {
+        return NextResponse.json({ error: rosterErr.message }, { status: 400 })
+      }
+
+      return NextResponse.json({ ok: true, id: roster.id, isRoster: true, toastInfo: null })
+    }
 
     // Check if auth user already exists
     const { data: existingUsers } = await service.auth.admin.listUsers()

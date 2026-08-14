@@ -1,8 +1,15 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Roster members get their own view: no points panels (they
+//                   can't earn), a record summary, and the claim panel for
+//                   linking them to a real account once they sign up.
+// ─────────────────────────────────────────────
 import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import RedeemPanel from './RedeemPanel'
 import AdjustPointsPanel from './AdjustPointsPanel'
+import ClaimRosterPanel from './ClaimRosterPanel'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -11,11 +18,113 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   // Fetch customer profile
   const { data: profile } = await service
     .from('profiles')
-    .select('id, display_name, full_name, email, phone, tier, created_at, pos_customer_id, birthday')
+    .select('id, display_name, full_name, email, phone, tier, created_at, pos_customer_id, birthday, is_roster')
     .eq('id', id)
     .single()
 
   if (!profile) notFound()
+
+  const isRoster = !!(profile as any).is_roster
+
+  // ── Roster members: no login, no points, so none of the points panels apply.
+  // Show what they DO have — an event record — plus the claim path.
+  if (isRoster) {
+    const rosterName = profile.full_name ?? profile.display_name ?? 'This member'
+
+    // Two queries rather than a PostgREST embed: this codebase has been bitten
+    // by the FK schema cache going stale after DDL, and this page ships in the
+    // same release as a migration.
+    const { data: nights } = await service
+      .from('leaderboard_events')
+      .select('period_id, wins, losses, score')
+      .eq('user_id', id)
+
+    const periodIds = [...new Set((nights ?? []).map((r: any) => r.period_id))]
+    const { data: periodRows } = periodIds.length > 0
+      ? await service
+          .from('leaderboard_periods')
+          .select('id, label, starts_at')
+          .in('id', periodIds)
+      : { data: [] as any[] }
+
+    const periodMap = Object.fromEntries((periodRows ?? []).map((p: any) => [p.id, p]))
+    const rows = [...(nights ?? [])].sort((a: any, b: any) =>
+      String(periodMap[b.period_id]?.starts_at ?? '').localeCompare(
+      String(periodMap[a.period_id]?.starts_at ?? '')))
+    const totalWins  = rows.reduce((n: number, r: any) => n + (r.wins   ?? 0), 0)
+    const totalLoss  = rows.reduce((n: number, r: any) => n + (r.losses ?? 0), 0)
+
+    return (
+      <div className="space-y-6 py-4">
+        <Link href="/staff/customers" className="text-xs text-[#7E613F] hover:text-[#96321F] transition-colors">
+          ← Customers
+        </Link>
+
+        <div className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl p-5 space-y-3">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-[#EDE9DC] flex items-center justify-center shrink-0">
+              <span className="text-xl font-bold text-[#7E613F]">
+                {rosterName[0]?.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-[#242622]">{rosterName}</h1>
+              {profile.phone && <p className="text-sm text-[#7E613F]">{profile.phone}</p>}
+              <p className="text-xs text-[#9E8F7E] mt-0.5">No email on file</p>
+            </div>
+            <span className="text-xs bg-[#EDE9DC] text-[#7E613F] px-2.5 py-1 rounded-full font-medium">
+              Roster
+            </span>
+          </div>
+
+          <p className="text-xs text-[#7E613F] bg-[#F7F5EF] border border-[#EDE9DC] rounded-xl px-3 py-2.5 leading-relaxed">
+            A roster member is a name on the board. They can be picked as a cribbage
+            opponent and keep a win/loss record across nights, but they can&rsquo;t sign in,
+            don&rsquo;t earn points, and aren&rsquo;t matched to Toast.
+          </p>
+
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="bg-[#F7F5EF] rounded-xl px-3 py-3 text-center">
+              <p className="text-[10px] text-[#7E613F] mb-1 uppercase tracking-wide">Nights</p>
+              <p className="text-xl font-bold text-[#242622]">{rows.length}</p>
+            </div>
+            <div className="bg-[#F7F5EF] rounded-xl px-3 py-3 text-center">
+              <p className="text-[10px] text-[#7E613F] mb-1 uppercase tracking-wide">Wins</p>
+              <p className="text-xl font-bold text-[#87A67F]">{totalWins}</p>
+            </div>
+            <div className="bg-[#F7F5EF] rounded-xl px-3 py-3 text-center">
+              <p className="text-[10px] text-[#7E613F] mb-1 uppercase tracking-wide">Losses</p>
+              <p className="text-xl font-bold text-[#242622]">{totalLoss}</p>
+            </div>
+          </div>
+        </div>
+
+        {rows.length > 0 && (
+          <section>
+            <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Nights Played</h2>
+            <div className="space-y-1">
+              {rows.map((r: any) => (
+                <div key={r.period_id} className="bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-[#242622]">{periodMap[r.period_id]?.label ?? 'Event'}</span>
+                  <span className="text-sm text-[#7E613F]">
+                    {(r.wins ?? 0)}–{(r.losses ?? 0)}
+                    <span className="text-xs text-[#9E8F7E] ml-2">
+                      {(r.score ?? 0) >= 0 ? '+' : ''}{r.score ?? 0}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">Link To A Real Account</h2>
+          <ClaimRosterPanel rosterId={id} rosterName={rosterName} />
+        </section>
+      </div>
+    )
+  }
 
   const [
     { data: ledger },

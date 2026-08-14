@@ -1,18 +1,25 @@
 'use client'
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Tag roster members in the player picker so staff can tell
+//                   them apart from real accounts.
+// ─────────────────────────────────────────────
 
 import { useState, useRef, useMemo } from 'react'
 import type { LeaderboardPeriod } from '@/lib/supabase/types'
 
 interface Props {
   period:  LeaderboardPeriod
-  members: { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null }[]
+  members: { id: string; display_name: string | null; full_name: string | null; phone: string | null; email: string | null; is_roster?: boolean | null }[]
   staffId: string
 }
 
 type MemberOption = Props['members'][number]
 function memberLabel(m: MemberOption) {
   const name = m.full_name ?? m.display_name ?? m.email ?? '?'
-  return m.phone ? `${name} · ${m.phone}` : name
+  const base = m.phone ? `${name} · ${m.phone}` : name
+  // Roster members are name-only: they play and keep a record, but earn nothing.
+  return m.is_roster ? `${base} · roster` : base
 }
 
 interface PlayerRow {

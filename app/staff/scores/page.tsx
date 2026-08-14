@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-08-14.1 — Include is_roster in the member picker query so roster
+//                   members are labelled in the score-entry pickers.
 //   v2026-07-13.1 — Paginate the all-profiles fetch via fetchAllRows: PostgREST
 //                   caps responses at 1,000 rows, so the member picker would
 //                   silently omit members once profiles passed 1,000.
@@ -34,7 +36,7 @@ export default async function StaffScoresPage() {
   // (paginated; secondary order('id') keeps pages stable across duplicate/null names)
   const members = await fetchAllRows((from, to) => service
     .from('profiles')
-    .select('id, display_name, full_name, phone, email')
+    .select('id, display_name, full_name, phone, email, is_roster')
     .order('full_name')
     .order('id')
     .range(from, to))

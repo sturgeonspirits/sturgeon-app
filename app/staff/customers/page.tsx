@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-14.1 — Show a Roster badge for name-only members and skip the
+//                   "no Toast link" hint for them (they can never have one).
+// ─────────────────────────────────────────────
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -17,13 +22,13 @@ export default async function StaffCustomersPage({
 
   let query = service
     .from('profiles')
-    .select('id, display_name, email, role, tier, created_at, pos_customer_id')
+    .select('id, display_name, full_name, email, role, tier, created_at, pos_customer_id, is_roster')
     .not('role', 'in', '("staff","admin")')
     .order('created_at', { ascending: false })
     .limit(50)
 
   if (q) {
-    query = query.or(`display_name.ilike.%${q}%,email.ilike.%${q}%`)
+    query = query.or(`display_name.ilike.%${q}%,full_name.ilike.%${q}%,email.ilike.%${q}%`)
   }
 
   const { data: customers } = await query
@@ -109,10 +114,17 @@ export default async function StaffCustomersPage({
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#242622] truncate">
-                    {c.display_name ?? 'Unnamed'}
+                  <p className="font-semibold text-[#242622] truncate flex items-center gap-1.5">
+                    {c.display_name ?? (c as any).full_name ?? 'Unnamed'}
+                    {(c as any).is_roster && (
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#7E613F] bg-[#EDE9DC] border border-[#D4CFC3] rounded px-1.5 py-0.5">
+                        Roster
+                      </span>
+                    )}
                   </p>
-                  <p className="text-xs text-[#7E613F] truncate">{c.email}</p>
+                  <p className="text-xs text-[#7E613F] truncate">
+                    {(c as any).is_roster ? 'No email — record only' : c.email}
+                  </p>
                   {toast && (
                     <p className="text-xs text-[#9E8F7E] mt-0.5">
                       🍞 Toast: {toast.toast_points} pts
@@ -125,10 +137,16 @@ export default async function StaffCustomersPage({
                   )}
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold text-[#242622]">{balance.toLocaleString()} pts</p>
-                  <p className="text-xs text-[#7E613F] capitalize">{c.tier ?? 'newcomer'}</p>
-                  {!toast && !c.pos_customer_id && (
-                    <p className="text-[10px] text-[#C8BCA4] mt-0.5">no Toast link</p>
+                  {(c as any).is_roster ? (
+                    <p className="text-xs text-[#9E8F7E]">no points</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-bold text-[#242622]">{balance.toLocaleString()} pts</p>
+                      <p className="text-xs text-[#7E613F] capitalize">{c.tier ?? 'newcomer'}</p>
+                      {!toast && !c.pos_customer_id && (
+                        <p className="text-[10px] text-[#C8BCA4] mt-0.5">no Toast link</p>
+                      )}
+                    </>
                   )}
                 </div>
               </Link>

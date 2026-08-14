@@ -3,6 +3,8 @@
 //   v2026-06-03.1 — Individual (cribbage) nights: load signed-up players and
 //                   their match reports so registered users can self-report
 //                   each of their 3 matches with a running nightly total.
+//   v2026-08-14.1 — Flag roster players in the opponent list so the UI knows
+//                   they will never mirror-report.
 // ─────────────────────────────────────────────
 import { redirect } from 'next/navigation'
 import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
@@ -86,12 +88,13 @@ export default async function EventSignupPage({ params }: Props) {
     if (playerIds.length > 0) {
       const { data: profs } = await service
         .from('profiles')
-        .select('id, display_name, full_name')
+        .select('id, display_name, full_name, is_roster')
         .in('id', playerIds)
       const profMap = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p]))
       players = playerIds.map((id: string) => ({
         id,
-        name: profMap[id]?.display_name ?? profMap[id]?.full_name ?? 'Player',
+        name:     profMap[id]?.display_name ?? profMap[id]?.full_name ?? 'Player',
+        isRoster: !!profMap[id]?.is_roster,
       }))
     }
 

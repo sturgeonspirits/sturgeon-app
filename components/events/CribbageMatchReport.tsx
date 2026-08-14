@@ -5,13 +5,22 @@
 //                   and opponent-agreement status.
 //   v2026-06-03.2 — Guest opponents (no app) + enforce a different opponent for
 //                   each of the 3 matches.
+//   v2026-08-14.1 — Roster opponents (staff-added, no login): pickable and
+//                   persistent across nights, but they can never mirror-report,
+//                   so the status reads "Recorded" instead of hanging on
+//                   "Waiting on opponent" forever.
 // ─────────────────────────────────────────────
 'use client'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export interface PlayerOption { id: string; name: string }
+export interface PlayerOption {
+  id: string
+  name: string
+  /** Roster member: on the board, but no login — will never report back. */
+  isRoster?: boolean
+}
 
 export interface MatchReport {
   reporterId:   string
@@ -49,6 +58,11 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
 
   const opponents = useMemo(() => players.filter(p => p.id !== currentUserId), [players, currentUserId])
 
+  const rosterIds = useMemo(
+    () => new Set(players.filter(p => p.isRoster).map(p => p.id)),
+    [players],
+  )
+
   const myReports = reports.filter(r => r.reporterId === currentUserId)
   const myByMatch = (n: number) => myReports.find(r => r.matchNumber === n) ?? null
 
@@ -58,8 +72,9 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
   const spread = myReports.reduce((s, r) => s + r.spread, 0)
 
   // Opponent agreement for one of my matches.
-  function agreement(mine: MatchReport): 'confirmed' | 'conflict' | 'pending' | 'guest' {
+  function agreement(mine: MatchReport): 'confirmed' | 'conflict' | 'pending' | 'guest' | 'roster' {
     if (!mine.opponentId) return 'guest'  // guests can't reconcile — no account
+    if (rosterIds.has(mine.opponentId)) return 'roster'  // no login, so never reports back
     const theirs = reports.find(r => r.reporterId === mine.opponentId && r.opponentId === currentUserId)
     if (!theirs) return 'pending'
     return theirs.won === !mine.won && theirs.spread === -mine.spread ? 'confirmed' : 'conflict'
@@ -138,6 +153,7 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
     conflict:  { label: 'Doesn’t match opponent', cls: 'text-[#96321F] bg-[#96321F]/10 border-[#96321F]/40' },
     pending:   { label: 'Waiting on opponent', cls: 'text-[#7E613F] bg-[#EDE9DC] border-[#C8BCA4]' },
     guest:     { label: 'Guest', cls: 'text-[#7E613F] bg-[#EDE9DC] border-[#C8BCA4]' },
+    roster:    { label: 'Recorded', cls: 'text-[#7E613F] bg-[#EDE9DC] border-[#C8BCA4]' },
   } as const
 
   return (
@@ -184,7 +200,7 @@ export default function CribbageMatchReport({ periodId, currentUserId, players, 
               <option value="">Choose opponent…</option>
               {opponents.map(o => (
                 <option key={o.id} value={o.id} disabled={used.has(o.id)}>
-                  {o.name}{used.has(o.id) ? ' (already played)' : ''}
+                  {o.name}{o.isRoster ? ' (roster)' : ''}{used.has(o.id) ? ' — already played' : ''}
                 </option>
               ))}
               <option value={GUEST}>Guest (not on the app)…</option>
