@@ -1,5 +1,8 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-08-10.1 — Read member names/avatars from public_profiles instead of
+//                   profiles; the blanket authenticated-read policy on
+//                   profiles is gone (migration 20260810000000).
 //   v2026-06-03.1 — Inject guest (no-app) cribbage opponents into the nightly
 //                   standings, derived from app players' match reports.
 // ─────────────────────────────────────────────
@@ -17,9 +20,11 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   const { period: periodParam } = await searchParams
   const { supabase, user } = await getAuthUser()
 
-  // All queries use the user's authenticated client — every leaderboard
-  // table has a public-read RLS policy, and the new "profiles: authenticated
-  // read display" policy lets any logged-in user read display_name/avatar_url.
+  // All queries use the user's authenticated client — every leaderboard table
+  // has a public-read RLS policy. Member names and avatars come from the
+  // `public_profiles` view (id / display_name / avatar_url / tier), which is
+  // the only member-to-member read path; the profiles table itself is now
+  // self-and-staff only. See migration 20260810000000.
 
   // Fetch event type config — drives all board behaviour
   const { data: eventType } = await supabase
@@ -116,7 +121,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
         const memberUserIds = [...new Set((memberData ?? []).map((m: any) => m.user_id))]
         const { data: memberProfiles } = memberUserIds.length > 0
-          ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', memberUserIds)
+          ? await supabase.from('public_profiles').select('id, display_name, avatar_url').in('id', memberUserIds)
           : { data: [] }
 
         const profileMap    = Object.fromEntries((memberProfiles ?? []).map((p: any) => [p.id, p]))
@@ -150,7 +155,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
       if (scoredRows.length > 0) {
         const userIds = scoredRows.map((e: any) => e.user_id)
         const { data: profileData } = await supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('id, display_name, avatar_url, tier')
           .in('id', userIds)
 
@@ -344,7 +349,7 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
     if (topRows.length > 0) {
       const atUserIds = topRows.map(r => r.user_id)
       const { data: atProfiles } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id, display_name, avatar_url')
         .in('id', atUserIds)
       const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))

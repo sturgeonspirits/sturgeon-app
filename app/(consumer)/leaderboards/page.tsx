@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-10.1 — Read winner names from public_profiles instead of profiles;
+//                   members no longer have blanket read on the profiles table.
+// ─────────────────────────────────────────────
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -172,13 +177,16 @@ export default async function LeaderboardsPage() {
 
         if (topEntry && ((topEntry.wins ?? 0) > 0 || (topEntry.score ?? 0) > 0)) {
           // Fetch the winner's profile
+          // public_profiles, not profiles — members may not read each other's
+          // rows any more (migration 20260810000000). The view's display_name
+          // already coalesces to full_name, so the rendered name is unchanged.
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, full_name')
+            .from('public_profiles')
+            .select('display_name')
             .eq('id', topEntry.user_id)
             .maybeSingle()
 
-          const name = profile?.display_name ?? profile?.full_name ?? 'Unknown'
+          const name = profile?.display_name ?? 'Unknown'
           const detail = et.scoring_method === 'wins_losses'
             ? `${topEntry.wins}W–${topEntry.losses}L`
             : `${topEntry.score} pts`

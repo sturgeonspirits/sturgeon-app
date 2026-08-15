@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-10.1 — Status badge now renders the statuses the DB can actually
+//                   hold (redeemed / cancelled / expired). 'approved' and
+//                   'rejected' were never valid values, so denied requests
+//                   rendered as raw text.
+// ─────────────────────────────────────────────
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import RedemptionActions from './RedemptionActions'
@@ -85,12 +92,19 @@ export default async function RedemptionsPage() {
   )
 }
 
+// Note: 'approved' and 'rejected' were never storable — reward_redemptions
+// only allows pending / redeemed / expired / cancelled. A rejected request is
+// stored as 'cancelled' and shown as "Rejected". The two dead cases are kept
+// so any historical rows written before the constraint was enforced still render.
 function statusBadge(status: string) {
   switch (status) {
-    case 'pending':  return <span className="text-xs font-semibold bg-amber-100  text-amber-800  px-2 py-0.5 rounded-full">Pending</span>
-    case 'approved': return <span className="text-xs font-semibold bg-green-100  text-green-800  px-2 py-0.5 rounded-full">Approved</span>
-    case 'rejected': return <span className="text-xs font-semibold bg-red-100    text-red-800    px-2 py-0.5 rounded-full">Rejected</span>
-    default:         return <span className="text-xs font-semibold bg-gray-100   text-gray-700   px-2 py-0.5 rounded-full">{status}</span>
+    case 'pending':   return <span className="text-xs font-semibold bg-amber-100  text-amber-800  px-2 py-0.5 rounded-full">Pending</span>
+    case 'redeemed':
+    case 'approved':  return <span className="text-xs font-semibold bg-green-100  text-green-800  px-2 py-0.5 rounded-full">Redeemed</span>
+    case 'cancelled':
+    case 'rejected':  return <span className="text-xs font-semibold bg-red-100    text-red-800    px-2 py-0.5 rounded-full">Rejected</span>
+    case 'expired':   return <span className="text-xs font-semibold bg-gray-100   text-gray-700   px-2 py-0.5 rounded-full">Expired</span>
+    default:          return <span className="text-xs font-semibold bg-gray-100   text-gray-700   px-2 py-0.5 rounded-full">{status}</span>
   }
 }
 
