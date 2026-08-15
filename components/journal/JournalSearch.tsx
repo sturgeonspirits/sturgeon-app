@@ -1,3 +1,19 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-01.1 — v3.0 filter treatment, matched to the menu page.
+//                   • Category chips moved into a panel that is collapsed by
+//                     default on mobile and always open from `md` up, with an
+//                     active-filter count on the toggle. Members with a long
+//                     tasting history had a chip list tall enough to push the
+//                     first entry off screen.
+//                   • 44px tap targets on chips, the toggle, and the search
+//                     clear button.
+//                   Entry ORDER IS UNCHANGED — the page still hands entries
+//                   over sorted visited_at descending and this component never
+//                   re-sorts, only filters. The Featured section from v3.0 does
+//                   not apply here: a tasting journal has no menu sections.
+// ─────────────────────────────────────────────
+
 'use client'
 
 import { useState, useMemo } from 'react'
@@ -32,7 +48,10 @@ export default function JournalSearch({ entries }: Props) {
   }, [entries])
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
+  // NOTE: filter only, never re-order. `entries` arrives sorted visited_at
+  // descending from the server and that order is the whole point of a journal.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return entries.filter(e => {
@@ -69,12 +88,12 @@ export default function JournalSearch({ entries }: Props) {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search by cocktail, category, or notes…"
-          className="w-full bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#242622] placeholder-[#C8BCA4] focus:outline-none focus:border-[#96321F] transition-colors"
+          className="w-full min-h-[44px] bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#242622] placeholder-[#C8BCA4] focus:outline-none focus:border-[#96321F] transition-colors"
         />
         {query && (
           <button
             onClick={() => setQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#C8BCA4] hover:text-[#7E613F] transition-colors"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#C8BCA4] hover:text-[#7E613F] transition-colors"
             aria-label="Clear search"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -84,23 +103,52 @@ export default function JournalSearch({ entries }: Props) {
         )}
       </div>
 
-      {/* ── Category chips ────────────────────────────── */}
+      {/* ── Category chips, collapsible on mobile ─────── */}
       {allCategories.length > 1 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {allCategories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-              className={`text-[11px] font-medium px-3 py-1 rounded-full border capitalize transition-colors ${
-                activeCategory === cat
-                  ? 'bg-[#96321F] border-[#96321F] text-[#FFFFFF]'
-                  : 'bg-[#FFFFFF] border-[#D4CFC3] text-[#7E613F] hover:border-[#96321F] hover:text-[#96321F]'
-              }`}
+        <>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(o => !o)}
+            aria-expanded={filtersOpen}
+            aria-controls="journal-filters"
+            className="md:hidden w-full min-h-[44px] flex items-center justify-between px-4 mb-3 bg-[#FFFFFF] border border-[#D4CFC3] rounded-xl text-sm font-semibold text-[#7E613F] active:scale-[0.99] transition-transform"
+          >
+            <span>
+              Filter by Category
+              {activeCategory && (
+                <span className="ml-2 text-[11px] bg-[#96321F] text-white rounded-full px-2 py-0.5 capitalize">
+                  {activeCategory}
+                </span>
+              )}
+            </span>
+            <span
+              aria-hidden="true"
+              className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
             >
-              {cat}
-            </button>
-          ))}
-        </div>
+              ▾
+            </span>
+          </button>
+
+          <div
+            id="journal-filters"
+            className={`${filtersOpen ? 'flex' : 'hidden'} md:flex flex-wrap gap-1.5 mb-4`}
+          >
+            {allCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                aria-pressed={activeCategory === cat}
+                className={`min-h-[44px] text-[11px] font-medium px-3 rounded-full border capitalize transition-colors ${
+                  activeCategory === cat
+                    ? 'bg-[#96321F] border-[#96321F] text-[#FFFFFF]'
+                    : 'bg-[#FFFFFF] border-[#D4CFC3] text-[#7E613F] hover:border-[#96321F] hover:text-[#96321F]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* ── Results count / clear ─────────────────────── */}
@@ -111,7 +159,7 @@ export default function JournalSearch({ entries }: Props) {
           </p>
           <button
             onClick={clearFilters}
-            className="text-xs text-[#96321F] font-semibold hover:underline"
+            className="min-h-[44px] px-1 text-xs text-[#96321F] font-semibold hover:underline"
           >
             Clear filters
           </button>
@@ -126,7 +174,7 @@ export default function JournalSearch({ entries }: Props) {
           <p className="text-sm text-[#7E613F]">Try different keywords or clear your filters</p>
           <button
             onClick={clearFilters}
-            className="mt-4 text-sm text-[#96321F] font-semibold hover:underline"
+            className="mt-4 min-h-[44px] text-sm text-[#96321F] font-semibold hover:underline"
           >
             Clear filters
           </button>

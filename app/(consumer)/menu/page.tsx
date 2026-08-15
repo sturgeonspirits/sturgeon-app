@@ -1,26 +1,33 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-08-01.1 — Menu now reads the published Menu_Public / Menu_Event tabs
+//                   via lib/sheet-menu.ts instead of the Supabase `recipes`
+//                   table, matching the v3.0 architecture used by the public
+//                   and Ready Room menus. Ends the drift where the app showed
+//                   the last sync's data while the website showed the sheet's.
+//
+//                   Sort order is unchanged (section_sort_order -> sort_order
+//                   -> name); it is now applied in sortRecipes() rather than
+//                   by the database. Auth gating and the empty state are also
+//                   unchanged, and the empty state now doubles as the failure
+//                   state when the sheet is unreachable.
+// ─────────────────────────────────────────────
+
 import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import MenuSearch from '@/components/menu/MenuSearch'
 import { RocksGlass } from '@/components/icons/brand'
+import { fetchSheetMenu } from '@/lib/sheet-menu'
 
 export default async function MenuPage() {
-  const { supabase, user } = await getAuthUser()
+  // Supabase still owns identity — only the menu data moved to the sheet.
+  const { user } = await getAuthUser()
   if (!user) redirect('/auth/login')
 
-  const { data: recipes } = await supabase
-    .from('recipes')
-    .select('id, name, menu_section, menu_ingredients, price, flavor_tags, glassware, show_on_menu, is_event_menu')
-    .eq('is_active', true)
-    .order('section_sort_order')
-    .order('sort_order')
-    .order('name')
+  const { regularRecipes, eventRecipes, featuredSection, failed } =
+    await fetchSheetMenu()
 
-  const allRecipes = recipes ?? []
-
-  // Regular menu: show_on_menu (col B) = true
-  const regularRecipes = allRecipes.filter(r => r.show_on_menu)
-  // Event menu: is_event_menu (col AA) = true
-  const eventRecipes   = allRecipes.filter(r => r.is_event_menu)
+  const isEmpty = regularRecipes.length === 0 && eventRecipes.length === 0
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-10">
@@ -31,16 +38,23 @@ export default async function MenuPage() {
         <p className="text-sm text-[#7E613F] mt-1">crafted in Oshkosh</p>
       </div>
 
-      {allRecipes.length === 0 ? (
+      {isEmpty ? (
         <div className="text-center py-20 bg-[#FFFFFF] rounded-2xl border border-[#D4CFC3]">
           <RocksGlass size={52} className="text-[#D4CFC3] mx-auto mb-4" />
-          <p className="font-semibold text-[#242622] mb-1">Menu coming soon</p>
-          <p className="text-sm text-[#7E613F]">Staff will sync the cocktail menu shortly</p>
+          <p className="font-semibold text-[#242622] mb-1">
+            {failed ? 'Menu unavailable' : 'Menu coming soon'}
+          </p>
+          <p className="text-sm text-[#7E613F]">
+            {failed
+              ? 'We could not reach the menu just now — pull to refresh in a moment'
+              : 'The cocktail menu will appear here shortly'}
+          </p>
         </div>
       ) : (
         <MenuSearch
           regularRecipes={regularRecipes}
           eventRecipes={eventRecipes}
+          featuredSection={featuredSection}
         />
       )}
     </div>
