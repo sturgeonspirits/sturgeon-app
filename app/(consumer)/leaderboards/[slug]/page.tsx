@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-09-02.1 — Fix: every player rendered as "Member". The public_profiles
+//                   reads added on 2026-08-10 come back empty in production, so
+//                   no name ever resolved. Route all three lookups through
+//                   fetchMemberNames() (lib/member-names.ts) instead.
 //   v2026-08-10.1 — Read member names/avatars from public_profiles instead of
 //                   profiles; the blanket authenticated-read policy on
 //                   profiles is gone (migration 20260810000000).
@@ -9,6 +13,7 @@
 import { getAuthUser } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import LeaderboardBoard from '@/components/leaderboard/LeaderboardBoard'
+import { fetchMemberNames } from '@/lib/member-names'
 
 interface Props {
   params:      Promise<{ slug: string }>
@@ -20,11 +25,13 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
   const { period: periodParam } = await searchParams
   const { supabase, user } = await getAuthUser()
 
-  // All queries use the user's authenticated client — every leaderboard table
-  // has a public-read RLS policy. Member names and avatars come from the
-  // `public_profiles` view (id / display_name / avatar_url / tier), which is
-  // the only member-to-member read path; the profiles table itself is now
-  // self-and-staff only. See migration 20260810000000.
+  // All leaderboard queries use the user's authenticated client — every
+  // leaderboard table has a public-read RLS policy.
+  //
+  // Names and avatars are the exception: they go through fetchMemberNames(),
+  // which resolves them server-side and returns only display_name / avatar_url
+  // / tier. See lib/member-names.ts for why it no longer reads public_profiles
+  // directly (that view returns nothing in production — 2026-09-02).
 
   // Fetch event type config — drives all board behaviour
   const { data: eventType } = await supabase
@@ -120,11 +127,8 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
           .in('team_id', teamData.map((t: any) => t.id))
 
         const memberUserIds = [...new Set((memberData ?? []).map((m: any) => m.user_id))]
-        const { data: memberProfiles } = memberUserIds.length > 0
-          ? await supabase.from('public_profiles').select('id, display_name, avatar_url').in('id', memberUserIds)
-          : { data: [] }
+        const profileMap    = await fetchMemberNames(memberUserIds, supabase)
 
-        const profileMap    = Object.fromEntries((memberProfiles ?? []).map((p: any) => [p.id, p]))
         const membersByTeam: Record<string, any[]> = {}
         for (const m of memberData ?? []) {
           if (!membersByTeam[m.team_id]) membersByTeam[m.team_id] = []
@@ -153,13 +157,9 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
       )
 
       if (scoredRows.length > 0) {
-        const userIds = scoredRows.map((e: any) => e.user_id)
-        const { data: profileData } = await supabase
-          .from('public_profiles')
-          .select('id, display_name, avatar_url, tier')
-          .in('id', userIds)
+        const userIds    = scoredRows.map((e: any) => e.user_id)
+        const profileMap = await fetchMemberNames(userIds, supabase)
 
-        const profileMap = Object.fromEntries((profileData ?? []).map((p: any) => [p.id, p]))
         entries = scoredRows.map((e: any) => ({
           ...e,
           profiles: profileMap[e.user_id] ?? null,
@@ -347,12 +347,8 @@ export default async function LeaderboardDetailPage({ params, searchParams }: Pr
 
     const topRows = rows.slice(0, 20)
     if (topRows.length > 0) {
-      const atUserIds = topRows.map(r => r.user_id)
-      const { data: atProfiles } = await supabase
-        .from('public_profiles')
-        .select('id, display_name, avatar_url')
-        .in('id', atUserIds)
-      const atProfileMap = Object.fromEntries((atProfiles ?? []).map((p: any) => [p.id, p]))
+      const atUserIds    = topRows.map(r => r.user_id)
+      const atProfileMap = await fetchMemberNames(atUserIds, supabase)
       allTime = topRows.map(r => ({ ...r, profiles: atProfileMap[r.user_id] ?? null }))
     }
   }

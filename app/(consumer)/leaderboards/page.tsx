@@ -1,5 +1,8 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-09-02.1 — Fix: latest-winner card showed "Unknown". The
+//                   public_profiles read added on 2026-08-10 comes back empty
+//                   in production; use fetchMemberNames() instead.
 //   v2026-08-10.1 — Read winner names from public_profiles instead of profiles;
 //                   members no longer have blanket read on the profiles table.
 // ─────────────────────────────────────────────
@@ -7,6 +10,7 @@ import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Trophy, RocksGlass } from '@/components/icons/brand'
+import { fetchMemberNames } from '@/lib/member-names'
 
 // Format a YYYY-MM-DD date string as "Wed, Apr 16"
 function fmtEventDate(dateStr: string): string {
@@ -176,17 +180,12 @@ export default async function LeaderboardsPage() {
           .maybeSingle()
 
         if (topEntry && ((topEntry.wins ?? 0) > 0 || (topEntry.score ?? 0) > 0)) {
-          // Fetch the winner's profile
-          // public_profiles, not profiles — members may not read each other's
-          // rows any more (migration 20260810000000). The view's display_name
-          // already coalesces to full_name, so the rendered name is unchanged.
-          const { data: profile } = await supabase
-            .from('public_profiles')
-            .select('display_name')
-            .eq('id', topEntry.user_id)
-            .maybeSingle()
-
-          const name = profile?.display_name ?? 'Unknown'
+          // Fetch the winner's name. Resolved server-side by fetchMemberNames()
+          // — members have no blanket read on profiles (migration
+          // 20260810000000) and the public_profiles view it introduced returns
+          // nothing in production. See lib/member-names.ts.
+          const nameMap = await fetchMemberNames([topEntry.user_id], supabase)
+          const name    = nameMap[topEntry.user_id!]?.display_name ?? 'Unknown'
           const detail = et.scoring_method === 'wins_losses'
             ? `${topEntry.wins}W–${topEntry.losses}L`
             : `${topEntry.score} pts`
