@@ -1,3 +1,6 @@
+// events/page.tsx — v2026-10-24 — Facebook event cards now have a button:
+// "Get Tickets" when the event has a ticket link (fb-events v2.1 ticket_url),
+// otherwise "Details on Facebook". Before, the cards had no link at all.
 import { getAuthUser, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -15,7 +18,12 @@ interface FbEvent {
   is_recurring_instance?: boolean
   is_canceled?:          boolean
   is_cancelled?:         boolean
+  url?:                  string
+  facebook_url?:         string
+  ticket_url?:           string | null
 }
+
+const isHttp = (u?: string | null): u is string => !!u && /^https?:\/\//i.test(u)
 
 const TZ = 'America/Chicago'
 
@@ -113,6 +121,9 @@ async function fetchFbEvents(): Promise<FbEvent[]> {
 function EventCard({ ev, featured = false }: { ev: FbEvent; featured?: boolean }) {
   const venue = ev.venue || ev.place || ''
   const desc  = truncate(ev.description, 220)
+  const ticketUrl = isHttp(ev.ticket_url) ? ev.ticket_url : null
+  const fbUrl     = isHttp(ev.facebook_url) ? ev.facebook_url
+                  : (isHttp(ev.url) && /facebook\.com/i.test(ev.url) ? ev.url : null)
 
   return (
     <div className={`bg-[#FFFFFF] border border-[#D4CFC3] rounded-2xl overflow-hidden ${featured ? '' : ''}`}>
@@ -175,6 +186,41 @@ function EventCard({ ev, featured = false }: { ev: FbEvent; featured?: boolean }
         {desc && (
           <p className="text-xs text-[#9E8F7E] leading-relaxed pt-1">{linkify(desc)}</p>
         )}
+
+        {/* Tickets first; Facebook as the fallback or secondary link */}
+        {ticketUrl ? (
+          <div className="pt-2 space-y-2">
+            <a
+              href={ticketUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-[#96321F] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#ae3a24] active:scale-[0.98] transition-all"
+            >
+              Get Tickets
+            </a>
+            {fbUrl && (
+              <a
+                href={fbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-xs font-semibold text-[#7E613F] underline underline-offset-2 hover:text-[#96321F]"
+              >
+                Details on Facebook
+              </a>
+            )}
+          </div>
+        ) : fbUrl ? (
+          <div className="pt-2">
+            <a
+              href={fbUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 border border-[#C8BCA4] text-[#96321F] text-sm font-semibold py-2.5 rounded-xl hover:border-[#96321F] active:scale-[0.98] transition-all"
+            >
+              Details on Facebook
+            </a>
+          </div>
+        ) : null}
       </div>
     </div>
   )
