@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-10-27.1 — Disclose app-open tracking (date only) in What we collect
+//                   and How we use; bumped Last updated.
+// ─────────────────────────────────────────────
 import Link from 'next/link'
 
 export const metadata = {
@@ -5,7 +10,7 @@ export const metadata = {
 }
 
 export default function PrivacyPage() {
-  const updated = 'April 12, 2026'
+  const updated = 'October 27, 2026'
 
   return (
     <div className="max-w-lg mx-auto px-4 py-10 space-y-8">
@@ -31,6 +36,7 @@ export default function PrivacyPage() {
           'Phone number (optional) — used only to match your account with an existing Toast loyalty card.',
           'Birthday (month and day only, no year) — used to send you a free birthday cocktail when you check in on your birthday.',
           'Points activity and event history — check-ins, mission completions, leaderboard scores, and reward redemptions.',
+          'App visits — the dates you opened the app (date only, no pages, location or device details), so we can see how many members use it.',
           'Device information — browser type and push notification subscription endpoint, used only to deliver push notifications you opted into.',
         ]} />
       </Section>
@@ -51,7 +57,7 @@ export default function PrivacyPage() {
           'To send you push notifications you opted into (event reminders, reward alerts).',
           'To detect your birthday and auto-apply your free birthday cocktail.',
           'To match your app account with your existing Toast loyalty card so your historical points carry over.',
-          'To generate aggregate, anonymous statistics (total check-ins, popular rewards) for our internal use.',
+          'To generate aggregate, anonymous statistics (total check-ins, popular rewards, how many members use the app each week) for our internal use.',
         ]} />
       </Section>
 

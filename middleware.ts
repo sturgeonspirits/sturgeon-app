@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+// Changelog
+//   v2026-10-27.1 — Record one app open per member per day (record_app_open
+//                   RPC), guarded by a daily cookie so it's one write a day.
+// ─────────────────────────────────────────────
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -62,8 +67,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  // ── Usage: record one app open per member per day ───────────
+  // Cookie holds the Chicago date of the last recorded open, so this is one
+  // RPC per device per day. Never let it block or break a page load.
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date())
+  if (request.cookies.get(OPEN_COOKIE)?.value !== today) {
+    try {
+      const { error } = await supabase.rpc('record_app_open')
+      if (!error) {
+        supabaseResponse.cookies.set(OPEN_COOKIE, today, {
+          path: '/', httpOnly: true, sameSite: 'lax', secure: true, maxAge: 60 * 60 * 36,
+        })
+      }
+    } catch { /* usage logging is best-effort */ }
+  }
+
   return supabaseResponse
 }
+
+const OPEN_COOKIE = 'ss_open_day'
 
 export const config = {
   matcher: [

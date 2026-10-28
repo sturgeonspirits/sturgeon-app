@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────
 // Changelog
+//   v2026-10-27.1 — Added App Usage section: members who opened the app in
+//                   7/30/90 days (member_last_seen), new-member return rate,
+//                   and an 8-week weekly-active trend (member_app_opens).
+//                   Relabeled earn-based "Active 30d" as "Earning points 30d".
 //   v2026-07-13.1 — Paginate all row-level fetches via fetchAllRows: PostgREST
 //                   caps responses at 1,000 rows, so unique-active counts,
 //                   retention, top missions/rewards, and points-economy totals
@@ -47,6 +51,9 @@ export default async function StaffMetricsDashboard() {
   const iso7d    = new Date(now - 7  * DAY).toISOString()
   const iso30d   = new Date(now - 30 * DAY).toISOString()
   const iso60d   = new Date(now - 60 * DAY).toISOString()
+  // YYYY-MM-DD in Chicago time, to match member_app_opens.opened_on
+  const chicagoDate = (ms: number) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date(ms))
 
   // ── Parallel queries ──────────────────────────────────────────
   const [
@@ -75,6 +82,9 @@ export default async function StaffMetricsDashboard() {
     allRewards,
 
     pointsTotals,
+
+    lastSeen,
+    appOpens,
   ] = await Promise.all([
     service.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
 
@@ -125,7 +135,49 @@ export default async function StaffMetricsDashboard() {
     fetchAllRows((f, t) => service.from('points_ledger')
       .select('balance, lifetime_earned, lifetime_spent')
       .order('user_id').range(f, t)).then(data => ({ data })),
+
+    // App usage — last sign-in / session refresh per customer (auth.*)
+    service.rpc('member_last_seen'),
+    // Daily open log for the 8-week trend (one row per member per day)
+    fetchAllRows((f, t) => service.from('member_app_opens')
+      .select('user_id, opened_on')
+      .gte('opened_on', chicagoDate(now - 56 * DAY))
+      .order('opened_on').order('user_id').range(f, t)).then(data => ({ data })),
   ])
+
+  // ── App usage ─────────────────────────────────────────────────
+  // "Opened the app" = signed in or refreshed a session (any app open after
+  // ~1h away). Customers only; staff and roster members are excluded.
+  const seenRows = ((lastSeen.data ?? []) as { user_id: string; joined_at: string; last_seen: string | null }[])
+  const seenMs   = (r: { last_seen: string | null }) => (r.last_seen ? Date.parse(r.last_seen) : 0)
+  const membersWithLogin = seenRows.length
+  const opened7d  = seenRows.filter(r => seenMs(r) > now - 7  * DAY).length
+  const opened30d = seenRows.filter(r => seenMs(r) > now - 30 * DAY).length
+  const opened90d = seenRows.filter(r => seenMs(r) > now - 90 * DAY).length
+
+  // New-member return: of members who joined 14–90 days ago, how many came
+  // back at least a week after joining?
+  const recentJoins = seenRows.filter(r => {
+    const j = Date.parse(r.joined_at)
+    return j <= now - 14 * DAY && j > now - 90 * DAY
+  })
+  const cameBack  = recentJoins.filter(r => seenMs(r) >= Date.parse(r.joined_at) + 7 * DAY).length
+  const returnPct = recentJoins.length > 0 ? Math.round((cameBack / recentJoins.length) * 100) : 0
+
+  // Weekly active members, last 8 rolling weeks (week 0 = last 7 days)
+  const customerIds = new Set(seenRows.map(r => r.user_id))
+  const todayMs = Date.parse(chicagoDate(now))
+  const weekSets = Array.from({ length: 8 }, () => new Set<string>())
+  for (const o of ((appOpens.data ?? []) as { user_id: string; opened_on: string }[])) {
+    if (!customerIds.has(o.user_id)) continue
+    const w = Math.floor((todayMs - Date.parse(o.opened_on)) / DAY / 7)
+    if (w >= 0 && w < 8) weekSets[w].add(o.user_id)
+  }
+  const weekly = weekSets.map((set, w) => ({
+    label: w === 0 ? 'This week' : w === 1 ? 'Last week' : `${w} weeks ago`,
+    count: set.size,
+  }))
+  const weeklyMax = Math.max(1, ...weekly.map(w => w.count))
 
   // ── Derive unique-active counts from user_id lists ────────────
   const uniq = (rows: any): number => {
@@ -259,7 +311,7 @@ export default async function StaffMetricsDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <StatCard label="Total members"  value={fmt(totalCustomers.count)} accent />
           <StatCard
-            label="Active 30d"
+            label="Earning points 30d"
             value={fmt(active30d)}
             sub={`${fmt(active7d)} in the last 7 days`}
           />
@@ -273,6 +325,48 @@ export default async function StaffMetricsDashboard() {
             value={`${retentionPct}%`}
             sub={`${returning} of ${prevMonthIds.size} prev-month members came back`}
           />
+        </div>
+      </section>
+
+      {/* App usage */}
+      <section>
+        <h2 className="text-xs font-semibold text-[#7E613F] uppercase tracking-widest mb-3">App Usage</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard
+            label="Opened app 30d"
+            value={fmt(opened30d)}
+            sub={`of ${fmt(membersWithLogin)} members with a login`}
+            accent
+          />
+          <StatCard label="Opened app 7d"  value={fmt(opened7d)} />
+          <StatCard label="Opened app 90d" value={fmt(opened90d)} />
+          <StatCard
+            label="New members back"
+            value={recentJoins.length > 0 ? `${returnPct}%` : '—'}
+            sub={`${cameBack} of ${recentJoins.length} who joined 2–13 weeks ago returned after week 1`}
+          />
+        </div>
+        <div className="bg-white border border-[#D4CFC3] rounded-2xl p-4 mt-3">
+          <p className="text-[11px] font-semibold text-[#7E613F] uppercase tracking-widest mb-3">
+            Members opening the app, by week
+          </p>
+          <div className="space-y-2">
+            {weekly.map(w => (
+              <div key={w.label} className="flex items-center gap-3">
+                <p className="text-xs text-[#7E613F] w-24 shrink-0">{w.label}</p>
+                <div className="flex-1 h-3 bg-[#F1F1E7] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#96321F] rounded-full"
+                    style={{ width: `${(w.count / weeklyMax) * 100}%` }}
+                  />
+                </div>
+                <p className="text-sm font-bold text-[#242622] w-8 text-right">{w.count}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-[#9E8F7E] mt-3">
+            Daily tracking started Oct 27, 2026. Earlier weeks only show each member&apos;s most recent visit, so they undercount.
+          </p>
         </div>
       </section>
 

@@ -762,6 +762,21 @@ export type Database = {
         }
         Relationships: []
       }
+      // Hand-added 2026-10-27 alongside migration 20261027000000.
+      member_app_opens: {
+        Row: { opened_on: string; user_id: string }
+        Insert: { opened_on: string; user_id: string }
+        Update: { opened_on?: string; user_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: "member_app_opens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mission_completion_requests: {
         Row: {
           created_at: string
@@ -1709,6 +1724,12 @@ export type Database = {
         Args: { p_redemption_id: string; p_staff_id: string; p_action?: string }
         Returns: Json
       }
+      // Hand-added 2026-10-27 alongside migration 20261027000000.
+      member_last_seen: {
+        Args: never
+        Returns: { user_id: string; joined_at: string; last_seen: string | null }[]
+      }
+      record_app_open: { Args: never; Returns: undefined }
       recalculate_tier: { Args: { p_user_id: string }; Returns: string }
     }
     Enums: {
